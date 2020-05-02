@@ -48,24 +48,13 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/karim/src/src/mysrc/cpp/gstreamermm/iptv_out
+CMAKE_SOURCE_DIR = /home/karim/src/iptv_out
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/karim/src/src/mysrc/cpp/gstreamermm/iptv_out
+CMAKE_BINARY_DIR = /home/karim/src/iptv_out
 
 #=============================================================================
 # Targets provided globally by CMake.
-
-# Special rule for the target rebuild_cache
-rebuild_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/usr/bin/cmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
-.PHONY : rebuild_cache
-
-# Special rule for the target rebuild_cache
-rebuild_cache/fast: rebuild_cache
-
-.PHONY : rebuild_cache/fast
 
 # Special rule for the target edit_cache
 edit_cache:
@@ -78,11 +67,22 @@ edit_cache/fast: edit_cache
 
 .PHONY : edit_cache/fast
 
+# Special rule for the target rebuild_cache
+rebuild_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
+	/usr/bin/cmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+.PHONY : rebuild_cache
+
+# Special rule for the target rebuild_cache
+rebuild_cache/fast: rebuild_cache
+
+.PHONY : rebuild_cache/fast
+
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/karim/src/src/mysrc/cpp/gstreamermm/iptv_out/CMakeFiles /home/karim/src/src/mysrc/cpp/gstreamermm/iptv_out/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/karim/src/iptv_out/CMakeFiles /home/karim/src/iptv_out/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/karim/src/src/mysrc/cpp/gstreamermm/iptv_out/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/karim/src/iptv_out/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -111,44 +111,30 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named iptv_archive
+# Target rules for targets named iptv_from_archive
 
 # Build rule for target.
-iptv_archive: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 iptv_archive
-.PHONY : iptv_archive
+iptv_from_archive: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 iptv_from_archive
+.PHONY : iptv_from_archive
 
 # fast build rule for target.
-iptv_archive/fast:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/build
-.PHONY : iptv_archive/fast
+iptv_from_archive/fast:
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/build
+.PHONY : iptv_from_archive/fast
 
-src/iptv_archive.o: src/iptv_archive.cpp.o
+#=============================================================================
+# Target rules for targets named iptv_to_http
 
-.PHONY : src/iptv_archive.o
+# Build rule for target.
+iptv_to_http: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 iptv_to_http
+.PHONY : iptv_to_http
 
-# target to build an object file
-src/iptv_archive.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/iptv_archive.cpp.o
-.PHONY : src/iptv_archive.cpp.o
-
-src/iptv_archive.i: src/iptv_archive.cpp.i
-
-.PHONY : src/iptv_archive.i
-
-# target to preprocess a source file
-src/iptv_archive.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/iptv_archive.cpp.i
-.PHONY : src/iptv_archive.cpp.i
-
-src/iptv_archive.s: src/iptv_archive.cpp.s
-
-.PHONY : src/iptv_archive.s
-
-# target to generate assembly for a file
-src/iptv_archive.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/iptv_archive.cpp.s
-.PHONY : src/iptv_archive.cpp.s
+# fast build rule for target.
+iptv_to_http/fast:
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/build
+.PHONY : iptv_to_http/fast
 
 src/iptv_archive_play.o: src/iptv_archive_play.cpp.o
 
@@ -156,7 +142,7 @@ src/iptv_archive_play.o: src/iptv_archive_play.cpp.o
 
 # target to build an object file
 src/iptv_archive_play.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/iptv_archive_play.cpp.o
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/iptv_archive_play.cpp.o
 .PHONY : src/iptv_archive_play.cpp.o
 
 src/iptv_archive_play.i: src/iptv_archive_play.cpp.i
@@ -165,7 +151,7 @@ src/iptv_archive_play.i: src/iptv_archive_play.cpp.i
 
 # target to preprocess a source file
 src/iptv_archive_play.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/iptv_archive_play.cpp.i
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/iptv_archive_play.cpp.i
 .PHONY : src/iptv_archive_play.cpp.i
 
 src/iptv_archive_play.s: src/iptv_archive_play.cpp.s
@@ -174,8 +160,89 @@ src/iptv_archive_play.s: src/iptv_archive_play.cpp.s
 
 # target to generate assembly for a file
 src/iptv_archive_play.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/iptv_archive_play.cpp.s
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/iptv_archive_play.cpp.s
 .PHONY : src/iptv_archive_play.cpp.s
+
+src/iptv_from_archive.o: src/iptv_from_archive.cpp.o
+
+.PHONY : src/iptv_from_archive.o
+
+# target to build an object file
+src/iptv_from_archive.cpp.o:
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/iptv_from_archive.cpp.o
+.PHONY : src/iptv_from_archive.cpp.o
+
+src/iptv_from_archive.i: src/iptv_from_archive.cpp.i
+
+.PHONY : src/iptv_from_archive.i
+
+# target to preprocess a source file
+src/iptv_from_archive.cpp.i:
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/iptv_from_archive.cpp.i
+.PHONY : src/iptv_from_archive.cpp.i
+
+src/iptv_from_archive.s: src/iptv_from_archive.cpp.s
+
+.PHONY : src/iptv_from_archive.s
+
+# target to generate assembly for a file
+src/iptv_from_archive.cpp.s:
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/iptv_from_archive.cpp.s
+.PHONY : src/iptv_from_archive.cpp.s
+
+src/iptv_to_http.o: src/iptv_to_http.cpp.o
+
+.PHONY : src/iptv_to_http.o
+
+# target to build an object file
+src/iptv_to_http.cpp.o:
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/iptv_to_http.cpp.o
+.PHONY : src/iptv_to_http.cpp.o
+
+src/iptv_to_http.i: src/iptv_to_http.cpp.i
+
+.PHONY : src/iptv_to_http.i
+
+# target to preprocess a source file
+src/iptv_to_http.cpp.i:
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/iptv_to_http.cpp.i
+.PHONY : src/iptv_to_http.cpp.i
+
+src/iptv_to_http.s: src/iptv_to_http.cpp.s
+
+.PHONY : src/iptv_to_http.s
+
+# target to generate assembly for a file
+src/iptv_to_http.cpp.s:
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/iptv_to_http.cpp.s
+.PHONY : src/iptv_to_http.cpp.s
+
+src/iptv_to_http_play.o: src/iptv_to_http_play.cpp.o
+
+.PHONY : src/iptv_to_http_play.o
+
+# target to build an object file
+src/iptv_to_http_play.cpp.o:
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/iptv_to_http_play.cpp.o
+.PHONY : src/iptv_to_http_play.cpp.o
+
+src/iptv_to_http_play.i: src/iptv_to_http_play.cpp.i
+
+.PHONY : src/iptv_to_http_play.i
+
+# target to preprocess a source file
+src/iptv_to_http_play.cpp.i:
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/iptv_to_http_play.cpp.i
+.PHONY : src/iptv_to_http_play.cpp.i
+
+src/iptv_to_http_play.s: src/iptv_to_http_play.cpp.s
+
+.PHONY : src/iptv_to_http_play.s
+
+# target to generate assembly for a file
+src/iptv_to_http_play.cpp.s:
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/iptv_to_http_play.cpp.s
+.PHONY : src/iptv_to_http_play.cpp.s
 
 src/mongo_driver.o: src/mongo_driver.cpp.o
 
@@ -183,7 +250,8 @@ src/mongo_driver.o: src/mongo_driver.cpp.o
 
 # target to build an object file
 src/mongo_driver.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/mongo_driver.cpp.o
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/mongo_driver.cpp.o
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/mongo_driver.cpp.o
 .PHONY : src/mongo_driver.cpp.o
 
 src/mongo_driver.i: src/mongo_driver.cpp.i
@@ -192,7 +260,8 @@ src/mongo_driver.i: src/mongo_driver.cpp.i
 
 # target to preprocess a source file
 src/mongo_driver.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/mongo_driver.cpp.i
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/mongo_driver.cpp.i
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/mongo_driver.cpp.i
 .PHONY : src/mongo_driver.cpp.i
 
 src/mongo_driver.s: src/mongo_driver.cpp.s
@@ -201,7 +270,8 @@ src/mongo_driver.s: src/mongo_driver.cpp.s
 
 # target to generate assembly for a file
 src/mongo_driver.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/mongo_driver.cpp.s
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/mongo_driver.cpp.s
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/mongo_driver.cpp.s
 .PHONY : src/mongo_driver.cpp.s
 
 src/utils.o: src/utils.cpp.o
@@ -210,7 +280,8 @@ src/utils.o: src/utils.cpp.o
 
 # target to build an object file
 src/utils.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/utils.cpp.o
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/utils.cpp.o
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/utils.cpp.o
 .PHONY : src/utils.cpp.o
 
 src/utils.i: src/utils.cpp.i
@@ -219,7 +290,8 @@ src/utils.i: src/utils.cpp.i
 
 # target to preprocess a source file
 src/utils.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/utils.cpp.i
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/utils.cpp.i
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/utils.cpp.i
 .PHONY : src/utils.cpp.i
 
 src/utils.s: src/utils.cpp.s
@@ -228,7 +300,8 @@ src/utils.s: src/utils.cpp.s
 
 # target to generate assembly for a file
 src/utils.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_archive.dir/build.make CMakeFiles/iptv_archive.dir/src/utils.cpp.s
+	$(MAKE) -f CMakeFiles/iptv_from_archive.dir/build.make CMakeFiles/iptv_from_archive.dir/src/utils.cpp.s
+	$(MAKE) -f CMakeFiles/iptv_to_http.dir/build.make CMakeFiles/iptv_to_http.dir/src/utils.cpp.s
 .PHONY : src/utils.cpp.s
 
 # Help Target
@@ -237,15 +310,22 @@ help:
 	@echo "... all (the default if no target is provided)"
 	@echo "... clean"
 	@echo "... depend"
-	@echo "... rebuild_cache"
-	@echo "... iptv_archive"
 	@echo "... edit_cache"
-	@echo "... src/iptv_archive.o"
-	@echo "... src/iptv_archive.i"
-	@echo "... src/iptv_archive.s"
+	@echo "... rebuild_cache"
+	@echo "... iptv_from_archive"
+	@echo "... iptv_to_http"
 	@echo "... src/iptv_archive_play.o"
 	@echo "... src/iptv_archive_play.i"
 	@echo "... src/iptv_archive_play.s"
+	@echo "... src/iptv_from_archive.o"
+	@echo "... src/iptv_from_archive.i"
+	@echo "... src/iptv_from_archive.s"
+	@echo "... src/iptv_to_http.o"
+	@echo "... src/iptv_to_http.i"
+	@echo "... src/iptv_to_http.s"
+	@echo "... src/iptv_to_http_play.o"
+	@echo "... src/iptv_to_http_play.i"
+	@echo "... src/iptv_to_http_play.s"
 	@echo "... src/mongo_driver.o"
 	@echo "... src/mongo_driver.i"
 	@echo "... src/mongo_driver.s"

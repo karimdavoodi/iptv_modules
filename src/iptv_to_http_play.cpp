@@ -1,9 +1,10 @@
 #include <exception>
 #include <boost/log/trivial.hpp>
 #include <thread>
-#include "iptv_archive_play.hpp"
+#include "iptv_to_http_play.hpp"
+// > gst-launch-1.0 udpsrc uri=udp://239.2.0.2:3200  ! rndbuffersize min=1316 max=1316 ! tcpserversink host=0.0.0.0 port=8001
 
-void IptvArchive::do_work()
+void Iptv_to_http::do_work()
 {
     using Glib::RefPtr;
     RefPtr<Glib::MainLoop> loop;
@@ -14,9 +15,6 @@ void IptvArchive::do_work()
     RefPtr<Gst::Element>   udpsink;
     sigc::connection m_timeout_connection;
     
-    // gst-launch-1.0 filesrc location=/tmp/2.ts ! 
-    //      tsparse set-timestamps=1 ! 
-    //      udpsink blocksize=1316 multicast-iface=lo host=239.1.1.2 port=3200 sync=true
     try{
         BOOST_LOG_TRIVIAL(trace) 
             << "Start " 

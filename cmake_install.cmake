@@ -1,4 +1,4 @@
-# Install script for directory: /home/karim/src/src/mysrc/cpp/gstreamermm/iptv_out
+# Install script for directory: /home/karim/src/iptv_out
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/karim/src/src/mysrc/cpp/gstreamermm/iptv_out/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/karim/src/iptv_out/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

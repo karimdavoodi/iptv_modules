@@ -25,15 +25,15 @@ set(ALL_INCS  /usr/local/include ${LIBMONGOCXX_INCLUDE_DIRS} ${GSTMM_INCLUDE_DIR
 set(MYLIBS src/mongo_driver.cpp src/utils.cpp)
 
 
-set(APP iptv_archive)
+set(APP iptv_from_archive)
 add_executable(${APP} src/${APP}.cpp src/iptv_archive_play.cpp  ${MYLIBS})
 target_link_libraries(${APP} ${ALL_LIBS})
 target_include_directories(${APP} PUBLIC ${ALL_INCS})
 
-#set(APP channels_hls)
-#add_executable(${APP} src/${APP}.cpp ${MYLIBS})
-#target_link_libraries(${APP} ${ALL_LIBS})
-#target_include_directories(${APP} PUBLIC ${ALL_INCS})
+set(APP iptv_to_http)
+add_executable(${APP} src/${APP}.cpp src/iptv_to_http_play.cpp ${MYLIBS})
+target_link_libraries(${APP} ${ALL_LIBS})
+target_include_directories(${APP} PUBLIC ${ALL_INCS})
 #
 #set(APP channels_epg)
 #add_executable(${APP} src/${APP}.cpp ${MYLIBS})

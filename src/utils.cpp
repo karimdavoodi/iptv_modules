@@ -71,7 +71,7 @@ string get_content_path(int id)
         BOOST_LOG_TRIVIAL(info) << "Invalid content info by id " << id;
         return "";
     }
-    BOOST_LOG_TRIVIAL(trace) << content_info.dump(4);
+    //BOOST_LOG_TRIVIAL(trace) << content_info.dump(4);
     json content_type = json::parse(Mongo::find_id("storage_contents_types",
                 content_info["type"]));
     json content_format = json::parse(Mongo::find_id("storage_contents_formats",

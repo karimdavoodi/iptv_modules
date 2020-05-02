@@ -9,14 +9,14 @@
 #define TIME_INTERVAL_STATE_SAVE 3000  // msec
 using std::string;
 
-class IptvArchive {
+class Iptv_to_http {
     private:
         string media_path;
         string multicast_addr;
         int port;
     public:
-        IptvArchive(string media_path, string multicast_addr, int port)
+        Iptv_to_http(string media_path, string multicast_addr, int port)
                 :media_path(media_path),multicast_addr(multicast_addr),port(port){}
         void do_work();
-        ~IptvArchive(){}
+        ~Iptv_to_http(){}
 };

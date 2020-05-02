@@ -1,3 +1,4 @@
+// TODO: implement save stat of players for resume in restart
 #include <chrono>
 #include <ctime>
 #include <exception>
@@ -11,7 +12,6 @@
 #include "utils.hpp"
 using namespace std;
 using nlohmann::json;
-
 bool time_to_play(bool schedule, json& media)
 {
     if(!schedule) return true; // play anytime in non schedule mode
@@ -49,7 +49,7 @@ void start_channel(json& channel, live_setting live_config)
             ],
  * */
     BOOST_LOG_TRIVIAL(info) << "Start Channel: " << channel["name"];
-    BOOST_LOG_TRIVIAL(trace) << channel.dump(4);
+    //BOOST_LOG_TRIVIAL(trace) << channel.dump(4);
     if(!channel["active"]){
         BOOST_LOG_TRIVIAL(info) << channel["name"] << " is not Active. Exit!";
         return;
@@ -59,11 +59,14 @@ void start_channel(json& channel, live_setting live_config)
 
     while(true){
         for(auto& media : channel["contents"]){
-            BOOST_LOG_TRIVIAL(trace) << "Play media id: " << media["content"];
             if(time_to_play(schedule, media)){
+                BOOST_LOG_TRIVIAL(trace) << "Play media id: " << media["content"];
                 auto media_path = get_content_path(media["content"]);
                 IptvArchive archive(media_path, multicast, INPUT_PORT);
                 archive.do_work();
+            }else{
+                BOOST_LOG_TRIVIAL(trace) << "Not play media id: " << media["content"]
+                    << " due to time.";
             }
         }
         if(schedule) std::this_thread::sleep_for(std::chrono::seconds(5*60));
