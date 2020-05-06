@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(iptv_out)
+project(iptv_modules)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -20,22 +20,24 @@ pkg_check_modules(GSTMM REQUIRED gstreamermm-1.0  glibmm-2.4 )
 set(CMAKE_MODULE_PATH /usr/local/lib/cmake )
 find_package(LIBMONGOCXX REQUIRED)
 
-set(ALL_LIBS ${Boost_LIBRARIES} ${LIBMONGOCXX_LIBRARIES} ${GSTMM_LIBRARIES} -lpthread -ldl )
+set(ALL_LIBS  ${Boost_LIBRARIES} ${LIBMONGOCXX_LIBRARIES} ${GSTMM_LIBRARIES} -lpthread -ldl )
 set(ALL_INCS  /usr/local/include ${LIBMONGOCXX_INCLUDE_DIRS} ${GSTMM_INCLUDE_DIRS})
-set(MYLIBS src/mongo_driver.cpp src/utils.cpp)
+set(MYLIBS    src/mongo_driver.cpp src/utils.cpp)
 
+set( project_EXES
+     iptv_in_archive
+     iptv_in_dvb
+     iptv_in_network
+#     iptv_in_transcoder
+#  
+#     iptv_out_hls
+#     iptv_out_epg
+     iptv_out_multicast
+#     iptv_out_record
+   )
 
-set(APP iptv_from_archive)
-add_executable(${APP} src/${APP}.cpp src/iptv_archive_play.cpp  ${MYLIBS})
-target_link_libraries(${APP} ${ALL_LIBS})
-target_include_directories(${APP} PUBLIC ${ALL_INCS})
-
-set(APP iptv_to_http)
-add_executable(${APP} src/${APP}.cpp src/iptv_to_http_play.cpp ${MYLIBS})
-target_link_libraries(${APP} ${ALL_LIBS})
-target_include_directories(${APP} PUBLIC ${ALL_INCS})
-#
-#set(APP channels_epg)
-#add_executable(${APP} src/${APP}.cpp ${MYLIBS})
-#target_link_libraries(${APP} ${ALL_LIBS})
-#target_include_directories(${APP} PUBLIC ${ALL_INCS})
+foreach( APP ${project_EXES} )
+    add_executable(${APP} src/${APP}.cpp src/${APP}_gst.cpp  ${MYLIBS})
+    target_link_libraries(${APP} ${ALL_LIBS})
+    target_include_directories(${APP} PUBLIC ${ALL_INCS})
+endforeach()

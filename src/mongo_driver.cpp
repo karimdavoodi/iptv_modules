@@ -6,6 +6,7 @@
 #include <exception>
 #include <string>
 #include <utility>
+#include <mutex>
 #define DB_NAME "iptv"
 
 static mongocxx::instance inst{};
@@ -13,6 +14,8 @@ static mongocxx::client client{mongocxx::uri{}};
 
 using bsoncxx::builder::basic::make_document;
 using bsoncxx::builder::basic::kvp;
+
+std::mutex db_mutex;
 
 void Mongo::fill_defauls(){
     try{
@@ -22,6 +25,7 @@ void Mongo::fill_defauls(){
 }
 void Mongo::info()
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     BOOST_LOG_TRIVIAL(trace) << __func__ ;
     auto dbs = client.database("iptv");
     auto cols = dbs.list_collection_names();
@@ -31,6 +35,7 @@ void Mongo::info()
 }
 bool Mongo::exists(std::string col_name, std::string doc)
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     auto db = client[DB_NAME];     
     
     BOOST_LOG_TRIVIAL(trace) << __func__ ;
@@ -40,6 +45,7 @@ bool Mongo::exists(std::string col_name, std::string doc)
 }
 bool Mongo::exists_id(std::string col_name, int id)
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     BOOST_LOG_TRIVIAL(trace) << __func__ << " id:" << id;
     auto db = client[DB_NAME];     
     
@@ -49,6 +55,7 @@ bool Mongo::exists_id(std::string col_name, int id)
 }
 bool Mongo::insert(std::string col, std::string doc)
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     BOOST_LOG_TRIVIAL(trace) << __func__ ;
     try{
         auto dB = client[DB_NAME];
@@ -60,6 +67,7 @@ bool Mongo::insert(std::string col, std::string doc)
 }
 bool Mongo::remove(std::string col, std::string doc)
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     BOOST_LOG_TRIVIAL(trace) << __func__ ;
     try{
         auto dB = client[DB_NAME];
@@ -72,6 +80,7 @@ bool Mongo::remove(std::string col, std::string doc)
 }
 bool Mongo::remove_by_id(std::string col, int id)
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     BOOST_LOG_TRIVIAL(trace) << __func__ << " id:" << id;
     try{
         auto dB = client[DB_NAME];
@@ -84,6 +93,7 @@ bool Mongo::remove_by_id(std::string col, int id)
 }
 bool Mongo::replace(std::string col, std::string filter, std::string doc)
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     BOOST_LOG_TRIVIAL(trace) << __func__ ;
     try{
         auto dB = client[DB_NAME];
@@ -97,6 +107,7 @@ bool Mongo::replace(std::string col, std::string filter, std::string doc)
 }
 bool Mongo::replace_by_id(std::string col, int id, std::string doc)
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     BOOST_LOG_TRIVIAL(trace) << __func__ << " id:" << id;
     try{
         auto dB = client[DB_NAME];
@@ -111,6 +122,7 @@ bool Mongo::replace_by_id(std::string col, int id, std::string doc)
 }
 std::string Mongo::find( std::string col, std::string doc)
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     auto dB = client[DB_NAME];     
     
     BOOST_LOG_TRIVIAL(trace) <<  __func__;
@@ -124,16 +136,15 @@ std::string Mongo::find( std::string col, std::string doc)
     }
     if(result_str.size() == 0) return "";
     result_str.pop_back();
-    if(count > 1){
-        result_str = "[ " + result_str + " ]";
-    }
+    result_str = "[ " + result_str + " ]";
     return result_str;
 }
 std::string Mongo::find_id(std::string col, int id)
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     auto dB = client[DB_NAME];     
    
-    BOOST_LOG_TRIVIAL(trace) << __func__ << " id:" << id;
+    BOOST_LOG_TRIVIAL(trace) << __func__  << " col:" << col << " id:" << id;
     try{
         bsoncxx::document::view  v;
         auto result = dB[col].find(make_document(kvp("_id", id)));
@@ -150,6 +161,7 @@ std::string Mongo::find_id(std::string col, int id)
 }
 std::string Mongo::find_id_range(std::string col, int begin, int end)
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     auto dB = client[DB_NAME];     
    
     BOOST_LOG_TRIVIAL(trace) << __func__ << " begin:" << begin << " end:" << end;
@@ -183,6 +195,7 @@ std::string Mongo::find_id_range(std::string col, int begin, int end)
 std::string Mongo::find_time_id_range(std::string col, 
         long stime, long etime, int begin, int end)
 {
+    std::lock_guard<std::mutex> lo(db_mutex);
     auto dB = client[DB_NAME];     
    
     BOOST_LOG_TRIVIAL(trace) << __func__ << " begin:" << begin << " end:" << end;

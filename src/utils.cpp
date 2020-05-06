@@ -46,10 +46,10 @@ bool get_live_config(live_setting& cfg, string type)
             ) return false;
     return true;
 }
-string get_multicast(live_setting& config, int channel_id)  
+string get_multicast(live_setting& config, int channel_id, bool out_multicast)  
 {
     uint32_t address = 0;
-    address  = config.multicast_class;
+    address  = out_multicast ? config.multicast_class : INPUT_MULTICAST ;
     address += config.type_id << 8;
     address += (channel_id & 0x0000ff00) << 16;
     address += (channel_id & 0x000000ff) << 24;
@@ -71,11 +71,13 @@ string get_content_path(int id)
         BOOST_LOG_TRIVIAL(info) << "Invalid content info by id " << id;
         return "";
     }
-    //BOOST_LOG_TRIVIAL(trace) << content_info.dump(4);
     json content_type = json::parse(Mongo::find_id("storage_contents_types",
                 content_info["type"]));
     json content_format = json::parse(Mongo::find_id("storage_contents_formats",
                 content_info["format"]));
+    BOOST_LOG_TRIVIAL(trace) << content_info  << '\n'
+        << content_type << '\n'
+        << content_format << '\n';
     string path = string(MEDIA_ROOT);
     path += content_type["name"];
     path +=  "/";
