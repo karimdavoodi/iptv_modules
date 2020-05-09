@@ -1,9 +1,9 @@
 #include <exception>
-#include <boost/log/trivial.hpp>
 #include <thread>
 #include <gstreamermm.h>
 #include <glibmm.h>
-#define TIME_INTERVAL_STATE_SAVE 3000  // msec
+#include <boost/log/trivial.hpp>
+#include "config.hpp"
 using namespace std;
 
 void gst_task(string media_path, string multicast_addr, int port)
@@ -59,6 +59,10 @@ void gst_task(string media_path, string multicast_addr, int port)
                                              const RefPtr<Gst::Message>& msg){
                 //BOOST_LOG_TRIVIAL(trace) << msg->get_message_type();
                 switch(msg->get_message_type()){
+                    case Gst::MESSAGE_ERROR:
+                        BOOST_LOG_TRIVIAL(warning) << 
+                                RefPtr<Gst::MessageError>::cast_static(msg)->parse_debug();
+                        break;
                     case Gst::MESSAGE_EOS:
                         loop->quit();
                         break;

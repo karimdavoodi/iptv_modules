@@ -1,15 +1,39 @@
+#include <boost/filesystem/operations.hpp>
 #include <exception>    
 #include <iostream>
-#include <boost/log/trivial.hpp>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include "../third_party/json.hpp"
-#include "mongo_driver.hpp"
+#include <unistd.h>
+#include <sys/types.h>
+#include <boost/filesystem.hpp>
+
 #include "utils.hpp"
 using namespace std;
-using nlohmann::json;
-
+void init()
+{
+    if(geteuid() != 0 ){
+        BOOST_LOG_TRIVIAL(error) << "Must run by root";
+        exit(-1);
+    }
+    Gst::init();
+    // Set Debug level
+    json system_location = json::parse(Mongo::find_id("system_location",1));
+    int debug_level = system_location["debug"];
+    debug_level = abs(5-debug_level);
+    boost::log::core::get()->set_filter(
+        boost::log::trivial::severity >= debug_level);
+    // Add internal multicast net to localhost 
+    route_add(INPUT_MULTICAST, "lo");
+}
+void route_add(int multicast_class, string nic)
+{
+    string multicat_addr = to_string(multicast_class) + ".0.0.0";
+    string netmask = "255.0.0.0";
+    string cmd = "route add -net " + multicat_addr + " netmask 255.0.0.0 dev " + nic; 
+    BOOST_LOG_TRIVIAL(info) << cmd;
+    std::system(cmd.c_str());
+}
 int live_input_type_id(const string type)
 {
     json input_types = json::parse(Mongo::find("live_inputs_types", "{}"));
@@ -86,4 +110,11 @@ string get_content_path(int id)
     path += content_format["name"];
     BOOST_LOG_TRIVIAL(trace) << "Media Path:" << path;
     return path;
+}
+void check_path(const std::string path)
+{
+    if(!boost::filesystem::exists(path)){
+        BOOST_LOG_TRIVIAL(info) << "Create " << path;
+        boost::filesystem::create_directories(path);
+    }
 }

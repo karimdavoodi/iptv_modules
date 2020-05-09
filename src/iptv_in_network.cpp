@@ -5,15 +5,9 @@
 #include <iostream>
 #include <vector>
 #include <thread>
-#include <gstreamermm.h>
-#include <boost/log/trivial.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/expressions.hpp>
-#include "../third_party/json.hpp"
-#include "mongo_driver.hpp"
+#include <boost/format.hpp>
 #include "utils.hpp"
 using namespace std;
-using nlohmann::json;
 void gst_task(string url, string multicast_addr, int port);
 
 void start_channel(string channel_str, live_setting live_config)
@@ -28,16 +22,25 @@ void start_channel(string channel_str, live_setting live_config)
         BOOST_LOG_TRIVIAL(info) << channel["name"] << " is not Static. Exit!";
         return;
     }
-    auto multicast = get_multicast(live_config, channel["_id"]);
-    gst_task(channel["url"], multicast, INPUT_PORT);
+    auto out_multicast = get_multicast(live_config, channel["_id"]);
+
+    // TODO: do by Gst
+    auto cmd = boost::format("%s -i '%s' -codec copy "
+            " -f mpegts 'udp://%s:%d?packesize=1316' ")
+        % FFMPEG % channel["url"].get<string>() % out_multicast % INPUT_PORT; 
+
+    BOOST_LOG_TRIVIAL(info) << cmd.str();
+    std::system(cmd.str().c_str());
+
+
+    //gst_task(channel["url"], out_multicast, INPUT_PORT);
 }
 int main()
 {
     vector<thread> pool;
     live_setting live_config;
-    Gst::init();
-    boost::log::core::get()->set_filter(
-        boost::log::trivial::severity >= boost::log::trivial::info);
+    
+    init();
     if(!get_live_config(live_config, "network")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;

@@ -1,10 +1,10 @@
 #include <exception>
-#include <boost/log/trivial.hpp>
 #include <thread>
 #include <gstreamermm.h>
 #include <glibmm.h>
-#define TIME_INTERVAL_STATE_SAVE 3000  // msec
-#include "utils.hpp"
+#include <boost/log/trivial.hpp>
+#include "config.hpp"
+
 using namespace std;
 
 void gst_task(string  in_multicast, string out_multicast)
@@ -18,11 +18,12 @@ void gst_task(string  in_multicast, string out_multicast)
     sigc::connection m_timeout_connection;
     
     try{
+        in_multicast += ":" + to_string(INPUT_PORT);
         BOOST_LOG_TRIVIAL(trace) 
             << "Start " 
             << in_multicast 
             << " --> " 
-            << out_multicast;
+            << out_multicast << ":" << INPUT_PORT;
 
         loop = Glib::MainLoop::create();
         pipeline = Gst::Pipeline::create();
@@ -39,7 +40,7 @@ void gst_task(string  in_multicast, string out_multicast)
         udpsrc->link(rndbuffersize);
         rndbuffersize->link(udpsink);
         
-        udpsrc->set_property("location", "udp://"+in_multicast);
+        udpsrc->set_property("uri", "udp://"+in_multicast);
 
         rndbuffersize->set_property("min", 1316);
         rndbuffersize->set_property("max", 1316);
@@ -53,6 +54,10 @@ void gst_task(string  in_multicast, string out_multicast)
                                              const RefPtr<Gst::Message>& msg){
                //BOOST_LOG_TRIVIAL(trace) << msg->get_message_type();
                 switch(msg->get_message_type()){
+                    case Gst::MESSAGE_ERROR:
+                        BOOST_LOG_TRIVIAL(warning) << 
+                                RefPtr<Gst::MessageError>::cast_static(msg)->parse_debug();
+                        break;
                     case Gst::MESSAGE_EOS:
                         loop->quit();
                         break;

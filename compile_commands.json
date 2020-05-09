@@ -1,46 +1,6 @@
 [
 {
   "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_in_dvb.dir/src/iptv_in_dvb.cpp.o -c /home/karim/src/iptv_modules/src/iptv_in_dvb.cpp",
-  "file": "/home/karim/src/iptv_modules/src/iptv_in_dvb.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_in_dvb.dir/src/iptv_in_dvb_gst.cpp.o -c /home/karim/src/iptv_modules/src/iptv_in_dvb_gst.cpp",
-  "file": "/home/karim/src/iptv_modules/src/iptv_in_dvb_gst.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_in_dvb.dir/src/mongo_driver.cpp.o -c /home/karim/src/iptv_modules/src/mongo_driver.cpp",
-  "file": "/home/karim/src/iptv_modules/src/mongo_driver.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_in_dvb.dir/src/utils.cpp.o -c /home/karim/src/iptv_modules/src/utils.cpp",
-  "file": "/home/karim/src/iptv_modules/src/utils.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_in_archive.dir/src/iptv_in_archive.cpp.o -c /home/karim/src/iptv_modules/src/iptv_in_archive.cpp",
-  "file": "/home/karim/src/iptv_modules/src/iptv_in_archive.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_in_archive.dir/src/iptv_in_archive_gst.cpp.o -c /home/karim/src/iptv_modules/src/iptv_in_archive_gst.cpp",
-  "file": "/home/karim/src/iptv_modules/src/iptv_in_archive_gst.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_in_archive.dir/src/mongo_driver.cpp.o -c /home/karim/src/iptv_modules/src/mongo_driver.cpp",
-  "file": "/home/karim/src/iptv_modules/src/mongo_driver.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_in_archive.dir/src/utils.cpp.o -c /home/karim/src/iptv_modules/src/utils.cpp",
-  "file": "/home/karim/src/iptv_modules/src/utils.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
   "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_in_network.dir/src/iptv_in_network.cpp.o -c /home/karim/src/iptv_modules/src/iptv_in_network.cpp",
   "file": "/home/karim/src/iptv_modules/src/iptv_in_network.cpp"
 },
@@ -57,26 +17,6 @@
 {
   "directory": "/home/karim/src/iptv_modules",
   "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_in_network.dir/src/utils.cpp.o -c /home/karim/src/iptv_modules/src/utils.cpp",
-  "file": "/home/karim/src/iptv_modules/src/utils.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_out_multicast.dir/src/iptv_out_multicast.cpp.o -c /home/karim/src/iptv_modules/src/iptv_out_multicast.cpp",
-  "file": "/home/karim/src/iptv_modules/src/iptv_out_multicast.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_out_multicast.dir/src/iptv_out_multicast_gst.cpp.o -c /home/karim/src/iptv_modules/src/iptv_out_multicast_gst.cpp",
-  "file": "/home/karim/src/iptv_modules/src/iptv_out_multicast_gst.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_out_multicast.dir/src/mongo_driver.cpp.o -c /home/karim/src/iptv_modules/src/mongo_driver.cpp",
-  "file": "/home/karim/src/iptv_modules/src/mongo_driver.cpp"
-},
-{
-  "directory": "/home/karim/src/iptv_modules",
-  "command": "/usr/bin/c++  -DBOOST_LOG_DYN_LINK=1 -I/usr/local/include -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include    -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -g -std=gnu++1z -o CMakeFiles/iptv_out_multicast.dir/src/utils.cpp.o -c /home/karim/src/iptv_modules/src/utils.cpp",
   "file": "/home/karim/src/iptv_modules/src/utils.cpp"
 }
 ]

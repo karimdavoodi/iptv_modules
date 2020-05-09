@@ -25,15 +25,15 @@ set(ALL_INCS  /usr/local/include ${LIBMONGOCXX_INCLUDE_DIRS} ${GSTMM_INCLUDE_DIR
 set(MYLIBS    src/mongo_driver.cpp src/utils.cpp)
 
 set( project_EXES
-     iptv_in_archive
-     iptv_in_dvb
-     iptv_in_network
-#     iptv_in_transcoder
-#  
-#     iptv_out_hls
-#     iptv_out_epg
-     iptv_out_multicast
-#     iptv_out_record
+    # iptv_in_archive       # TODO: save stat of last streaming
+    # iptv_in_dvb           # TODO: do by Gst
+    # iptv_in_network       # TODO: do by Gst
+    # iptv_in_transcoder    # TODO: do by Gst
+  
+    # iptv_out_hls          # TODO: do by Gst 
+#     iptv_out_epg          #
+#     iptv_out_multicast    # DONE
+#     iptv_out_record       # TODO: do by Gst
    )
 
 foreach( APP ${project_EXES} )

@@ -1,9 +1,14 @@
+#pragma onc;
 #include <iostream>
-#define PKT_SIZE     1316
-#define SOCK_BUF_SIZE  (PKT_SIZE*4000)
-#define  INPUT_PORT 3200
-#define  MEDIA_ROOT "/opt/sms/www/iptv/media/"
-#define INPUT_MULTICAST 229
+#include <gstreamermm.h>
+#include <boost/log/trivial.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/expressions.hpp>
+#include "../third_party/json.hpp"
+#include "mongo_driver.hpp"
+#include "config.hpp"
+
+using nlohmann::json;
 
 struct live_setting {
     int type_id;
@@ -13,3 +18,6 @@ struct live_setting {
 bool get_live_config(live_setting& cfg, std::string type);
 std::string get_multicast(live_setting& config, int channel_id, bool out_multicast=false);
 std::string get_content_path(int id);
+void route_add(int multicast_class, std::string nic);
+void init();
+void check_path(const std::string path);

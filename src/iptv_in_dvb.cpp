@@ -9,10 +9,7 @@
 #include <fstream>
 #include <thread>
 #include <gstreamermm.h>
-#include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
-#include "../third_party/json.hpp"
-#include "mongo_driver.hpp"
 #include "utils.hpp"
 using namespace std;
 using nlohmann::json;
@@ -70,13 +67,14 @@ void start_channel(json tuner, live_setting live_config)
             % tuner["_id"] % cfg_name % fromdvb_args ; 
     cout << cmd.str() << '\n';
     std::system(cmd.str().c_str());
+    std::system("ls -l");
 }
 int main()
 {
     vector<thread> pool;
-
     live_setting live_config;
-    Gst::init();
+
+    init();
     if(!get_live_config(live_config, "dvb")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
@@ -105,5 +103,6 @@ int main()
     }
     for(auto& t : pool)
         t.join();
+    BOOST_LOG_TRIVIAL(info) << "End!";
     return 0;
 } 

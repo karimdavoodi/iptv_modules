@@ -26,7 +26,7 @@ void Mongo::fill_defauls(){
 void Mongo::info()
 {
     std::lock_guard<std::mutex> lo(db_mutex);
-    BOOST_LOG_TRIVIAL(trace) << __func__ ;
+//    BOOST_LOG_TRIVIAL(trace) << __func__ ;
     auto dbs = client.database("iptv");
     auto cols = dbs.list_collection_names();
     for(auto col : cols){
@@ -38,7 +38,7 @@ bool Mongo::exists(std::string col_name, std::string doc)
     std::lock_guard<std::mutex> lo(db_mutex);
     auto db = client[DB_NAME];     
     
-    BOOST_LOG_TRIVIAL(trace) << __func__ ;
+//    BOOST_LOG_TRIVIAL(trace) << __func__ << " " << col_name ;
     auto result = db[col_name].count_documents(bsoncxx::from_json(doc));
     if(result > 0) return true;
     return false;
@@ -46,7 +46,7 @@ bool Mongo::exists(std::string col_name, std::string doc)
 bool Mongo::exists_id(std::string col_name, int id)
 {
     std::lock_guard<std::mutex> lo(db_mutex);
-    BOOST_LOG_TRIVIAL(trace) << __func__ << " id:" << id;
+//    BOOST_LOG_TRIVIAL(trace) << __func__ << " " << col_name << " id:" << id;
     auto db = client[DB_NAME];     
     
     auto result = db[col_name].count_documents(make_document(kvp("_id", id)));
@@ -56,7 +56,7 @@ bool Mongo::exists_id(std::string col_name, int id)
 bool Mongo::insert(std::string col, std::string doc)
 {
     std::lock_guard<std::mutex> lo(db_mutex);
-    BOOST_LOG_TRIVIAL(trace) << __func__ ;
+//    BOOST_LOG_TRIVIAL(trace) << __func__ << " " << col ;
     try{
         auto dB = client[DB_NAME];
         auto ret = dB[col].insert_one(bsoncxx::from_json(doc));
@@ -68,7 +68,7 @@ bool Mongo::insert(std::string col, std::string doc)
 bool Mongo::remove(std::string col, std::string doc)
 {
     std::lock_guard<std::mutex> lo(db_mutex);
-    BOOST_LOG_TRIVIAL(trace) << __func__ ;
+//    BOOST_LOG_TRIVIAL(trace) << __func__ << " " << col ;
     try{
         auto dB = client[DB_NAME];
         auto ret = dB[col].delete_one(bsoncxx::from_json(doc));
@@ -81,7 +81,7 @@ bool Mongo::remove(std::string col, std::string doc)
 bool Mongo::remove_by_id(std::string col, int id)
 {
     std::lock_guard<std::mutex> lo(db_mutex);
-    BOOST_LOG_TRIVIAL(trace) << __func__ << " id:" << id;
+//    BOOST_LOG_TRIVIAL(trace) << __func__ << " " << col << " id:" << id;
     try{
         auto dB = client[DB_NAME];
         auto ret = dB[col].delete_one(make_document(kvp("_id", id)));
@@ -94,7 +94,7 @@ bool Mongo::remove_by_id(std::string col, int id)
 bool Mongo::replace(std::string col, std::string filter, std::string doc)
 {
     std::lock_guard<std::mutex> lo(db_mutex);
-    BOOST_LOG_TRIVIAL(trace) << __func__ ;
+//    BOOST_LOG_TRIVIAL(trace) << __func__ << " " << col ;
     try{
         auto dB = client[DB_NAME];
         auto ret = dB[col].replace_one(bsoncxx::from_json(filter) ,bsoncxx::from_json(doc));
@@ -108,7 +108,7 @@ bool Mongo::replace(std::string col, std::string filter, std::string doc)
 bool Mongo::replace_by_id(std::string col, int id, std::string doc)
 {
     std::lock_guard<std::mutex> lo(db_mutex);
-    BOOST_LOG_TRIVIAL(trace) << __func__ << " id:" << id;
+//    BOOST_LOG_TRIVIAL(trace) << __func__ << " " << col << " id:" << id;
     try{
         auto dB = client[DB_NAME];
         auto ret = dB[col].replace_one(make_document(kvp("_id", id)) ,
@@ -125,7 +125,7 @@ std::string Mongo::find( std::string col, std::string doc)
     std::lock_guard<std::mutex> lo(db_mutex);
     auto dB = client[DB_NAME];     
     
-    BOOST_LOG_TRIVIAL(trace) <<  __func__;
+//    BOOST_LOG_TRIVIAL(trace) <<  __func__<< " " << col ;
 
     auto result = dB[col].find(bsoncxx::from_json(doc));
     std::string result_str = "";
@@ -144,7 +144,7 @@ std::string Mongo::find_id(std::string col, int id)
     std::lock_guard<std::mutex> lo(db_mutex);
     auto dB = client[DB_NAME];     
    
-    BOOST_LOG_TRIVIAL(trace) << __func__  << " col:" << col << " id:" << id;
+//    BOOST_LOG_TRIVIAL(trace) << __func__  << " col:" << col << " id:" << id;
     try{
         bsoncxx::document::view  v;
         auto result = dB[col].find(make_document(kvp("_id", id)));
@@ -164,7 +164,7 @@ std::string Mongo::find_id_range(std::string col, int begin, int end)
     std::lock_guard<std::mutex> lo(db_mutex);
     auto dB = client[DB_NAME];     
    
-    BOOST_LOG_TRIVIAL(trace) << __func__ << " begin:" << begin << " end:" << end;
+//    BOOST_LOG_TRIVIAL(trace) << __func__ << " begin:" << begin << " end:" << end;
     try{
         bsoncxx::document::view  v;
         auto result = dB[col].find(v);
@@ -198,7 +198,7 @@ std::string Mongo::find_time_id_range(std::string col,
     std::lock_guard<std::mutex> lo(db_mutex);
     auto dB = client[DB_NAME];     
    
-    BOOST_LOG_TRIVIAL(trace) << __func__ << " begin:" << begin << " end:" << end;
+//    BOOST_LOG_TRIVIAL(trace) << __func__ << " begin:" << begin << " end:" << end;
     try{
         auto result = dB[col].find(
                 make_document(kvp("time", 

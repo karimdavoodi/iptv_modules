@@ -1,12 +1,11 @@
-#include "gstreamermm/element.h"
-#include "gstreamermm/pipeline.h"
 #include <exception>
-#include <boost/log/trivial.hpp>
 #include <gstreamermm.h>
 #include <glibmm.h>
 #include <thread>
 #include <iostream>
-#define TIME_INTERVAL_STATE_SAVE 3000  // msec
+#include <boost/log/trivial.hpp>
+#include "config.hpp"
+
 /*
  
             bin ---> rndbuffersize ---> udpsink
@@ -95,6 +94,10 @@ void gst_task(string url, string multicast_addr, int port)
         pipeline->get_bus()->add_watch([loop](const RefPtr<Gst::Bus>&, 
                                              const RefPtr<Gst::Message>& msg){
                 switch(msg->get_message_type()){
+                    case Gst::MESSAGE_ERROR:
+                        BOOST_LOG_TRIVIAL(warning) << 
+                                RefPtr<Gst::MessageError>::cast_static(msg)->parse_debug();
+                        break;
                     case Gst::MESSAGE_EOS:
                         loop->quit();
                         break;

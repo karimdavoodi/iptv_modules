@@ -111,32 +111,6 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named iptv_in_dvb
-
-# Build rule for target.
-iptv_in_dvb: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 iptv_in_dvb
-.PHONY : iptv_in_dvb
-
-# fast build rule for target.
-iptv_in_dvb/fast:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/build
-.PHONY : iptv_in_dvb/fast
-
-#=============================================================================
-# Target rules for targets named iptv_in_archive
-
-# Build rule for target.
-iptv_in_archive: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 iptv_in_archive
-.PHONY : iptv_in_archive
-
-# fast build rule for target.
-iptv_in_archive/fast:
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/build
-.PHONY : iptv_in_archive/fast
-
-#=============================================================================
 # Target rules for targets named iptv_in_network
 
 # Build rule for target.
@@ -148,127 +122,6 @@ iptv_in_network: cmake_check_build_system
 iptv_in_network/fast:
 	$(MAKE) -f CMakeFiles/iptv_in_network.dir/build.make CMakeFiles/iptv_in_network.dir/build
 .PHONY : iptv_in_network/fast
-
-#=============================================================================
-# Target rules for targets named iptv_out_multicast
-
-# Build rule for target.
-iptv_out_multicast: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 iptv_out_multicast
-.PHONY : iptv_out_multicast
-
-# fast build rule for target.
-iptv_out_multicast/fast:
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/build
-.PHONY : iptv_out_multicast/fast
-
-src/iptv_in_archive.o: src/iptv_in_archive.cpp.o
-
-.PHONY : src/iptv_in_archive.o
-
-# target to build an object file
-src/iptv_in_archive.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/iptv_in_archive.cpp.o
-.PHONY : src/iptv_in_archive.cpp.o
-
-src/iptv_in_archive.i: src/iptv_in_archive.cpp.i
-
-.PHONY : src/iptv_in_archive.i
-
-# target to preprocess a source file
-src/iptv_in_archive.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/iptv_in_archive.cpp.i
-.PHONY : src/iptv_in_archive.cpp.i
-
-src/iptv_in_archive.s: src/iptv_in_archive.cpp.s
-
-.PHONY : src/iptv_in_archive.s
-
-# target to generate assembly for a file
-src/iptv_in_archive.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/iptv_in_archive.cpp.s
-.PHONY : src/iptv_in_archive.cpp.s
-
-src/iptv_in_archive_gst.o: src/iptv_in_archive_gst.cpp.o
-
-.PHONY : src/iptv_in_archive_gst.o
-
-# target to build an object file
-src/iptv_in_archive_gst.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/iptv_in_archive_gst.cpp.o
-.PHONY : src/iptv_in_archive_gst.cpp.o
-
-src/iptv_in_archive_gst.i: src/iptv_in_archive_gst.cpp.i
-
-.PHONY : src/iptv_in_archive_gst.i
-
-# target to preprocess a source file
-src/iptv_in_archive_gst.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/iptv_in_archive_gst.cpp.i
-.PHONY : src/iptv_in_archive_gst.cpp.i
-
-src/iptv_in_archive_gst.s: src/iptv_in_archive_gst.cpp.s
-
-.PHONY : src/iptv_in_archive_gst.s
-
-# target to generate assembly for a file
-src/iptv_in_archive_gst.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/iptv_in_archive_gst.cpp.s
-.PHONY : src/iptv_in_archive_gst.cpp.s
-
-src/iptv_in_dvb.o: src/iptv_in_dvb.cpp.o
-
-.PHONY : src/iptv_in_dvb.o
-
-# target to build an object file
-src/iptv_in_dvb.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/iptv_in_dvb.cpp.o
-.PHONY : src/iptv_in_dvb.cpp.o
-
-src/iptv_in_dvb.i: src/iptv_in_dvb.cpp.i
-
-.PHONY : src/iptv_in_dvb.i
-
-# target to preprocess a source file
-src/iptv_in_dvb.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/iptv_in_dvb.cpp.i
-.PHONY : src/iptv_in_dvb.cpp.i
-
-src/iptv_in_dvb.s: src/iptv_in_dvb.cpp.s
-
-.PHONY : src/iptv_in_dvb.s
-
-# target to generate assembly for a file
-src/iptv_in_dvb.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/iptv_in_dvb.cpp.s
-.PHONY : src/iptv_in_dvb.cpp.s
-
-src/iptv_in_dvb_gst.o: src/iptv_in_dvb_gst.cpp.o
-
-.PHONY : src/iptv_in_dvb_gst.o
-
-# target to build an object file
-src/iptv_in_dvb_gst.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/iptv_in_dvb_gst.cpp.o
-.PHONY : src/iptv_in_dvb_gst.cpp.o
-
-src/iptv_in_dvb_gst.i: src/iptv_in_dvb_gst.cpp.i
-
-.PHONY : src/iptv_in_dvb_gst.i
-
-# target to preprocess a source file
-src/iptv_in_dvb_gst.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/iptv_in_dvb_gst.cpp.i
-.PHONY : src/iptv_in_dvb_gst.cpp.i
-
-src/iptv_in_dvb_gst.s: src/iptv_in_dvb_gst.cpp.s
-
-.PHONY : src/iptv_in_dvb_gst.s
-
-# target to generate assembly for a file
-src/iptv_in_dvb_gst.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/iptv_in_dvb_gst.cpp.s
-.PHONY : src/iptv_in_dvb_gst.cpp.s
 
 src/iptv_in_network.o: src/iptv_in_network.cpp.o
 
@@ -324,70 +177,13 @@ src/iptv_in_network_gst.cpp.s:
 	$(MAKE) -f CMakeFiles/iptv_in_network.dir/build.make CMakeFiles/iptv_in_network.dir/src/iptv_in_network_gst.cpp.s
 .PHONY : src/iptv_in_network_gst.cpp.s
 
-src/iptv_out_multicast.o: src/iptv_out_multicast.cpp.o
-
-.PHONY : src/iptv_out_multicast.o
-
-# target to build an object file
-src/iptv_out_multicast.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/iptv_out_multicast.cpp.o
-.PHONY : src/iptv_out_multicast.cpp.o
-
-src/iptv_out_multicast.i: src/iptv_out_multicast.cpp.i
-
-.PHONY : src/iptv_out_multicast.i
-
-# target to preprocess a source file
-src/iptv_out_multicast.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/iptv_out_multicast.cpp.i
-.PHONY : src/iptv_out_multicast.cpp.i
-
-src/iptv_out_multicast.s: src/iptv_out_multicast.cpp.s
-
-.PHONY : src/iptv_out_multicast.s
-
-# target to generate assembly for a file
-src/iptv_out_multicast.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/iptv_out_multicast.cpp.s
-.PHONY : src/iptv_out_multicast.cpp.s
-
-src/iptv_out_multicast_gst.o: src/iptv_out_multicast_gst.cpp.o
-
-.PHONY : src/iptv_out_multicast_gst.o
-
-# target to build an object file
-src/iptv_out_multicast_gst.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/iptv_out_multicast_gst.cpp.o
-.PHONY : src/iptv_out_multicast_gst.cpp.o
-
-src/iptv_out_multicast_gst.i: src/iptv_out_multicast_gst.cpp.i
-
-.PHONY : src/iptv_out_multicast_gst.i
-
-# target to preprocess a source file
-src/iptv_out_multicast_gst.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/iptv_out_multicast_gst.cpp.i
-.PHONY : src/iptv_out_multicast_gst.cpp.i
-
-src/iptv_out_multicast_gst.s: src/iptv_out_multicast_gst.cpp.s
-
-.PHONY : src/iptv_out_multicast_gst.s
-
-# target to generate assembly for a file
-src/iptv_out_multicast_gst.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/iptv_out_multicast_gst.cpp.s
-.PHONY : src/iptv_out_multicast_gst.cpp.s
-
 src/mongo_driver.o: src/mongo_driver.cpp.o
 
 .PHONY : src/mongo_driver.o
 
 # target to build an object file
 src/mongo_driver.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/mongo_driver.cpp.o
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/mongo_driver.cpp.o
 	$(MAKE) -f CMakeFiles/iptv_in_network.dir/build.make CMakeFiles/iptv_in_network.dir/src/mongo_driver.cpp.o
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/mongo_driver.cpp.o
 .PHONY : src/mongo_driver.cpp.o
 
 src/mongo_driver.i: src/mongo_driver.cpp.i
@@ -396,10 +192,7 @@ src/mongo_driver.i: src/mongo_driver.cpp.i
 
 # target to preprocess a source file
 src/mongo_driver.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/mongo_driver.cpp.i
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/mongo_driver.cpp.i
 	$(MAKE) -f CMakeFiles/iptv_in_network.dir/build.make CMakeFiles/iptv_in_network.dir/src/mongo_driver.cpp.i
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/mongo_driver.cpp.i
 .PHONY : src/mongo_driver.cpp.i
 
 src/mongo_driver.s: src/mongo_driver.cpp.s
@@ -408,10 +201,7 @@ src/mongo_driver.s: src/mongo_driver.cpp.s
 
 # target to generate assembly for a file
 src/mongo_driver.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/mongo_driver.cpp.s
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/mongo_driver.cpp.s
 	$(MAKE) -f CMakeFiles/iptv_in_network.dir/build.make CMakeFiles/iptv_in_network.dir/src/mongo_driver.cpp.s
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/mongo_driver.cpp.s
 .PHONY : src/mongo_driver.cpp.s
 
 src/utils.o: src/utils.cpp.o
@@ -420,10 +210,7 @@ src/utils.o: src/utils.cpp.o
 
 # target to build an object file
 src/utils.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/utils.cpp.o
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/utils.cpp.o
 	$(MAKE) -f CMakeFiles/iptv_in_network.dir/build.make CMakeFiles/iptv_in_network.dir/src/utils.cpp.o
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/utils.cpp.o
 .PHONY : src/utils.cpp.o
 
 src/utils.i: src/utils.cpp.i
@@ -432,10 +219,7 @@ src/utils.i: src/utils.cpp.i
 
 # target to preprocess a source file
 src/utils.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/utils.cpp.i
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/utils.cpp.i
 	$(MAKE) -f CMakeFiles/iptv_in_network.dir/build.make CMakeFiles/iptv_in_network.dir/src/utils.cpp.i
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/utils.cpp.i
 .PHONY : src/utils.cpp.i
 
 src/utils.s: src/utils.cpp.s
@@ -444,10 +228,7 @@ src/utils.s: src/utils.cpp.s
 
 # target to generate assembly for a file
 src/utils.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_in_dvb.dir/build.make CMakeFiles/iptv_in_dvb.dir/src/utils.cpp.s
-	$(MAKE) -f CMakeFiles/iptv_in_archive.dir/build.make CMakeFiles/iptv_in_archive.dir/src/utils.cpp.s
 	$(MAKE) -f CMakeFiles/iptv_in_network.dir/build.make CMakeFiles/iptv_in_network.dir/src/utils.cpp.s
-	$(MAKE) -f CMakeFiles/iptv_out_multicast.dir/build.make CMakeFiles/iptv_out_multicast.dir/src/utils.cpp.s
 .PHONY : src/utils.cpp.s
 
 # Help Target
@@ -457,35 +238,14 @@ help:
 	@echo "... clean"
 	@echo "... depend"
 	@echo "... rebuild_cache"
-	@echo "... iptv_in_dvb"
-	@echo "... edit_cache"
-	@echo "... iptv_in_archive"
 	@echo "... iptv_in_network"
-	@echo "... iptv_out_multicast"
-	@echo "... src/iptv_in_archive.o"
-	@echo "... src/iptv_in_archive.i"
-	@echo "... src/iptv_in_archive.s"
-	@echo "... src/iptv_in_archive_gst.o"
-	@echo "... src/iptv_in_archive_gst.i"
-	@echo "... src/iptv_in_archive_gst.s"
-	@echo "... src/iptv_in_dvb.o"
-	@echo "... src/iptv_in_dvb.i"
-	@echo "... src/iptv_in_dvb.s"
-	@echo "... src/iptv_in_dvb_gst.o"
-	@echo "... src/iptv_in_dvb_gst.i"
-	@echo "... src/iptv_in_dvb_gst.s"
+	@echo "... edit_cache"
 	@echo "... src/iptv_in_network.o"
 	@echo "... src/iptv_in_network.i"
 	@echo "... src/iptv_in_network.s"
 	@echo "... src/iptv_in_network_gst.o"
 	@echo "... src/iptv_in_network_gst.i"
 	@echo "... src/iptv_in_network_gst.s"
-	@echo "... src/iptv_out_multicast.o"
-	@echo "... src/iptv_out_multicast.i"
-	@echo "... src/iptv_out_multicast.s"
-	@echo "... src/iptv_out_multicast_gst.o"
-	@echo "... src/iptv_out_multicast_gst.i"
-	@echo "... src/iptv_out_multicast_gst.s"
 	@echo "... src/mongo_driver.o"
 	@echo "... src/mongo_driver.i"
 	@echo "... src/mongo_driver.s"

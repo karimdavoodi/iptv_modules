@@ -5,13 +5,8 @@
 #include <iostream>
 #include <vector>
 #include <thread>
-#include <gstreamermm.h>
-#include <boost/log/trivial.hpp>
-#include "../third_party/json.hpp"
-#include "mongo_driver.hpp"
 #include "utils.hpp"
 using namespace std;
-using nlohmann::json;
 void gst_task(string media_path, string multicast_addr, int port);
 
 bool time_to_play(bool schedule, json& media)
@@ -63,7 +58,8 @@ int main()
 {
     vector<thread> pool;
     live_setting live_config;
-    Gst::init();
+    
+    init();
     if(!get_live_config(live_config, "archive")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
