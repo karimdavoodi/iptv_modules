@@ -1,4 +1,5 @@
 // TODO: implement save stat of players for resume in restart
+#include <boost/filesystem/operations.hpp>
 #include <boost/format/format_fwd.hpp>
 #include <chrono>
 #include <cstdlib>
@@ -16,35 +17,7 @@ using nlohmann::json;
 
 void start_channel(json tuner, live_setting live_config)
 {
-    /*
-        "_id": 1,
-        "name": "", 
-        "active": False,
-        "is_dvbt": True, 
-        "freq": 1, 
-        "errrate": "", 
-        "pol": "", 
-        "symrate": 1,
-        "switch": 1, 
-        "channels":[
-            {
-            "_id": 2,
-            "active": True,
-            "name": "IRIB TV1", 
-            "dvb_id": 1, 
-            "is_dvbt": True, 
-            "sid": 101, 
-            "aid": 1011, 
-            "vid": 101,
-            "freq": 602000, 
-            "pol": 1, 
-            "scramble": False, 
-            "symb": 1
-            }
-        ]
-
-     */
-    BOOST_LOG_TRIVIAL(info) << tuner.dump(4);
+    BOOST_LOG_TRIVIAL(trace) << tuner.dump(4);
     string fromdvb_args = "";
     if (tuner["is_dvbt"])   
         fromdvb_args = "-f" + to_string(tuner["freq"]) + "000";
@@ -61,13 +34,15 @@ void start_channel(json tuner, live_setting live_config)
         auto addr = boost::format("%s:%d@127.0.0.1  1   %d\n") 
             % multicast % INPUT_PORT % chan["sid"];
         cfg << addr.str(); 
+        BOOST_LOG_TRIVIAL(info) << "DVB:" << tuner["_id"] << " chan:" 
+            << chan["name"]  << " -> " << multicast; 
     }
     cfg.close();
-    auto cmd = boost::format("/opt/sms/bin/fromdvb -WYCUluqqqq -t0 -a%d -c%s %s")
+    auto cmd = boost::format("/opt/sms/bin/fromdvb -WYCUlu -t0 -a%d -c%s %s")
             % tuner["_id"] % cfg_name % fromdvb_args ; 
-    cout << cmd.str() << '\n';
-    std::system(cmd.str().c_str());
-    std::system("ls -l");
+    string cmd_str = cmd.str();
+    BOOST_LOG_TRIVIAL(info) <<  cmd_str;
+    system(cmd_str.c_str());
 }
 int main()
 {
@@ -98,11 +73,17 @@ int main()
     }
     for(auto& tuner : tuners ){
         if(!tuner["channels"].is_null()){
-            pool.emplace_back(start_channel, tuner, live_config);
+            string dvb_path = "/dev/dvb/adapter" + to_string(tuner["_id"]); 
+            if(boost::filesystem::exists(dvb_path)){
+                pool.emplace_back(start_channel, tuner, live_config);
+            }else{
+                BOOST_LOG_TRIVIAL(error) << "DVB Not found: "<< dvb_path;
+            }
         }
     }
-    for(auto& t : pool)
+    for(auto& t : pool){
         t.join();
+    }
     BOOST_LOG_TRIVIAL(info) << "End!";
     return 0;
 } 

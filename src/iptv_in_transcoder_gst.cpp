@@ -55,27 +55,8 @@ void gst_task(string media_path, string multicast_addr, int port)
         udpsink->set_property("port", port);
         udpsink->set_property("sync", 1);
 
-        pipeline->get_bus()->add_watch([loop](const RefPtr<Gst::Bus>&, 
-                                             const RefPtr<Gst::Message>& msg){
-                //BOOST_LOG_TRIVIAL(trace) << msg->get_message_type();
-                switch(msg->get_message_type()){
-                    case Gst::MESSAGE_ERROR:
-                        BOOST_LOG_TRIVIAL(warning) << 
-                                RefPtr<Gst::MessageError>::cast_static(msg)->parse_debug();
-                        break;
-                    case Gst::MESSAGE_EOS:
-                        loop->quit();
-                        break;
-                    default: break;
-                }
-                return true;
-                });
-        m_timeout_connection = Glib::signal_timeout().connect([&]()->bool {
-                gint64 cur;
-                pipeline->query_position(Gst::FORMAT_TIME, cur); 
-                BOOST_LOG_TRIVIAL(trace) << cur/1000000;    
-                return true;
-                }, TIME_INTERVAL_STATE_SAVE);
+        PIPLINE_WATCH;
+        PIPLINE_POSITION;
 
         pipeline->set_state(Gst::STATE_PLAYING);
         loop->run();

@@ -1,4 +1,4 @@
-#include <boost/filesystem/operations.hpp>
+#include <boost/log/core/record_view.hpp>
 #include <exception>    
 #include <iostream>
 #include <netinet/in.h>
@@ -7,22 +7,47 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <boost/filesystem.hpp>
-
+/*
+#include <boost/log/sinks/syslog_backend.hpp>
+#include <boost/log/sinks/sync_frontend.hpp>
+#include <boost/log/core.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
+*/
 #include "utils.hpp"
 using namespace std;
-void init()
+void boost_log_init()
 {
-    if(geteuid() != 0 ){
-        BOOST_LOG_TRIVIAL(error) << "Must run by root";
-        exit(-1);
-    }
-    Gst::init();
+    /*
+    typedef boost::log::sinks::synchronous_sink< boost::log::sinks::syslog_backend > sink_t;
+    boost::shared_ptr< boost::log::core > core = boost::log::core::get();
+    boost::shared_ptr< boost::log::sinks::syslog_backend > backend(
+            new boost::log::sinks::syslog_backend(
+        boost::log::keywords::facility = boost::log::sinks::syslog::local0
+    ));
+
+    // Set the straightforward level translator for the "Severity" attribute of type int
+    backend->set_severity_mapper(
+            boost::log::sinks::syslog::direct_severity_mapping< int >("Severity"));
+    core->add_sink(boost::make_shared<sink_t>(backend));
+    */
     // Set Debug level
+    
     json system_location = json::parse(Mongo::find_id("system_location",1));
     int debug_level = system_location["debug"];
     debug_level = abs(5-debug_level);
     boost::log::core::get()->set_filter(
         boost::log::trivial::severity >= debug_level);
+
+}
+void init()
+{
+    if( geteuid() != 0 ){
+        BOOST_LOG_TRIVIAL(error) << "Must run by root";
+        exit(-1);
+    }
+    boost_log_init();
+    Gst::init();
     // Add internal multicast net to localhost 
     route_add(INPUT_MULTICAST, "lo");
 }
