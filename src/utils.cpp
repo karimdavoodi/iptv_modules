@@ -8,17 +8,46 @@
 #include <sys/types.h>
 #include <boost/filesystem.hpp>
 /*
-#include <boost/log/sinks/syslog_backend.hpp>
-#include <boost/log/sinks/sync_frontend.hpp>
+#include <fstream>
+#include <boost/smart_ptr/shared_ptr.hpp>
+#include <boost/smart_ptr/make_shared_object.hpp>
 #include <boost/log/core.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/sinks/sync_frontend.hpp>
+#include <boost/log/sinks/text_ostream_backend.hpp>
+#include <boost/log/sources/severity_logger.hpp>
+#include <boost/log/sources/record_ostream.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+namespace logging = boost::log;
+namespace src = boost::log::sources;
+namespace expr = boost::log::expressions;
+namespace sinks = boost::log::sinks;
+namespace keywords = boost::log::keywords;
 */
 #include "utils.hpp"
 using namespace std;
+
 void boost_log_init()
 {
+
     /*
+    typedef sinks::synchronous_sink< sinks::text_ostream_backend > text_sink;
+    boost::shared_ptr< text_sink > sink = boost::make_shared< text_sink >();
+
+    sink->locked_backend()->add_stream(
+        boost::make_shared< std::ofstream >("sample.log"));
+
+    sink->set_formatter
+    (
+        expr::format("%1%: <%2%> %3%")
+            % expr::attr< unsigned int >("LineID")
+            % logging::trivial::severity
+            % expr::smessage
+    );
+
+    logging::core::get()->add_sink(sink);
+
     typedef boost::log::sinks::synchronous_sink< boost::log::sinks::syslog_backend > sink_t;
     boost::shared_ptr< boost::log::core > core = boost::log::core::get();
     boost::shared_ptr< boost::log::sinks::syslog_backend > backend(
@@ -79,9 +108,7 @@ bool get_live_config(live_setting& cfg, string type)
             break;
         }
     } 
-    string addr = net["multicastBase"];
-    string num1 = addr.substr(0, addr.find('.'));
-    cfg.multicast_class = std::stoi(num1);
+    cfg.multicast_class = net["multicastBase"];
     cfg.type_id = live_input_type_id(type);
     BOOST_LOG_TRIVIAL(trace) 
         << "Live config:  "
@@ -99,6 +126,7 @@ string get_multicast(live_setting& config, int channel_id, bool out_multicast)
 {
     uint32_t address = 0;
     address  = out_multicast ? config.multicast_class : INPUT_MULTICAST ;
+    if(address < 224 || address > 239) address = 239;
     address += config.type_id << 8;
     address += (channel_id & 0x0000ff00) << 16;
     address += (channel_id & 0x000000ff) << 24;

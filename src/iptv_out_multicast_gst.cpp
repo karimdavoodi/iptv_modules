@@ -19,7 +19,7 @@ void gst_task(string  in_multicast, string out_multicast)
     
     try{
         in_multicast += ":" + to_string(INPUT_PORT);
-        BOOST_LOG_TRIVIAL(trace) 
+        BOOST_LOG_TRIVIAL(info) 
             << "Start " 
             << in_multicast 
             << " --> " 

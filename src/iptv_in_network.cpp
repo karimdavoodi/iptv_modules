@@ -1,4 +1,3 @@
-// TODO: implement save stat of players for resume in restart
 #include <chrono>
 #include <ctime>
 #include <exception>
@@ -8,7 +7,7 @@
 #include <boost/format.hpp>
 #include "utils.hpp"
 using namespace std;
-void gst_task(string url, string multicast_addr, int port);
+void gst_task(string in_url, string out_multicast, int port);
 
 void start_channel(string channel_str, live_setting live_config)
 {
@@ -24,6 +23,7 @@ void start_channel(string channel_str, live_setting live_config)
     }
     auto out_multicast = get_multicast(live_config, channel["_id"]);
 
+    /*
     // TODO: do by Gst
     auto cmd = boost::format("%s -i '%s' -codec copy "
             " -f mpegts 'udp://%s:%d?packesize=1316' ")
@@ -31,9 +31,8 @@ void start_channel(string channel_str, live_setting live_config)
 
     BOOST_LOG_TRIVIAL(info) << cmd.str();
     std::system(cmd.str().c_str());
-
-
-    //gst_task(channel["url"], out_multicast, INPUT_PORT);
+    */
+    gst_task(channel["url"], out_multicast, INPUT_PORT);
 }
 int main()
 {

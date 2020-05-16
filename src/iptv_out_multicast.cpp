@@ -10,6 +10,7 @@ void gst_task(string in_multicast, string out_multicast);
 
 void start_channel(json channel, live_setting live_config)
 {
+    BOOST_LOG_TRIVIAL(info) << "Start Multicast for " << channel["name"];
     live_config.type_id = channel["inputType"];
     auto in_multicast = get_multicast(live_config, channel["inputId"]);
     auto out_multicast = get_multicast(live_config, channel["_id"], true);
