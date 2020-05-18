@@ -1,4 +1,3 @@
-// TODO: implement save stat of players for resume in restart
 #include <chrono>
 #include <ctime>
 #include <exception>
@@ -66,7 +65,8 @@ int main()
     }
     json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
-        if(chan["active"] == true && chan["inputType"] == live_config.type_id){
+        if(chan["active"].get<bool>() == true && 
+                chan["inputType"].get<int>() == live_config.type_id){
             string archive = Mongo::find_id("live_inputs_archive", chan["inputId"]);
             pool.emplace_back(start_channel, archive, live_config);
         }

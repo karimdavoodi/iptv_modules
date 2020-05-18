@@ -71,14 +71,18 @@ void boost_log_init()
 }
 void init()
 {
-    if( geteuid() != 0 ){
-        BOOST_LOG_TRIVIAL(error) << "Must run by root";
-        exit(-1);
+    try{
+        if( geteuid() != 0 ){
+            BOOST_LOG_TRIVIAL(error) << "Must run by root";
+            exit(-1);
+        }
+        boost_log_init();
+        Gst::init();
+        // Add internal multicast net to localhost 
+        route_add(INPUT_MULTICAST, "lo");
+    }catch(std::exception& e){
+        BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();
     }
-    boost_log_init();
-    Gst::init();
-    // Add internal multicast net to localhost 
-    route_add(INPUT_MULTICAST, "lo");
 }
 void route_add(int multicast_class, string nic)
 {
@@ -88,39 +92,53 @@ void route_add(int multicast_class, string nic)
     BOOST_LOG_TRIVIAL(info) << cmd;
     std::system(cmd.c_str());
 }
-int live_input_type_id(const string type)
+void live_input_type_id(live_setting& cfg, const string type)
 {
-    json input_types = json::parse(Mongo::find("live_inputs_types", "{}"));
-    for(auto& t : input_types){
-        if(t["name"] == type){
-            return t["_id"];
+    try{
+        json input_types = json::parse(Mongo::find("live_inputs_types", "{}"));
+        for(auto& t : input_types){
+            if(t["name"] == type)
+                cfg.type_id =  t["_id"];
+            if(t["name"] == "virtual_dvb")
+                cfg.virtual_dvb_id =  t["_id"];
+            if(t["name"] == "virtual_net")
+                cfg.virtual_net_id =  t["_id"];
         }
+    }catch(std::exception& e){
+        BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();
     }
-    return -1;
 }
 bool get_live_config(live_setting& cfg, string type)
 {
-    json net = json::parse(Mongo::find_id("system_network",1));
-    int m_id = net["multicastInterface"]; 
-    for(auto& iface : net["interfaces"]){
-        if(iface["_id"] == m_id){
-            cfg.multicast_iface = iface["name"];
-            break;
-        }
-    } 
-    cfg.multicast_class = net["multicastBase"];
-    cfg.type_id = live_input_type_id(type);
-    BOOST_LOG_TRIVIAL(trace) 
-        << "Live config:  "
-        << " multicast_class:" << cfg.multicast_class 
-        << " multicast_iface:" << cfg.multicast_iface 
-        << " type_id:" << cfg.type_id;
-    if(cfg.type_id == -1 || 
-            cfg.multicast_class > 254 ||
-            cfg.multicast_class < 224 ||
-            cfg.multicast_iface.size() < 1
-            ) return false;
-    return true;
+    try{
+        live_input_type_id(cfg, type);
+        json net = json::parse(Mongo::find_id("system_network",1));
+        cfg.multicast_class = net["multicastBase"];
+        int m_id = net["multicastInterface"]; 
+        for(auto& iface : net["interfaces"]){
+            if(iface["_id"] == m_id){
+                cfg.multicast_iface = iface["name"];
+                break;
+            }
+        } 
+        BOOST_LOG_TRIVIAL(trace) 
+            << "Live config:  "
+            << " multicast_class:" << cfg.multicast_class 
+            << " multicast_iface:" << cfg.multicast_iface 
+            << " type_id:" << cfg.type_id;
+        if(cfg.type_id == -1 || 
+                cfg.multicast_class > 254 ||
+                cfg.multicast_class < 224 ||
+                cfg.multicast_iface.size() < 1){
+
+            BOOST_LOG_TRIVIAL(error)  << "Error in " << __func__;
+            return false;
+        } 
+        return true;
+    }catch(std::exception& e){
+        BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();
+        return false;
+    }
 }
 string get_multicast(live_setting& config, int channel_id, bool out_multicast)  
 {
@@ -143,26 +161,31 @@ string get_multicast(live_setting& config, int channel_id, bool out_multicast)
 }
 string get_content_path(int id)
 {
-    json content_info = json::parse(Mongo::find_id("storage_contents_info",id));
-    if(content_info["type"].is_null()){
-        BOOST_LOG_TRIVIAL(info) << "Invalid content info by id " << id;
+    try{
+        json content_info = json::parse(Mongo::find_id("storage_contents_info",id));
+        if(content_info["type"].is_null()){
+            BOOST_LOG_TRIVIAL(info) << "Invalid content info by id " << id;
+            return "";
+        }
+        json content_type = json::parse(Mongo::find_id("storage_contents_types",
+                    content_info["type"]));
+        json content_format = json::parse(Mongo::find_id("storage_contents_formats",
+                    content_info["format"]));
+        BOOST_LOG_TRIVIAL(trace) << content_info  << '\n'
+            << content_type << '\n'
+            << content_format << '\n';
+        string path = string(MEDIA_ROOT);
+        path += content_type["name"];
+        path +=  "/";
+        path += to_string(id);
+        path += ".";
+        path += content_format["name"];
+        BOOST_LOG_TRIVIAL(trace) << "Media Path:" << path;
+        return path;
+    }catch(std::exception& e){
+        BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();
         return "";
     }
-    json content_type = json::parse(Mongo::find_id("storage_contents_types",
-                content_info["type"]));
-    json content_format = json::parse(Mongo::find_id("storage_contents_formats",
-                content_info["format"]));
-    BOOST_LOG_TRIVIAL(trace) << content_info  << '\n'
-        << content_type << '\n'
-        << content_format << '\n';
-    string path = string(MEDIA_ROOT);
-    path += content_type["name"];
-    path +=  "/";
-    path += to_string(id);
-    path += ".";
-    path += content_format["name"];
-    BOOST_LOG_TRIVIAL(trace) << "Media Path:" << path;
-    return path;
 }
 void check_path(const std::string path)
 {

@@ -9,14 +9,12 @@
 #include <glibmm.h>
 #include <boost/log/trivial.hpp>
 #include "config.hpp"
+#include "gst/gstmessage.h"
 #include "utils.hpp"
 using namespace std;
 /*
    gst-launch-1.0 -v udpsrc uri=udp://229.2.0.1:3200 ! tsparse ! fakesink
    */
-struct DayTime {
-    int hour, minute, second;
-} current_time;
 
 struct Event {
     string name;
@@ -26,6 +24,9 @@ struct Event {
 };
 map<int, Event> day_eit;
 
+struct DayTime {
+    int hour, minute, second;
+};
 int gst_date_to_int(GstDateTime* date)
 {
     int n = 0;
@@ -50,6 +51,8 @@ string gst_date_to_str(GstDateTime* date)
     }
     return ret;
 }
+#if 0
+DayTime current_time;
 void dump_tdt (GstMpegtsSection * section)
 {
     GstDateTime *date = gst_mpegts_section_get_tdt (section);
@@ -58,7 +61,6 @@ void dump_tdt (GstMpegtsSection * section)
         gst_date_time_unref (date);
     }
 }
-/*
 void dump_tot (GstMpegtsSection * section)
 {
     const GstMpegtsTOT *tot = gst_mpegts_section_get_tot (section);
@@ -69,6 +71,7 @@ void dump_tot (GstMpegtsSection * section)
     }
 }
 */
+#endif
 void dump_descriptors (GstMpegtsEITEvent *event)
 {
     GPtrArray *descriptors = event->descriptors;
@@ -100,8 +103,7 @@ void dump_eit(GstMpegtsSection *sec)
         BOOST_LOG_TRIVIAL(warning) << "Can't parse mpegts EIT";
         return;
     } 
-    /*
-    BOOST_LOG_TRIVIAL(info) << "EIT:"
+    BOOST_LOG_TRIVIAL(trace) << "EIT:"
         << " section_id " << sec->subtable_extension
         << " transport_stream_id " << eit->transport_stream_id
         << " original_network_id " << eit->original_network_id
@@ -109,8 +111,7 @@ void dump_eit(GstMpegtsSection *sec)
         << " last_table_id " << eit->last_table_id
         << " actual_stream " << (eit->actual_stream ? "true" : "false") 
         << " present_following " << (eit->present_following ? "TRUE" : "FALSE");
-    */
-    gst_mpegts_section_unref (sec);
+
     int len = eit->events->len;
     BOOST_LOG_TRIVIAL(trace) << "Event number:" << len;
     for (int i = 0; i < len; i++) {
@@ -124,6 +125,8 @@ void dump_eit(GstMpegtsSection *sec)
             << " duration:" << event->duration;
         dump_descriptors (event);
     }
+    //g_object_unref(GST_OBJECT(eit));
+    
 }
 void channel_epg_update(map<int, Event>& day_eit, int channel_id)
 {
@@ -182,34 +185,37 @@ void gst_task(string in_multicast, int port, int channel_id)
         pipeline->get_bus()->add_watch([loop](const RefPtr<Gst::Bus>&, 
                     const RefPtr<Gst::Message>& msg){
                 BOOST_LOG_TRIVIAL(trace) 
-                << "Got Msg: " << msg->get_message_type()
-                << " From:  " << msg->get_source()->get_name()
-                << " Struct: " <<  msg->get_structure().to_string();
+                    << "Got Msg: " << msg->get_message_type()
+                    << " From:  " << msg->get_source()->get_name()
+                    << " Struct: " <<  msg->get_structure().to_string();
                 GstMessage *m = msg->gobj();
                 GstMpegtsSection *sec;
                 switch(msg->get_message_type()){
-                case Gst::MESSAGE_ELEMENT:
-                sec = gst_message_parse_mpegts_section (m);
-                if(sec == NULL){
-                BOOST_LOG_TRIVIAL(warning) << "Can't parse mpegts section";
-                return true;
-                }
-                if(sec->section_type == GST_MPEGTS_SECTION_EIT)
-                    dump_eit(sec); 
-                //if(sec->section_type == GST_MPEGTS_SECTION_TOT)
-                //    dump_tot(sec); 
-                if(sec->section_type == GST_MPEGTS_SECTION_TDT)
-                    dump_tdt(sec); 
-                break;
-                case Gst::MESSAGE_ERROR:
-                BOOST_LOG_TRIVIAL(error) << 
-                    RefPtr<Gst::MessageError>::cast_static(msg)->parse_debug();
-                break;
-                case Gst::MESSAGE_EOS:
-                BOOST_LOG_TRIVIAL(info) <<  "Got EOS";    
-                loop->quit();
-                break;
-                default: break;
+                    case Gst::MESSAGE_ELEMENT:
+                        sec = gst_message_parse_mpegts_section(m);
+                        if(sec == NULL){
+                            BOOST_LOG_TRIVIAL(warning) << "Can't parse mpegts section";
+                            return true;
+                        }
+                        if(sec->section_type == GST_MPEGTS_SECTION_EIT)
+                            dump_eit(sec); 
+                        gst_mpegts_section_unref (sec);
+#if 0
+                        if(sec->section_type == GST_MPEGTS_SECTION_TOT)
+                            dump_tot(sec); 
+                        if(sec->section_type == GST_MPEGTS_SECTION_TDT)
+                            dump_tdt(sec); 
+#endif
+                        break;
+                    case Gst::MESSAGE_ERROR:
+                        BOOST_LOG_TRIVIAL(error) << 
+                            RefPtr<Gst::MessageError>::cast_static(msg)->parse_debug();
+                        break;
+                    case Gst::MESSAGE_EOS:
+                        BOOST_LOG_TRIVIAL(info) <<  "Got EOS";    
+                        loop->quit();
+                        break;
+                    default: break;
                 }
                 return true;
         });

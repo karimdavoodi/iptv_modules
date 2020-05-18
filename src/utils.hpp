@@ -14,6 +14,7 @@ struct live_setting {
     int type_id;
     int multicast_class;
     std::string multicast_iface;
+    int virtual_net_id, virtual_dvb_id;
 };
 bool get_live_config(live_setting& cfg, std::string type);
 std::string get_multicast(live_setting& config, int channel_id, bool out_multicast=false);

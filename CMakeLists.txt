@@ -37,9 +37,9 @@ set_target_properties(utils PROPERTIES
     )
 
 set( project_EXES
-     iptv_in_archive       # TODO: save stat of last streaming
+     iptv_in_archive       # TODO: 1-support mp4,mkv,... 2-save stat of last streaming
      iptv_in_dvb           # TODO: do by Gst
-     iptv_in_network       # TODO: test
+     iptv_in_network       # TODO: test (not work by channels_http buffer)
      iptv_in_transcoder    # TODO: do by Gst
      iptv_in_unscramble    # TODO: ...
   
@@ -51,7 +51,7 @@ set( project_EXES
      iptv_out_rf           # TODO: ...
      iptv_out_http         # TODO: ... 
      iptv_out_gold         # TODO: ...
-     iptv_out_dlna         # TODO: do by Rygel library
+     iptv_out_dlna         # TODO: disabled. do by Rygel library
    )
 
 foreach( APP ${project_EXES} )

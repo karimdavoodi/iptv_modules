@@ -5,7 +5,9 @@
 #include <boost/log/trivial.hpp>
 #include "config.hpp"
 using namespace std;
-
+/*
+ *   TS file has timestamps, but other files dosen't have. 
+ * */
 void gst_task(string media_path, string multicast_addr, int port)
 {
     using Glib::RefPtr;
@@ -44,7 +46,7 @@ void gst_task(string media_path, string multicast_addr, int port)
         filesrc->link(tsparse);
         tsparse->link(rndbuffersize);
         rndbuffersize->link(udpsink);
-        
+         
         filesrc->set_property("location", media_path);
         tsparse->set_property("set-timestamps", 1);
 

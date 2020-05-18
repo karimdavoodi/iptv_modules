@@ -31,6 +31,8 @@ int main()
     json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         if(chan["active"] == true && chan["udp"] == true){
+            if(chan["inputType"] != live_config.virtual_dvb_id &&
+                    chan["inputType"] != live_config.virtual_net_id  )
             pool.emplace_back(start_channel, chan, live_config);
         }
     }

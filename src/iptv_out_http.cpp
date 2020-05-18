@@ -66,15 +66,19 @@ int main()
     json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         if(chan["active"] == true && chan["http"] == true){
-            Channel *C = new Channel();
-            C->id = chan["_id"];
-            C->name = chan["name"];
-            live_config.type_id = chan["inputType"];
-            C->multicast = get_multicast(live_config, chan["inputId"]);
-            C->tsb = {};
-            chan_map[chan["_id"]] = C;
-            
-            pool.emplace_back(start_channel, chan);
+            if(chan["inputType"] != live_config.virtual_dvb_id &&
+                    chan["inputType"] != live_config.virtual_net_id  ){
+
+                Channel *C = new Channel();
+                C->id = chan["_id"];
+                C->name = chan["name"];
+                live_config.type_id = chan["inputType"];
+                C->multicast = get_multicast(live_config, chan["inputId"]);
+                C->tsb = {};
+                chan_map[chan["_id"]] = C;
+
+                pool.emplace_back(start_channel, chan);
+            }
         }
     }
     http_unicast_server();
