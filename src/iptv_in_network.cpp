@@ -6,6 +6,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
+#define BY_FFMPEG 0
 using namespace std;
 void gst_task(string in_url, string out_multicast, int port);
 
@@ -23,16 +24,16 @@ void start_channel(string channel_str, live_setting live_config)
     }
     auto out_multicast = get_multicast(live_config, channel["_id"]);
 
-    /*
-    // TODO: do by Gst
+#if BY_FFMPEG
     auto cmd = boost::format("%s -i '%s' -codec copy "
             " -f mpegts 'udp://%s:%d?packesize=1316' ")
         % FFMPEG % channel["url"].get<string>() % out_multicast % INPUT_PORT; 
 
     BOOST_LOG_TRIVIAL(info) << cmd.str();
     std::system(cmd.str().c_str());
-    */
+#else
     gst_task(channel["url"], out_multicast, INPUT_PORT);
+#endif
 }
 int main()
 {
@@ -46,7 +47,8 @@ int main()
     }
     json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
-        if(chan["active"] == true && chan["inputType"] == live_config.type_id){
+        IS_CHANNEL_VALID(chan);
+        if(chan["inputType"] == live_config.type_id){
             string network = Mongo::find_id("live_inputs_network", chan["inputId"]);
             pool.emplace_back(start_channel, network, live_config);
         }

@@ -29,7 +29,8 @@ int main()
     json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         // Active EPG only for DVB channels
-        if(chan["active"] == true && chan["inputType"] == live_config.type_id){
+        IS_CHANNEL_VALID(chan);
+        if(chan["inputType"] == live_config.type_id){
             pool.emplace_back(start_channel, chan, live_config);
         }
     }

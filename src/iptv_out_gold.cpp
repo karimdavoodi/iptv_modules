@@ -12,8 +12,8 @@ void start_channel(json channel, live_setting live_config)
 {
     live_config.type_id = channel["inputType"];
     auto in_multicast = get_multicast(live_config, channel["inputId"]);
-    auto out_multicast = get_multicast(live_config, channel["_id"], true);
-    gst_task(in_multicast, out_multicast); 
+    BOOST_LOG_TRIVIAL(error) << "TODO: implement GOLD channels ..." ;
+    return;
 }
 int main()
 {
@@ -21,19 +21,16 @@ int main()
     live_setting live_config;
 
     init();
-    BOOST_LOG_TRIVIAL(error) << "TODO ..." ;
-    return 0;
     if(!get_live_config(live_config, "archive")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
     }
     route_add(live_config.multicast_class, live_config.multicast_iface);
 
-    json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
-    for(auto& chan : silver_channels ){
-        if(chan["active"] == true && chan["udp"] == true){
-            pool.emplace_back(start_channel, chan, live_config);
-        }
+    json gold_channels = json::parse(Mongo::find("live_output_gold", "{}"));
+    for(auto& chan : gold_channels ){
+        IS_CHANNEL_VALID(chan);
+        pool.emplace_back(start_channel, chan, live_config);
     }
     for(auto& t : pool)
         t.join();

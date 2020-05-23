@@ -7,6 +7,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
+#define BY_FFMPEG 1
 using namespace std;
 using nlohmann::json;
 void gst_task(string media_path, string multicast_addr, int port);
@@ -44,6 +45,7 @@ void start_channel(json channel, live_setting live_config)
                 "audioRate": "128k", 
                 "extra": ""
     */
+#if BY_FFMPEG 
     string vcodec = "copy" ,acodec = "copy";
     if(profile["videoCodec"].get<string>().find("264") != string::npos) 
         vcodec = "libx264";
@@ -66,9 +68,11 @@ void start_channel(json channel, live_setting live_config)
 
     BOOST_LOG_TRIVIAL(info) << cmd.str();
     std::system(cmd.str().c_str());
+#else
+    string in_uri = "udp://" + in_multicast + ":" + to_string(INPUT_PORT);
+    gst_task(in_uri, multicast_out, INPUT_PORT);
+#endif
     
-    //string in_uri = "udp://" + in_multicast + ":" + to_string(INPUT_PORT);
-    //gst_task(in_uri, multicast_out, INPUT_PORT);
 }
 int main()
 {
@@ -82,9 +86,11 @@ int main()
     }
     json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
-        if(chan["active"] == true && chan["inputType"] == live_config.type_id){
+        IS_CHANNEL_VALID(chan);
+        if(chan["inputType"] == live_config.type_id){
             json transcode = json::parse(Mongo::find_id("live_inputs_transcode", 
                         chan["inputId"]));
+            IS_CHANNEL_VALID(transcode);
             pool.emplace_back(start_channel, transcode, live_config);
         }
     }

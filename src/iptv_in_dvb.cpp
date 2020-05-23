@@ -12,6 +12,7 @@
 #include <gstreamermm.h>
 #include <boost/format.hpp>
 #include "utils.hpp"
+#define BY_DVBLAST 1
 using namespace std;
 using nlohmann::json;
 
@@ -38,11 +39,14 @@ void start_channel(json tuner, live_setting live_config)
             << chan["name"]  << " -> " << multicast; 
     }
     cfg.close();
+#if BY_DVBLAST
     auto cmd = boost::format("/opt/sms/bin/fromdvb -WYCUlu -t0 -a%d -c%s %s")
             % tuner["_id"] % cfg_name % fromdvb_args ; 
     string cmd_str = cmd.str();
     BOOST_LOG_TRIVIAL(info) <<  cmd_str;
     system(cmd_str.c_str());
+#else
+#endif
 }
 int main()
 {
@@ -57,12 +61,15 @@ int main()
     json tuners = json::parse(Mongo::find("live_tuners_input", "{}"));
     json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
-        if(chan["active"] == true && chan["inputType"] == live_config.type_id){
+        IS_CHANNEL_VALID(chan);
+        if(chan["inputType"] == live_config.type_id){
             json dvb_chan = json::parse(Mongo::find_id("live_inputs_dvb", chan["inputId"]));
+            IS_CHANNEL_VALID(dvb_chan);
             for(auto& tuner : tuners ){
                 int t_id = tuner["_id"];
                 int c_id = dvb_chan["dvb_id"];
                 if(t_id == c_id){
+                    IS_CHANNEL_VALID(tuner);
                     if(tuner["channels"].is_null())
                         tuner["channels"] = json::array();
                     tuner["channels"].push_back(dvb_chan);

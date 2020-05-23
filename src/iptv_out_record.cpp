@@ -8,6 +8,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
+#define BY_FFMPEG 0
 using namespace std;
 void gst_task(string in_multicast, string file_path, int second);
 
@@ -27,16 +28,15 @@ void start_channel(json channel, live_setting live_config)
         check_path(path.str());
         string file_path = path.str() + "/" + date_fmt.str() + ".mp4"; 
         
-        /*
-        // TODO: do by Gst! not ffmpeg
+#if BY_FFMPEG
         #define FFMPEG_REC_OPTS  " -bsf:a aac_adtstoasc -movflags empty_moov -y -f mp4 "
         auto cmd = boost::format("%s -i udp://%s:%d -t %d -codec copy %s '%s'")
             % FFMPEG % in_multicast % INPUT_PORT % duration % FFMPEG_REC_OPTS % file_path;
         BOOST_LOG_TRIVIAL(info) << cmd.str();
         std::system(cmd.str().c_str());
-        */
-
+#else
         gst_task(in_multicast, file_path, duration); 
+#endif
     }
 }
 int main()

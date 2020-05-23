@@ -10,6 +10,7 @@ add_definitions(
                  -fdiagnostics-generate-patch 
                  -DBOOST_LOG_DYN_LINK=1
                  -DGST_USE_UNSTABLE_API=1
+                 -g
                  )
 #BOOST
 find_package(Boost COMPONENTS system log REQUIRED)
@@ -42,6 +43,8 @@ set( project_EXES
      iptv_in_network       # TODO: test (not work by channels_http buffer)
      iptv_in_transcoder    # TODO: do by Gst
      iptv_in_unscramble    # TODO: ...
+     iptv_in_scramble      # TODO: ...
+     iptv_in_web           # TODO: ...
   
      iptv_out_hls          # TODO: do by Gst 
      iptv_out_epg          # TODO: test 

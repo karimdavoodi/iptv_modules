@@ -7,6 +7,15 @@
 #include "../third_party/json.hpp"
 #include "mongo_driver.hpp"
 #include "config.hpp"
+#define IS_CHANNEL_VALID(chan)                               \
+        if(chan["active"].is_null()) {                       \
+            BOOST_LOG_TRIVIAL(error) << "Invalid channel!";  \
+            continue;                                        \
+        }                                                    \
+        if(chan["active"] == false) {                        \
+            BOOST_LOG_TRIVIAL(warning) << "Inactive channel!";\
+            continue;                                        \
+        } do{}while(0)
 
 using nlohmann::json;
 

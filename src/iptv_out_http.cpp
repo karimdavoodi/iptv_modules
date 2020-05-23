@@ -65,7 +65,8 @@ int main()
 
     json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
-        if(chan["active"] == true && chan["http"] == true){
+        IS_CHANNEL_VALID(chan);
+        if(chan["http"] == true){
             if(chan["inputType"] != live_config.virtual_dvb_id &&
                     chan["inputType"] != live_config.virtual_net_id  ){
 

@@ -145,6 +145,7 @@ void channel_epg_update(map<int, Event>& day_eit, int channel_id)
             <<  " Text:" << event.second.text
             <<  " Duration:" << event.second.duration;
     }
+    
     day_eit.clear();
     json silver_channel = json::parse(Mongo::find_id("live_output_silver", channel_id));
     silver_channel["epg"] = eit;
@@ -215,6 +216,15 @@ void gst_task(string in_multicast, int port, int channel_id)
                         BOOST_LOG_TRIVIAL(info) <<  "Got EOS";    
                         loop->quit();
                         break;
+#if 0
+                    case Gst::MESSAGE_TAG:
+                        RefPtr<Gst::MessageTag>::cast_static(msg)
+                            ->parse_tag_list().foreach(
+                                [](const Glib::ustring name){
+                                BOOST_LOG_TRIVIAL(info) << "Tag:" <<  name;
+                                });
+                        break;
+#endif
                     default: break;
                 }
                 return true;

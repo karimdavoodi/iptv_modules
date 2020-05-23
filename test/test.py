@@ -161,10 +161,65 @@ def init_db():
         "firewallRule": [ ]
         })
 
+def add_video(path):
+    mdb = mongo.Mongo()
+    root_path = "/opt/sms/www/iptv/media/Video/"
+    poster_path = "/opt/sms/www/iptv/media/Poster/"
+    os.system("mkdir -p "+root_path)
+    os.system("mkdir -p "+poster_path)
+    _id = 3000
+    t = int(time.time())
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            file_path = os.path.join(root, name)
+            fmt = 0
+            fmt_name = ""
+            if ".ts" in name: 
+                fmt = 1
+                fmt_name = ".ts"
+            elif ".mp4" in name: 
+                fmt =  2
+                fmt_name = ".mp4"
+            elif ".mkv" in name: 
+                fmt =  3
+                fmt_name = ".mkv"
+            if fmt == 0: continue
+            _id += 1
+            os.system("cp " + file_path + " " + root_path + str(_id) + fmt_name )        
+            chname = name[:-4] 
+            print("add " + file_path)
+            mdb.insert_or_replace_id("storage_contents_info", _id, {
+                    "_id": _id,
+                    "type":3,
+                    "format": fmt,
+                    "category":[ _id % 3 + 1 ],
+                    "name": chname,
+                    "permission": [],
+                    "price": 0,
+                    "platform":[],
+                    "date": t,
+                    "languages" : [], 
+                    "description":{
+                            "en": {
+                                "name": chname,
+                                "description": ""
+                                },
+                            "fa": {
+                                "name": chname,
+                                "description": ""
+                                },
+                            "ar": {
+                                "name": chname,
+                                "description": ""
+                            }
+                        }
+                    })
 def add_picture(path):
     mdb = mongo.Mongo()
     root_path = "/opt/sms/www/iptv/media/Picture/"
+    poster_path = "/opt/sms/www/iptv/media/Poster/"
     os.system("mkdir -p "+root_path)
+    os.system("mkdir -p "+poster_path)
     _id = 2000
     t = int(time.time())
     for root, dirs, files in os.walk(path):
@@ -184,6 +239,8 @@ def add_picture(path):
             if fmt == 0: continue
             _id += 1
             os.system("cp " + file_path + " " + root_path + str(_id) + fmt_name )        
+            os.system("convert " + file_path + " resize 240x240 " 
+                    + poster_path + str(_id) + ".jpg" )        
             chname = name[:-4] 
             mdb.insert_or_replace_id("storage_contents_info", _id, {
                     "_id": _id,
@@ -246,10 +303,13 @@ def add_menu():
                 "fa": type_name + " fa",
                 "ar": type_name + " ar"
             }, 
-            "logo": 54,
+            "logo": 54+i,
             "permission": 1,
             "components": comp 
                 })
+    menu.append(1)
+    menu.append(2)
+    menu.append(3)
     mdb.insert_or_replace_id("launcher_setting", 10, {
             "_id": 10,
             "active": True,
@@ -294,8 +354,9 @@ def add_menu():
             "defaultChannel": 1 
             })
 
-add_menu()
 """
+add_video("/home/karim/Music/Video_Music")
+add_menu()
 add_picture("/home/karim/Pictures/mypic/990220")
 init_db()
 for ch_type in ["dvb", "archive", "network", "web", "virtual_dvb", "virtual_net",

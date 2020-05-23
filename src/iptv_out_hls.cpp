@@ -6,6 +6,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
+#define BY_FFMPEG 1
 using namespace std;
 void gst_task(string in_multicast, int in_port, string hls_root);
 
@@ -16,8 +17,7 @@ void start_channel(json channel, live_setting live_config)
     string hls_root = string(HLS_ROOT) + channel["name"].get<string>();
     check_path(hls_root);
 
-    /*
-    // TODO: do by Gst
+#if BY_FFMPEG
     hls_root += "/p.m3u8";
     auto cmd = boost::format("%s -i 'udp://%s:%d' "
             "-codec copy -map 0 -ac 2 "
@@ -27,8 +27,9 @@ void start_channel(json channel, live_setting live_config)
 
     BOOST_LOG_TRIVIAL(info) << cmd.str();
     std::system(cmd.str().c_str());
-    */
+#else
     gst_task(in_multicast, INPUT_PORT, hls_root); 
+#endif
 }
 int main()
 {
@@ -43,7 +44,8 @@ int main()
     check_path(HLS_ROOT);
     json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
-        if(chan["active"] == true && chan["hls"] == true){
+        IS_CHANNEL_VALID(chan);
+        if(chan["hls"] == true){
             if(chan["inputType"] != live_config.virtual_dvb_id &&
                chan["inputType"] != live_config.virtual_net_id  )
                 pool.emplace_back(start_channel, chan, live_config);
