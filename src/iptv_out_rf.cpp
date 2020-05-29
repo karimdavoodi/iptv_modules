@@ -24,12 +24,13 @@ int main()
     vector<string> tomts_cmd;
     vector<string> torf_cmd;
 
+    CHECK_LICENSE;
     init();
     if(!get_live_config(live_config, "archive")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
     }
-    json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
+    json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["freq"].is_null()){
@@ -73,20 +74,22 @@ int main()
                 << "\nlive = 1"
                 << "\nsource = udp://" << in_multicast <<  ":" << INPUT_PORT << '\n'; 
             cfg.close();
-            int port = 1200 + tid;
-            std::ostringstream tomts; 
-            tomts << "/opt/sms/bin/tomts -q -c " << tid 
-                << "-B " << bandwidth << " -t0 -O 127.0.0.1 "
-                << " -m " << pcr << " -P " << port << " &";
-            std::ostringstream torf;
-            torf << "/opt/sms/bin/torft "
-                << tid << " " <<  rf.first << " " << port << " &";
-
-            BOOST_LOG_TRIVIAL(info) << tomts.str();
-            BOOST_LOG_TRIVIAL(info) << torf.str();
-            std::system(tomts.str().c_str());
-            std::system(torf.str().c_str());
+            i++;
         }
+        int port = 1200 + tid;
+        std::ostringstream tomts; 
+        tomts << "/opt/sms/bin/tomts -q -c " << tid 
+            << " -B " << bandwidth << " -t0 -O 127.0.0.1 "
+            << " -m " << pcr << " -P " << port << " &";
+        std::ostringstream torf;
+        torf << "/opt/sms/bin/torft "
+            << tid << " " <<  rf.first << " " << port << " &";
+
+        BOOST_LOG_TRIVIAL(info) << tomts.str();
+        BOOST_LOG_TRIVIAL(info) << torf.str();
+        std::system(tomts.str().c_str());
+        std::system(torf.str().c_str());
+        tid++;
     }
     while(true)
         std::this_thread::sleep_for(std::chrono::seconds(100));

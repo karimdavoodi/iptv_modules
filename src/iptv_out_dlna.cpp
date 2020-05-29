@@ -15,9 +15,9 @@ void start_channel(json channel, live_setting live_config)
 int main()
 {
 
+    CHECK_LICENSE;
     BOOST_LOG_TRIVIAL(warning) << "Contents are not in filesystem structure. disable dlna!";
-    return 0;
-
+    while(true) this_thread::sleep_for(chrono::seconds(100));
     init();
     json license = json::parse(Mongo::find_id("system_license", 1));
     if(license["license"].is_null()){

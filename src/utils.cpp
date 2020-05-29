@@ -7,67 +7,42 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <boost/filesystem.hpp>
-
-/*
-#include <fstream>
-#include <boost/smart_ptr/shared_ptr.hpp>
-#include <boost/smart_ptr/make_shared_object.hpp>
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
-#include <boost/log/sinks/sync_frontend.hpp>
-#include <boost/log/sinks/text_ostream_backend.hpp>
-#include <boost/log/sources/severity_logger.hpp>
-#include <boost/log/sources/record_ostream.hpp>
+#include <boost/log/sinks/text_file_backend.hpp>
+#include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
-namespace logging = boost::log;
-namespace src = boost::log::sources;
-namespace expr = boost::log::expressions;
-namespace sinks = boost::log::sinks;
-namespace keywords = boost::log::keywords;
-*/
+#include <boost/log/attributes/current_process_name.hpp>
+
+
 #include "utils.hpp"
 using namespace std;
 
 void boost_log_init()
 {
+    namespace logging = boost::log;
+    namespace keywords = logging::keywords;
+    namespace attrs = logging::attributes;
+    logging::add_common_attributes();
+    logging::core::get()->add_global_attribute(
+            "Process", attrs::current_process_name());
 
-    /*
-    typedef sinks::synchronous_sink< sinks::text_ostream_backend > text_sink;
-    boost::shared_ptr< text_sink > sink = boost::make_shared< text_sink >();
+    logging::add_file_log
+        (
+         keywords::file_name = "/opt/sms/tmp/log.log",
+         keywords::format = "%Process% %ThreadID%: %Message%",
+         keywords::auto_flush = true,
+         keywords::open_mode = std::ios_base::app
+         //%TimeStamp% %Process% %ThreadID% %Severity% %LineID% %Message%"     
+        );
 
-    sink->locked_backend()->add_stream(
-        boost::make_shared< std::ofstream >("sample.log"));
-
-    sink->set_formatter
-    (
-        expr::format("%1%: <%2%> %3%")
-            % expr::attr< unsigned int >("LineID")
-            % logging::trivial::severity
-            % expr::smessage
-    );
-
-    logging::core::get()->add_sink(sink);
-
-    typedef boost::log::sinks::synchronous_sink< boost::log::sinks::syslog_backend > sink_t;
-    boost::shared_ptr< boost::log::core > core = boost::log::core::get();
-    boost::shared_ptr< boost::log::sinks::syslog_backend > backend(
-            new boost::log::sinks::syslog_backend(
-        boost::log::keywords::facility = boost::log::sinks::syslog::local0
-    ));
-
-    // Set the straightforward level translator for the "Severity" attribute of type int
-    backend->set_severity_mapper(
-            boost::log::sinks::syslog::direct_severity_mapping< int >("Severity"));
-    core->add_sink(boost::make_shared<sink_t>(backend));
-    */
     // Set Debug level
-    
     json system_location = json::parse(Mongo::find_id("system_location",1));
     int debug_level = system_location["debug"];
     debug_level = abs(5-debug_level);
-    boost::log::core::get()->set_filter(
-        boost::log::trivial::severity >= debug_level);
+    logging::core::get()->set_filter(
+            logging::trivial::severity >= debug_level);
 
 }
 void init()
@@ -85,6 +60,27 @@ void init()
         BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();
     }
 }
+void db_log(const std::string msg, int type)
+{
+    long timestamp = time(NULL);
+    long rand = std::rand() % 100000;
+    if(type == ERROR){
+        json j = {
+            {"_id", timestamp + rand },
+            {"time", timestamp },
+            {"error", msg},
+            {"priority", 0}
+        };
+        Mongo::insert("status_errors", j.dump());
+    }else{
+        json j = {
+            {"_id", timestamp + rand },
+            {"time", timestamp },
+            {"activity", msg}
+        };
+        Mongo::insert("report_system", j.dump());
+    }
+}
 void route_add(int multicast_class, string nic)
 {
     string multicat_addr = to_string(multicast_class) + ".0.0.0";
@@ -96,7 +92,7 @@ void route_add(int multicast_class, string nic)
 void live_input_type_id(live_setting& cfg, const string type)
 {
     try{
-        json input_types = json::parse(Mongo::find("live_inputs_types", "{}"));
+        json input_types = json::parse(Mongo::find_mony("live_inputs_types", "{}"));
         for(auto& t : input_types){
             if(t["name"] == type)
                 cfg.type_id =  t["_id"];

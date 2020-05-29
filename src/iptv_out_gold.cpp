@@ -20,6 +20,10 @@ int main()
     vector<thread> pool;
     live_setting live_config;
 
+    CHECK_LICENSE;
+    BOOST_LOG_TRIVIAL(info) << "TODO:.............";
+    while(true) this_thread::sleep_for(chrono::seconds(100));
+
     init();
     if(!get_live_config(live_config, "archive")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
@@ -27,12 +31,13 @@ int main()
     }
     route_add(live_config.multicast_class, live_config.multicast_iface);
 
-    json gold_channels = json::parse(Mongo::find("live_output_gold", "{}"));
+    json gold_channels = json::parse(Mongo::find_mony("live_output_gold", "{}"));
     for(auto& chan : gold_channels ){
         IS_CHANNEL_VALID(chan);
         pool.emplace_back(start_channel, chan, live_config);
     }
     for(auto& t : pool)
         t.join();
+    while(true) this_thread::sleep_for(chrono::seconds(100));
     return 0;
 } 

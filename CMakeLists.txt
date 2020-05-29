@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(iptv_modules)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_definitions( 
@@ -10,10 +9,10 @@ add_definitions(
                  -fdiagnostics-generate-patch 
                  -DBOOST_LOG_DYN_LINK=1
                  -DGST_USE_UNSTABLE_API=1
-                 -g
+                #-g
                  )
 #BOOST
-find_package(Boost COMPONENTS system log REQUIRED)
+find_package(Boost COMPONENTS system log log_setup REQUIRED)
 #GSTREAMERMM
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GSTMM REQUIRED 
@@ -27,12 +26,18 @@ pkg_check_modules(GSTMM REQUIRED
 set(CMAKE_MODULE_PATH /usr/local/lib/cmake )
 find_package(LIBMONGOCXX REQUIRED)
 
-set(ALL_LIBS  ${Boost_LIBRARIES} ${LIBMONGOCXX_LIBRARIES} ${GSTMM_LIBRARIES} )
+set(ALL_LIBS  
+    ${Boost_LIBRARIES} 
+    ${LIBMONGOCXX_LIBRARIES} 
+    ${GSTMM_LIBRARIES} 
+    /opt/sms/src/lock/licpp.a 
+    )
 set(ALL_INCS  /usr/local/include ${LIBMONGOCXX_INCLUDE_DIRS} ${GSTMM_INCLUDE_DIRS})
 set(MYLIBS    src/mongo_driver.cpp src/utils.cpp)
 
-add_library(utils src/mongo_driver.cpp src/utils.cpp)
+add_library(utils src/mongo_driver.cpp src/utils.cpp )
 target_include_directories(utils PUBLIC ${ALL_INCS})
+target_link_libraries(utils ${ALL_LIBS} )
 set_target_properties(utils PROPERTIES
     IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/libutils.a"
     )

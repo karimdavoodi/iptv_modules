@@ -56,6 +56,7 @@ int main()
     vector<thread> pool;
     live_setting live_config;
 
+    CHECK_LICENSE;
     init();
     signal(SIGPIPE, SIG_IGN);
     if(!get_live_config(live_config, "archive")){
@@ -63,7 +64,7 @@ int main()
         return -1;
     }
 
-    json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
+    json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["http"] == true){
@@ -85,5 +86,6 @@ int main()
     http_unicast_server();
     for(auto& t : pool)
         t.join();
+    while(true) this_thread::sleep_for(chrono::seconds(100));
     return 0;
 } 

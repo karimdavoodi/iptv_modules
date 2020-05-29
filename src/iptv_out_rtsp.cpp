@@ -15,6 +15,7 @@ void start_channel(json channel, live_setting live_config)
 int main()
 {
 
+    CHECK_LICENSE;
     init();
     json license = json::parse(Mongo::find_id("system_license", 1));
     if(license["license"].is_null()){

@@ -28,7 +28,7 @@ int main()
     }
     route_add(live_config.multicast_class, live_config.multicast_iface);
 
-    json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
+    json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["udp"] == true){
@@ -39,5 +39,6 @@ int main()
     }
     for(auto& t : pool)
         t.join();
+    while(true) this_thread::sleep_for(chrono::seconds(100));
     return 0;
 } 

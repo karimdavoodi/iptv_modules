@@ -36,13 +36,14 @@ int main()
     vector<thread> pool;
     live_setting live_config;
 
+    CHECK_LICENSE;
     init();
     if(!get_live_config(live_config, "archive")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
     }
     check_path(HLS_ROOT);
-    json silver_channels = json::parse(Mongo::find("live_output_silver", "{}"));
+    json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["hls"] == true){
@@ -53,5 +54,6 @@ int main()
     }
     for(auto& t : pool)
         t.join();
+    while(true) this_thread::sleep_for(chrono::seconds(100));
     return 0;
 } 

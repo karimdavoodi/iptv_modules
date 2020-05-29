@@ -149,7 +149,7 @@ void channel_epg_update(map<int, Event>& day_eit, int channel_id)
     day_eit.clear();
     json silver_channel = json::parse(Mongo::find_id("live_output_silver", channel_id));
     silver_channel["epg"] = eit;
-    Mongo::replace_by_id("live_output_silver", channel_id, silver_channel.dump());
+    Mongo::replace_id("live_output_silver", channel_id, silver_channel.dump());
     BOOST_LOG_TRIVIAL(info) << "Update EPG of channel_id:" << channel_id;
 }
 void gst_task(string in_multicast, int port, int channel_id)
