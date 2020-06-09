@@ -5,7 +5,6 @@
 #define TIME_INTERVAL_STATE_SAVE 3000  // msec
 using std::string;
 using nlohmann::json;
-
 class IptvTranscode {
     private:
         string media_path;

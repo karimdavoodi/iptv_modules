@@ -22,12 +22,17 @@ void start_channel(json channel, live_setting live_config)
         "profile": 1,
  * */
     BOOST_LOG_TRIVIAL(info) << "Start Channel: " << channel["name"];
-    //BOOST_LOG_TRIVIAL(trace) << channel.dump(4);
+    //BOOST_LOG_TRIVIAL(debug) << channel.dump(4);
     if(!channel["active"]){
         BOOST_LOG_TRIVIAL(info) << channel["name"] << " is not Active. Exit!";
         return;
     }
     json profile = json::parse(Mongo::find_id("live_transcode_profile",channel["profile"])); 
+    if(profile["_id"].is_null()){
+        BOOST_LOG_TRIVIAL(error) << "transcode profile id is in invalid:" 
+                                 << channel["profile"];
+        return;
+    }
     auto out_multicast = get_multicast(live_config, channel["_id"]);
     live_config.type_id = channel["inputType"];
     auto in_multicast  = get_multicast(live_config, channel["input"]);
@@ -53,21 +58,18 @@ void start_channel(json channel, live_setting live_config)
         vcodec = "mpeg2video";
     else
         vcodec = profile["videoCodec"];
-
     acodec = profile["audioCodec"];
     auto opts = boost::format(" -preset %s -s %s -r %s -g %s -b:v %s -b:a %s   ")
             % profile["preset"] % profile["videoSize"] % profile["videoFps"] 
             % profile["videoFps"] % profile["videoRate"] % profile["audioRate"];
     auto codecs = boost::format("-vcodec %s -acodec %s") 
             % vcodec % acodec;
-
     auto cmd = boost::format("%s -i 'udp://%s:%d?reuse=1' "
-            " %s %s -f mpegts 'udp://%s:%d?packesize=1316' ")
+            " %s %s -f mpegts 'udp://%s:%d?pkt_size=1316' ")
         % FFMPEG % in_multicast % INPUT_PORT % codecs.str() 
         % opts.str() % out_multicast % INPUT_PORT;
-
-    BOOST_LOG_TRIVIAL(info) << cmd.str();
-    std::system(cmd.str().c_str());
+    
+    exec_shell_loop(cmd.str());
 #else
     string in_uri = "udp://" + in_multicast + ":" + to_string(INPUT_PORT);
     gst_task(in_uri, multicast_out, INPUT_PORT);
@@ -78,7 +80,6 @@ int main()
 {
     vector<thread> pool;
     live_setting live_config;
-
     CHECK_LICENSE;
     init();
     if(!get_live_config(live_config, "transcode")){
@@ -90,13 +91,13 @@ int main()
         IS_CHANNEL_VALID(chan);
         if(chan["inputType"] == live_config.type_id){
             json transcode = json::parse(Mongo::find_id("live_inputs_transcode", 
-                        chan["inputId"]));
+                        chan["input"]));
             IS_CHANNEL_VALID(transcode);
             pool.emplace_back(start_channel, transcode, live_config);
+            break;
         }
     }
     for(auto& t : pool)
         t.join();
-    while(true) this_thread::sleep_for(chrono::seconds(100));
-    return 0;
+    THE_END;
 } 

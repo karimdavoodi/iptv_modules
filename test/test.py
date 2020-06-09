@@ -2,18 +2,18 @@
 # -*- coding: utf-8 -*-
 import os
 import time
-import commands
+import subprocess
 import imp
 mongo = imp.load_source('mongo', '/s/uicontrol/mongo.py')
 
 
 def make_channel_config(chan_type, number):
-    print("Insert channel type:" + chan_type)
+    print(("Insert channel type:" + chan_type))
 
     mdb = mongo.Mongo()
     live_inputs_types = mdb.find_one("live_inputs_types",{"name":chan_type})
     if live_inputs_types == None:
-        print("Invalid channel type:"+chan_type)
+        print(("Invalid channel type:"+chan_type))
         return
     channel_type = live_inputs_types["_id"]
     for i in range(number):
@@ -43,7 +43,7 @@ def make_channel_config(chan_type, number):
                 "manualSchedule": False,
                 "contents": [ 
                         {
-                        "content": 1001,
+                        "content": 3002,
                         "weekday": 1,
                         "time": 1,
                         }
@@ -61,7 +61,7 @@ def make_channel_config(chan_type, number):
                 })
         if chan_type == "web":
             name = "web"+str(i)
-            mdb.insert_or_replace_id("live_inputs_network", i,{  
+            mdb.insert_or_replace_id("live_inputs_web", i,{  
                 "_id": i,
                 "active": True,
                 "name": name,
@@ -118,6 +118,21 @@ def make_channel_config(chan_type, number):
                 "inputType": 2,
                 "crypto": "AES",
                 "key": "123" 
+                })
+        if chan_type == "mixed":
+            name = "mixed"+str(i)
+            mdb.insert_or_replace_id("live_inputs_mixed", i,{  
+                "_id": i,
+                "active": True,
+                "input1": i, 
+                "input2": i, 
+                "inputType1": 2,    # from live/inputs/types 
+                "inputType2": 3,    # from live/inputs/types 
+                "input2mix": 'cover',  # from 'multiple','cover'
+                "input2x": 1, 
+                "input2y": 1, 
+                "input2width": 100, 
+                "input2height": 100 
                 })
         silver_id =  channel_type*100+i
         mdb.insert_or_replace_id("live_output_silver", silver_id, {
@@ -187,7 +202,7 @@ def add_video(path):
             _id += 1
             os.system("cp " + file_path + " " + root_path + str(_id) + fmt_name )        
             chname = name[:-4] 
-            print("add " + file_path)
+            print(("add " + file_path))
             mdb.insert_or_replace_id("storage_contents_info", _id, {
                     "_id": _id,
                     "type":3,
@@ -271,11 +286,11 @@ def add_picture(path):
 def add_menu():
     mdb = mongo.Mongo()
     menu = []
-    for i in xrange(1,9):
+    for i in range(1,9):
         type_ = mdb.find_id("launcher_components_types",i)
         type_name = type_["name"]
         comp = []
-        for j in xrange(1,4):
+        for j in range(1,4):
             _id = 100 + i*10 + j 
             comp.append(_id)
             mdb.insert_or_replace_id("launcher_components_info", _id, {
@@ -353,15 +368,13 @@ def add_menu():
             "clientHotspot": "",
             "defaultChannel": 1 
             })
-
 """
 add_video("/home/karim/Music/Video_Music")
 add_menu()
 add_picture("/home/karim/Pictures/mypic/990220")
 init_db()
-for ch_type in ["dvb", "archive", "network", "web", "virtual_dvb", "virtual_net",
-        "transcode", "scramble", "unscramble"]:
-    make_channel_config(ch_type, 10)
-
 """
+for ch_type in ["dvb", "archive", "network", "web", "virtual_dvb", "virtual_net",
+        "transcode", "scramble", "unscramble", "mixed"]:
+    make_channel_config(ch_type, 10)
 

@@ -8,13 +8,11 @@
 #include "utils.hpp"
 using namespace std;
 void gst_task(string in_multicast, string out_multicast);
-
 void start_channel(json channel, live_setting live_config)
 {
 }
 int main()
 {
-
     CHECK_LICENSE;
     init();
     json license = json::parse(Mongo::find_id("system_license", 1));
@@ -42,7 +40,5 @@ int main()
     }else{
         BOOST_LOG_TRIVIAL(info) << "Dosen't have license for RTSP";
     }
-    while(true) 
-        std::this_thread::sleep_for(chrono::seconds(60));
-    return 0;
+    THE_END;
 } 

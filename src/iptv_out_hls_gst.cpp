@@ -4,7 +4,6 @@
 #include <glibmm.h>
 #include <boost/log/trivial.hpp>
 #include "config.hpp"
-
 using namespace std;
 /*
 gst-launch-1.0 -v --gst-debug-level=3  udpsrc uri=udp://229.2.0.1:3200 \
@@ -26,7 +25,6 @@ void gst_task(string in_multicast, int in_port, string hls_root)
     RefPtr<Gst::Element>   hlssink;
     sigc::connection m_timeout_connection;
    
-
     try{
         in_multicast = "229.2.0.1";
         in_multicast += ":" + to_string(in_port);
@@ -34,7 +32,6 @@ void gst_task(string in_multicast, int in_port, string hls_root)
             << "Start " 
             << in_multicast 
             << " --> HLS in " << hls_root; 
-
         loop = Glib::MainLoop::create();
         pipeline = Gst::Pipeline::create();
         
@@ -46,7 +43,7 @@ void gst_task(string in_multicast, int in_port, string hls_root)
         hlssink = Gst::ElementFactory::create_element("hlssink2");
         
         if( !udpsrc || !hlssink || !parsebin ){
-            BOOST_LOG_TRIVIAL(trace) << "Error in create";
+            BOOST_LOG_TRIVIAL(debug) << "Error in create";
             return;
         }
         try{
@@ -63,7 +60,6 @@ void gst_task(string in_multicast, int in_port, string hls_root)
         
         
         udpsrc->set_property("uri", "udp://"+in_multicast);
-
         parsebin->signal_pad_added().connect([&](const RefPtr<Gst::Pad>& pad){
                 try{
                 
@@ -90,17 +86,14 @@ void gst_task(string in_multicast, int in_port, string hls_root)
                 }
                 });
         //hlssink->set_property("multicast-iface", string("lo"));
-
         PIPLINE_WATCH;
         PIPLINE_POSITION;
-
         pipeline->set_state(Gst::STATE_PLAYING);
         loop->run();
         pipeline->set_state(Gst::STATE_NULL);
         m_timeout_connection.disconnect();
-        BOOST_LOG_TRIVIAL(trace) << "Finish";
-
+        BOOST_LOG_TRIVIAL(debug) << "Finish";
     }catch(std::exception& e){
-        BOOST_LOG_TRIVIAL(trace) << "Exception:" << e.what();
+        BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
     }
 }

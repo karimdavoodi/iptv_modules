@@ -19,10 +19,7 @@ int main()
 {
     vector<thread> pool;
     live_setting live_config;
-
     CHECK_LICENSE;
-    BOOST_LOG_TRIVIAL(info) << "TODO: iptv_in_unscrabmble";
-    while(true) this_thread::sleep_for(chrono::seconds(100));
     init();
     if(!get_live_config(live_config, "unscramble")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
@@ -33,13 +30,12 @@ int main()
         IS_CHANNEL_VALID(chan);
         if(chan["inputType"] == live_config.type_id){
             json unscrabmle_chan = json::parse(Mongo::find_id("live_inputs_unscramble", 
-                        chan["inputId"]));
+                        chan["input"]));
             IS_CHANNEL_VALID(unscrabmle_chan);
             pool.emplace_back(start_channel, unscrabmle_chan, live_config);
         }
     }
     for(auto& t : pool)
         t.join();
-    while(true) this_thread::sleep_for(chrono::seconds(100));
-    return 0;
+    THE_END;
 } 

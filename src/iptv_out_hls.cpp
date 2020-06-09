@@ -9,14 +9,12 @@
 #define BY_FFMPEG 1
 using namespace std;
 void gst_task(string in_multicast, int in_port, string hls_root);
-
 void start_channel(json channel, live_setting live_config)
 {
     live_config.type_id = channel["inputType"];
-    auto in_multicast = get_multicast(live_config, channel["inputId"]);
+    auto in_multicast = get_multicast(live_config, channel["input"]);
     string hls_root = string(HLS_ROOT) + channel["name"].get<string>();
     check_path(hls_root);
-
 #if BY_FFMPEG
     hls_root += "/p.m3u8";
     auto cmd = boost::format("%s -i 'udp://%s:%d' "
@@ -24,9 +22,7 @@ void start_channel(json channel, live_setting live_config)
             "-hls_time 4 -hls_list_size 10 -hls_flags delete_segments "
             " '%s'")
         % FFMPEG % in_multicast % INPUT_PORT % hls_root;
-
-    BOOST_LOG_TRIVIAL(info) << cmd.str();
-    std::system(cmd.str().c_str());
+    exec_shell_loop(cmd.str());
 #else
     gst_task(in_multicast, INPUT_PORT, hls_root); 
 #endif
@@ -35,7 +31,6 @@ int main()
 {
     vector<thread> pool;
     live_setting live_config;
-
     CHECK_LICENSE;
     init();
     if(!get_live_config(live_config, "archive")){
@@ -54,6 +49,5 @@ int main()
     }
     for(auto& t : pool)
         t.join();
-    while(true) this_thread::sleep_for(chrono::seconds(100));
-    return 0;
+    THE_END;
 } 

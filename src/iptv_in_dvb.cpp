@@ -15,10 +15,9 @@
 #define BY_DVBLAST 1
 using namespace std;
 using nlohmann::json;
-
 void start_channel(json tuner, live_setting live_config)
 {
-    BOOST_LOG_TRIVIAL(trace) << tuner.dump(4);
+    BOOST_LOG_TRIVIAL(debug) << tuner.dump(4);
     string fromdvb_args = "";
     if (tuner["is_dvbt"])   
         fromdvb_args = "-f" + to_string(tuner["freq"]) + "000";
@@ -52,11 +51,10 @@ int main()
 {
     vector<thread> pool;
     live_setting live_config;
-
     CHECK_LICENSE;
     init();
     if(!get_live_config(live_config, "dvb")){
-        BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
+        BOOST_LOG_TRIVIAL(error) << "Error in live config! Exit.";
         return -1;
     }
     json tuners = json::parse(Mongo::find_mony("live_tuners_input", "{}"));
@@ -64,7 +62,7 @@ int main()
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["inputType"] == live_config.type_id){
-            json dvb_chan = json::parse(Mongo::find_id("live_inputs_dvb", chan["inputId"]));
+            json dvb_chan = json::parse(Mongo::find_id("live_inputs_dvb", chan["input"]));
             IS_CHANNEL_VALID(dvb_chan);
             for(auto& tuner : tuners ){
                 int t_id = tuner["_id"];
@@ -92,7 +90,5 @@ int main()
     for(auto& t : pool){
         t.join();
     }
-    BOOST_LOG_TRIVIAL(info) << "End!";
-    while(true) this_thread::sleep_for(chrono::seconds(100));
-    return 0;
+    THE_END;
 } 

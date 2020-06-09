@@ -1,6 +1,18 @@
-# iptv_out
-include:
-    - iptv_archive: multicat the mpegts files
-    - iptv_network: multicat the url from http, udp, rtp, hls, rtsp
-    - iptv_transcoder: transcode multicat to multicat
-
+# iptv_modules
+## include:
+- iptv_in_archive
+- iptv_in_dvb
+- iptv_in_network
+- iptv_in_scramble
+- iptv_in_transcoder
+- iptv_in_unscramble
+- iptv_in_web
+- iptv_out_dlna
+- iptv_out_epg
+- iptv_out_gold
+- iptv_out_hls
+- iptv_out_http
+- iptv_out_multicast
+- iptv_out_record
+- iptv_out_rf
+- iptv_out_rtsp

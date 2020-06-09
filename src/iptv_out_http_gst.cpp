@@ -38,7 +38,6 @@
 #define SOCK_BUF_SIZE  (PKT_SIZE*4000)
 #define INPUT_UDP_TIMEOUT  20
 #define RECORD_SCHEDULING_DAYS 7
-
 using namespace std;
 int debug = 10;
 void Log(int level, const char *format, ...)
@@ -50,10 +49,7 @@ void Log(int level, const char *format, ...)
         va_end(args);
     }
 }
-
-
 // int x<::> = <% %>;   === int x[] = {2,3,4};   C17
-
 struct ts_buffer {
     int				ts_i; /* buffer pointer */
     uint8_t		   *ts;   /* buffer */
@@ -66,15 +62,12 @@ struct Channel {
     string multicast;
     struct ts_buffer tsb;
 };
-
 extern std::map<int, Channel*> chan_map;
 ///////////////////////////////////////////////////////////////////////////
 void set_sock_buf_size(int sock,int n,const char *name)
 {
     size_t rec_buf = n;
-
     Log(3,"Set sock send/recv buf size %d for %s\n",n,name);
-
     if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF,&rec_buf,sizeof(rec_buf)) < 0) {
         Log(0,"Failed to set SO_RCVBUF:%s\n",strerror(errno));
     }
@@ -90,15 +83,12 @@ int mcast_sock_create(const char *host, int port,int bind_need,int is_local)
     struct sockaddr_in sockaddr;
     struct timeval tv;
     int sock;
-
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0) {
         Log(0,"socket(SOCK_DGRAM): %s\n", strerror(errno));
         return -1;
     }
-
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-
     struct hostent *hostinfo = gethostbyname(host);
     if (hostinfo == NULL) {
         Log(0,"gethostbyname error %s", host);
@@ -108,7 +98,6 @@ int mcast_sock_create(const char *host, int port,int bind_need,int is_local)
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_port = htons(port);
     sockaddr.sin_addr = *(struct in_addr *)hostinfo->h_addr;
-
     memcpy(&mreq.imr_multiaddr, &(sockaddr.sin_addr), sizeof(struct in_addr));
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
     if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
@@ -116,7 +105,6 @@ int mcast_sock_create(const char *host, int port,int bind_need,int is_local)
         close(sock);
         return -1;
     }
-
     if(bind_need){
         memset(&receiving_from, 0, sizeof(receiving_from));
         receiving_from.sin_family = AF_INET;
@@ -150,7 +138,6 @@ int mcast_sock_create(const char *host, int port,int bind_need,int is_local)
         }
         struct sockaddr_in bind_addr;
         bind_addr.sin_addr.s_addr = htonl(INADDR_ANY); 
-
         if(setsockopt( sock, IPPROTO_IP, IP_MULTICAST_IF,
                     (void *)&bind_addr.sin_addr.s_addr,
                     sizeof(bind_addr.sin_addr.s_addr))<0){
@@ -167,7 +154,6 @@ void send_http_response( int sockfd, int code, const char* reason)
 {
     static char msg[1024];
     int msglen;
-
     assert( (sockfd > 0) && code && reason );
     msg[0] = '\0';
     msglen = snprintf( msg, sizeof(msg) - 1, 
@@ -210,7 +196,6 @@ int write_all(int s, char *buf, int len)
     int total = 0;        
     int bytesleft = len; 
     int n;
-
     while(total < len) {
         n = write(s, buf+total, bytesleft);
         if (n == -1) { break; }
@@ -224,7 +209,6 @@ int write_all(int s, char *buf, int len)
 #define HEADER  "HTTP/1.1 200 OK\r\n"                       \
         "Server: Moojafzar IPTV server (IP Unicaster)\r\n"  \
         "Content-Type:application/octet-stream\r\n\r\n"     
-
 long MAX_CHANNEL_DATA = 3000*PKT_SIZE;
 int BUFFER_SEC = 10;   
 int max_users = MAX_USERS;
@@ -237,7 +221,6 @@ int get_request_chan_addr(char *client_req, int *chan_id)
     char *p,*tok;
     char *channel_id;
     char tmp[2048];
-
     *chan_id = -1;
     strncpy(tmp,client_req,2048);
     p         = strtok_r (tmp,"/.",&tok);  
@@ -245,18 +228,15 @@ int get_request_chan_addr(char *client_req, int *chan_id)
     if(channel_id == NULL || !std::isdigit(channel_id[0]))
             return false;
     *chan_id = atoi(channel_id);
-
     return true;
 }
 bool get_chan_multicast(int chan_id, char *chan_multicast)
 {
-
     live_setting live_config;
-
     json silver_channel = json::parse(Mongo::find_id("live_output_silver", chan_id));
     if(silver_channel.is_null()) return false;
     live_config.type_id = silver_channel["inputType"];
-    auto in_multicast = get_multicast(live_config, silver_channel["inputId"]);
+    auto in_multicast = get_multicast(live_config, silver_channel["input"]);
     strncpy(chan_multicast, in_multicast.c_str(), 20);
     return true;
 }
@@ -274,7 +254,6 @@ void relay_traffic_directly(int s_udp_sock,int c_tcp_sock,int chan_id,const char
 {
     int n, w, wn, wi, size, old_size, count;
     uint8_t	  pkt[PKT_SIZE];   
-
     count = size = old_size = 0;
     while(true)
     {
@@ -340,7 +319,6 @@ void relay_traffic(int client_sock,int chan_id,char *client_http_req,struct in_a
         sec = (sec>5)?5:sec; /* FIXME: 0 -> 3 */
     //	else if(strstr(client_http_req,"9A405"))  /* NexBox */
     //		sec = (sec>3)?3:sec;
-
     if(c->tsb.dl <= sec ){
         len = MAX_CHANNEL_DATA;
     }else{ 
@@ -348,25 +326,19 @@ void relay_traffic(int client_sock,int chan_id,char *client_http_req,struct in_a
     }
     if(c->tsb.dl == 0 || c->tsb.dl > 10000)
         len = c->tsb.ts_i;
-
     len -= (len % PKT_SIZE);
-
     if(sec == 0 || len < 0  || c->tsb.ts == NULL ) len = 0;
-
     /* Exception: len=0 for SAMSUNG HOTEL TV */
     if(c->tsb.dl>100/*radio*/ && strstr(client_http_req,"Lavf52.104")/*samsung hotel tv*/){
         len = 0;
     }
-
     strncpy(client_ip,inet_ntoa(client_addr),20);
     if(debug>1){
         Log(3, "Client:%s\n",client_http_req);
-
         Log(2, "%d(%s->%s): len %d,sec %d,dl %d,ts_i %d,max %ld\n",
                 c->id,c->multicast.c_str(),client_ip,len,sec,c->tsb.dl,c->tsb.ts_i,
                 MAX_CHANNEL_DATA);
     }
-
     if(write(client_sock, HEADER, strlen(HEADER)) == -1){
         Log(1,"(%s) Connection lost(1)!\n",client_ip);
         return;
@@ -400,14 +372,10 @@ void relay_traffic(int client_sock,int chan_id,char *client_http_req,struct in_a
         Log(0,"Can't open socket to channel %s\n",c->name.c_str());
         return;
     }
-
     Log(1,"HTTP Relay %s(%s:%d) -> %s\n",
             c->name.c_str(),c->multicast.c_str(),INPUT_PORT,client_ip);
-
     relay_traffic_directly(server_sock,client_sock,chan_id,(const char *)client_ip);
-
     shutdown(server_sock,SHUT_RDWR); close(server_sock);
-
     Log(2,"Close traffic %s -> %s\n",c->multicast.c_str(),client_ip);
 }
 void http_unicast_relay(int clientfd, struct sockaddr_in sock)
@@ -417,11 +385,9 @@ void http_unicast_relay(int clientfd, struct sockaddr_in sock)
     char client_req[2048];
     int client_id;
     char chan_multicast[20];
-
     signal(SIGPIPE, SIG_IGN);
     BOOST_LOG_TRIVIAL(info) << "Accept Clinet "; 
     tcp_sock_opt(clientfd);
-
     if((n=read(clientfd, client_req, 2048)) < 0 ){
         send_http_response(clientfd, 500, "Service error. Can't read req" );
         Log(0,"Error reading from socket\n");
@@ -429,7 +395,6 @@ void http_unicast_relay(int clientfd, struct sockaddr_in sock)
         return;
     }
     client_req[n] = '\0';
-
     if(!get_request_chan_addr(client_req, &chan_id)){
         send_http_response(clientfd, 500, "Service error. Can't get chan name" );
         shutdown(clientfd,SHUT_RDWR); close(clientfd);
@@ -441,15 +406,10 @@ void http_unicast_relay(int clientfd, struct sockaddr_in sock)
         return;
     }
     send_http_response( clientfd, 200, "OK" );
-
     clients_num++;
-
     relay_traffic(clientfd,chan_id,client_req,sock.sin_addr);
-
     clients_num--;
-
     shutdown(clientfd,SHUT_RDWR); close(clientfd);
-
     return;
 }
 void http_unicast_server()
@@ -460,7 +420,6 @@ void http_unicast_server()
     struct http_thread_arg *arg;
     struct sockaddr_in serveraddr;
     socklen_t clientlen;
-
     BOOST_LOG_TRIVIAL(info) << "Start http server in port " << UNICAST_HTTP_PORT;
     if((parentfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ){
         Log(0, "Error open http socket:%s\n",  strerror(errno));
@@ -468,12 +427,10 @@ void http_unicast_server()
     }
     optval = 1;
     setsockopt(parentfd, SOL_SOCKET, SO_REUSEADDR,(const void *)&optval , sizeof(int));
-
     bzero((char *) &serveraddr, sizeof(serveraddr));
     serveraddr.sin_family = AF_INET;
     serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
     serveraddr.sin_port = htons((unsigned short) UNICAST_HTTP_PORT );
-
     optval = 0;
     while (bind(parentfd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0){ 
         if(++optval > 5){

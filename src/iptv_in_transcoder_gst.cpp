@@ -5,7 +5,6 @@
 #include <boost/log/trivial.hpp>
 #include "config.hpp"
 using namespace std;
-
 void gst_task(string media_path, string multicast_addr, int port)
 {
     using Glib::RefPtr;
@@ -21,7 +20,7 @@ void gst_task(string media_path, string multicast_addr, int port)
     //      tsparse set-timestamps=1 ! 
     //      udpsink blocksize=1316 multicast-iface=lo host=239.1.1.2 port=3200 sync=true
     try{
-        BOOST_LOG_TRIVIAL(trace) 
+        BOOST_LOG_TRIVIAL(debug) 
             << "Start " 
             << media_path 
             << " --> udp://" 
@@ -36,7 +35,7 @@ void gst_task(string media_path, string multicast_addr, int port)
         udpsink = Gst::ElementFactory::create_element("udpsink");
         
         if( !filesrc || !tsparse || !udpsink || !rndbuffersize){
-            BOOST_LOG_TRIVIAL(trace) << "Error in create";
+            BOOST_LOG_TRIVIAL(debug) << "Error in create";
             return;
         }
         pipeline->add(filesrc)->add(tsparse)->add(rndbuffersize)->add(udpsink);
@@ -46,25 +45,20 @@ void gst_task(string media_path, string multicast_addr, int port)
         
         filesrc->set_property("location", media_path);
         tsparse->set_property("set-timestamps", 1);
-
         rndbuffersize->set_property("min", 1316);
         rndbuffersize->set_property("max", 1316);
-
         udpsink->set_property("multicast-iface", string("lo"));
         udpsink->set_property("host", multicast_addr);
         udpsink->set_property("port", port);
         udpsink->set_property("sync", 1);
-
         PIPLINE_WATCH;
         PIPLINE_POSITION;
-
         pipeline->set_state(Gst::STATE_PLAYING);
         loop->run();
         pipeline->set_state(Gst::STATE_NULL);
         m_timeout_connection.disconnect();
-        BOOST_LOG_TRIVIAL(trace) << "Finish";
-
+        BOOST_LOG_TRIVIAL(debug) << "Finish";
     }catch(std::exception& e){
-        BOOST_LOG_TRIVIAL(trace) << "Exception:" << e.what();
+        BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
     }
 }

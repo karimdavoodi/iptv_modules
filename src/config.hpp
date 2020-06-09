@@ -1,5 +1,4 @@
 #pragma onc;
-
 #define PKT_SIZE     1316
 #define SOCK_BUF_SIZE  (PKT_SIZE*4000)
 #define  INPUT_PORT 3200
@@ -37,11 +36,17 @@
         }\
         return true;\
     });
-
 #define PIPLINE_POSITION \
     sigc::connection m_timeout_pos = Glib::signal_timeout().connect([&]()->bool {\
         gint64 cur;\
         pipeline->query_position(Gst::FORMAT_TIME, cur); \
         BOOST_LOG_TRIVIAL(trace) <<  "Position:" << cur/1000000;    \
         return true;\
+    }, TIME_INTERVAL_STATE_SAVE )
+#define PIPLINE_DOT_FILE \
+    sigc::connection m_timeout_dot = Glib::signal_timeout().connect([&]()->bool {\
+            BOOST_LOG_TRIVIAL(trace) << "Make dot file: pipeline.dot";\
+            GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline->gobj()), \
+                    GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");\
+                    return false;\
     }, TIME_INTERVAL_STATE_SAVE )

@@ -7,26 +7,21 @@
 #include "utils.hpp"
 using namespace std;
 void gst_task(string in_multicast, int port, int chan_id);
-
 void start_channel(json channel, live_setting live_config)
 {
-    auto in_multicast = get_multicast(live_config, channel["inputId"]);
-
+    auto in_multicast = get_multicast(live_config, channel["input"]);
     gst_task(in_multicast, INPUT_PORT, channel["_id"]); 
 }
 int main()
 {
     vector<thread> pool;
     live_setting live_config;
-
     CHECK_LICENSE;
     init();
-
     if(!get_live_config(live_config, "dvb")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
     }
-
     json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         // Active EPG only for DVB channels
@@ -37,7 +32,5 @@ int main()
     }
     for(auto& t : pool)
         t.join();
-    while(true) this_thread::sleep_for(chrono::seconds(100));
-    BOOST_LOG_TRIVIAL(info) << "End!";
-    return 0;
+    THE_END;
 } 

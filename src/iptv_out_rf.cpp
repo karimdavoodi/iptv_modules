@@ -9,11 +9,10 @@
 #include "utils.hpp"
 using namespace std;
 void gst_task(string in_multicast, string out_multicast);
-
 void start_channel(json channel, live_setting live_config)
 {
     live_config.type_id = channel["inputType"];
-    auto in_multicast = get_multicast(live_config, channel["inputId"]);
+    auto in_multicast = get_multicast(live_config, channel["input"]);
     BOOST_LOG_TRIVIAL(error) << "TODO: implement RF ...";
 }
 int main()
@@ -23,7 +22,6 @@ int main()
     map<int, vector<json> > chan_by_freq;
     vector<string> tomts_cmd;
     vector<string> torf_cmd;
-
     CHECK_LICENSE;
     init();
     if(!get_live_config(live_config, "archive")){
@@ -65,7 +63,7 @@ int main()
         i = 1;
         for(const auto& chan: rf.second){
             live_config.type_id = chan["inputType"];
-            auto in_multicast = get_multicast(live_config, chan["inputId"]);
+            auto in_multicast = get_multicast(live_config, chan["input"]);
             cfg << "\n[Channel" << i << "]\n"
                 << "\nservice_id = " << chan["sid"] 
                 << "\nid = "<< chan["sid"] 
@@ -84,14 +82,11 @@ int main()
         std::ostringstream torf;
         torf << "/opt/sms/bin/torft "
             << tid << " " <<  rf.first << " " << port << " &";
-
         BOOST_LOG_TRIVIAL(info) << tomts.str();
         BOOST_LOG_TRIVIAL(info) << torf.str();
         std::system(tomts.str().c_str());
         std::system(torf.str().c_str());
         tid++;
     }
-    while(true)
-        std::this_thread::sleep_for(std::chrono::seconds(100));
-    return 0;
+    THE_END;
 } 

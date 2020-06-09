@@ -9,14 +9,12 @@
 #include "gstreamermm/caps.h"
 #include "gstreamermm/pad.h"
 #include "gstreamermm/query.h"
-
 /*
             urisourcebin ---> queue1 -->  parsebin 
                         src_0 --> queue  --> mpegtsmux.video --> 
                         src_1 --> queue  --> mpegtsmux.audio -->  
                                        queue2 --> rndbuffersize ---> udpsink
  * */
-
 using namespace std;
 void gst_task(string in_url, string out_multicast, int port)
 {
@@ -36,10 +34,8 @@ void gst_task(string in_url, string out_multicast, int port)
     try{
         BOOST_LOG_TRIVIAL(info) << in_url << " --> " 
             << out_multicast << ":" << port;
-
         loop = Glib::MainLoop::create();
         pipeline = Gst::Pipeline::create();
-
         urisourcebin = Gst::ElementFactory::create_element("urisourcebin");
         queue1  = Gst::ElementFactory::create_element("queue","urisourcebin_Q_parsebin");
         queue2  = Gst::ElementFactory::create_element("queue","tsmux_Q_rndbuffersize");
@@ -51,25 +47,22 @@ void gst_task(string in_url, string out_multicast, int port)
         udpsink = Gst::ElementFactory::create_element("udpsink");
         
         if( !urisourcebin || !udpsink ){
-            BOOST_LOG_TRIVIAL(trace) << "Error in create";
+            BOOST_LOG_TRIVIAL(debug) << "Error in create";
             return;
         }
         try{
             pipeline->add(urisourcebin)->add(queue1)->add(parsebin)->
                 add(mpegtsmux)->add(queue2)->add(rndbuffersize)->
                 add(udpsink)->add(queue_a)->add(queue_v);
-
             // connect urisourcebin --> queue1 dynamicly
             queue1->link(parsebin);
             // connect parsebin --> mpegtsmux's queue dynamicly
             mpegtsmux->link(queue2)->link(rndbuffersize)->link(udpsink);
             queue_a->link(mpegtsmux);
             queue_v->link(mpegtsmux);
-
         } catch(std::runtime_error& e){
             BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
         }
-
         urisourcebin->set_property("uri", in_url);
         rndbuffersize->set_property("min", 1316);
         rndbuffersize->set_property("max", 1316);
@@ -77,7 +70,6 @@ void gst_task(string in_url, string out_multicast, int port)
         udpsink->set_property("host", out_multicast);
         udpsink->set_property("port", port);
         udpsink->set_property("sync", 1);
-
         urisourcebin->signal_pad_added().connect([&](const RefPtr<Gst::Pad>& pad){
                 auto name = pad->get_name();
                 BOOST_LOG_TRIVIAL(info) << "urisourcebin add pad: " << name;
@@ -117,16 +109,14 @@ void gst_task(string in_url, string out_multicast, int port)
                     BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
                 }
         });
-
         PIPLINE_WATCH;
         //PIPLINE_POSITION;
-
         pipeline->set_state(Gst::STATE_PLAYING);
         loop->run();
         pipeline->set_state(Gst::STATE_NULL);
         m_timeout_connection.disconnect();
         BOOST_LOG_TRIVIAL(info) << "Finish";
     }catch(std::exception& e){
-        BOOST_LOG_TRIVIAL(trace) << "Exception:" << e.what();
+        BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
     }
 }

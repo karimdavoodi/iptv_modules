@@ -3,13 +3,15 @@ project(iptv_modules)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
+
 add_definitions( 
-                #-fdiagnostics-color=always 
                  -fdiagnostics-show-location=every-line
                  -fdiagnostics-generate-patch 
                  -DBOOST_LOG_DYN_LINK=1
                  -DGST_USE_UNSTABLE_API=1
-                #-g
+                 #-O3
                  )
 #BOOST
 find_package(Boost COMPONENTS system log log_setup REQUIRED)
@@ -43,23 +45,25 @@ set_target_properties(utils PROPERTIES
     )
 
 set( project_EXES
-     iptv_in_archive       # TODO: 1-support mp4,mkv,... 2-save stat of last streaming
-     iptv_in_dvb           # TODO: do by Gst
+     iptv_in_archive       # TODO: support mp4,mkv,... by GST 
      iptv_in_network       # TODO: test (not work by channels_http buffer)
      iptv_in_transcoder    # TODO: do by Gst
-     iptv_in_unscramble    # TODO: ...
-     iptv_in_scramble      # TODO: ...
      iptv_in_web           # TODO: ...
+     iptv_in_dvb           # TODO: do by Gst
+     iptv_in_unscramble    ##TODO: ...
+     iptv_in_scramble      ##TODO: ...
   
      iptv_out_hls          # TODO: do by Gst 
      iptv_out_epg          # TODO: test 
      iptv_out_multicast    # TODO: test
      iptv_out_record       # TODO: test
      iptv_out_rtsp         # TODO: do by Gst-rtsp-server library
-     iptv_out_rf           # TODO: ...
-     iptv_out_http         # TODO: ... 
-     iptv_out_gold         # TODO: ...
+     iptv_out_rf           # TODO: do by Gst
+     iptv_out_http         # TODO: do by Gst 
+     iptv_out_gold         # TODO: do
      iptv_out_dlna         # TODO: disabled. do by Rygel library
+     iptv_out_snapshot     # TODO: 
+     iptv_utils
    )
 
 foreach( APP ${project_EXES} )

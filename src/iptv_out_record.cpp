@@ -11,12 +11,10 @@
 #define BY_FFMPEG 0
 using namespace std;
 void gst_task(string in_multicast, string file_path, int second);
-
 void start_channel(json channel, live_setting live_config)
 {
     live_config.type_id = channel["inputType"];
-    auto in_multicast = get_multicast(live_config, channel["inputId"]);
-
+    auto in_multicast = get_multicast(live_config, channel["input"]);
     while(true){
         auto now = time(NULL);
         auto tm = localtime(&now);
@@ -43,10 +41,8 @@ int main()
 {
     vector<thread> pool;
     live_setting live_config;
-
     CHECK_LICENSE;
     init();
-
     string time_shift_dir = string(MEDIA_ROOT) + "time_shift";
     if(!boost::filesystem::exists(time_shift_dir)){
         BOOST_LOG_TRIVIAL(info) << "Create " << time_shift_dir;
@@ -56,7 +52,6 @@ int main()
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
     }
-
     json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         if(chan["active"] == true && chan["recordTime"] > 0){
@@ -67,7 +62,5 @@ int main()
     }
     for(auto& t : pool)
         t.join();
-    while(true) this_thread::sleep_for(chrono::seconds(100));
-    BOOST_LOG_TRIVIAL(info) << "End!";
-    return 0;
+    THE_END;
 } 
