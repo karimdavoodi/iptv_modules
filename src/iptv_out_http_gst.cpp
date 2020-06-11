@@ -39,7 +39,7 @@
 #define INPUT_UDP_TIMEOUT  20
 #define RECORD_SCHEDULING_DAYS 7
 using namespace std;
-int debug = 10;
+int debug = 1;
 void Log(int level, const char *format, ...)
 {
     va_list args;
@@ -230,16 +230,18 @@ int get_request_chan_addr(char *client_req, int *chan_id)
     *chan_id = atoi(channel_id);
     return true;
 }
-bool get_chan_multicast(int chan_id, char *chan_multicast)
+/*
+bool get_chan_multicast(Mongo& db, int chan_id, char *chan_multicast)
 {
     live_setting live_config;
-    json silver_channel = json::parse(Mongo::find_id("live_output_silver", chan_id));
+    json silver_channel = json::parse(db.find_id("live_output_silver", chan_id));
     if(silver_channel.is_null()) return false;
     live_config.type_id = silver_channel["inputType"];
-    auto in_multicast = get_multicast(live_config, silver_channel["input"]);
+    auto in_multicast = Util::get_multicast(live_config, silver_channel["input"]);
     strncpy(chan_multicast, in_multicast.c_str(), 20);
     return true;
 }
+*/
 int find_ts(int n,int max,uint8_t *ts)
 {
     int i = n;

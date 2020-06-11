@@ -6,23 +6,25 @@
 #include <thread>
 #include "utils.hpp"
 using namespace std;
-void gst_task(string in_multicast, int port, int chan_id);
+void gst_task(Mongo& db, string in_multicast, int port, int chan_id);
 void start_channel(json channel, live_setting live_config)
 {
-    auto in_multicast = get_multicast(live_config, channel["input"]);
-    gst_task(in_multicast, INPUT_PORT, channel["_id"]); 
+    Mongo db;
+    auto in_multicast = Util::get_multicast(live_config, channel["input"]);
+    gst_task(db, in_multicast, INPUT_PORT, channel["_id"]); 
 }
 int main()
 {
+    Mongo db;
     vector<thread> pool;
     live_setting live_config;
     CHECK_LICENSE;
-    init();
-    if(!get_live_config(live_config, "dvb")){
+    Util::init(db);
+    if(!Util::get_live_config(db, live_config, "dvb")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
     }
-    json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
+    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         // Active EPG only for DVB channels
         IS_CHANNEL_VALID(chan);

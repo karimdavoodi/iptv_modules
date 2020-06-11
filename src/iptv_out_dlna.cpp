@@ -13,10 +13,12 @@ void start_channel(json channel, live_setting live_config)
 }
 int main()
 {
+    Mongo db;
+
     CHECK_LICENSE;
     BOOST_LOG_TRIVIAL(warning) << "Contents are not in filesystem structure. disable dlna!";
-    init();
-    json license = json::parse(Mongo::find_id("system_license", 1));
+    Util::init(db);
+    json license = json::parse(db.find_id("system_license", 1));
     if(license["license"].is_null()){
         BOOST_LOG_TRIVIAL(error) << "License in empty!";
         return -1;

@@ -123,7 +123,7 @@ void dump_eit(GstMpegtsSection *sec)
     //g_object_unref(GST_OBJECT(eit));
     
 }
-void channel_epg_update(map<int, Event>& day_eit, int channel_id)
+void channel_epg_update(Mongo& db, map<int, Event>& day_eit, int channel_id)
 {
     json eit = json::array();
     for(auto &event : day_eit){
@@ -145,10 +145,10 @@ void channel_epg_update(map<int, Event>& day_eit, int channel_id)
     epg["_id"] = channel_id;
     epg["total"] = eit.size();
     epg["content"] = eit;
-    Mongo::insert_or_replace_id("live_output_silver_epg", channel_id, epg.dump());
+    db.insert_or_replace_id("live_output_silver_epg", channel_id, epg.dump());
     BOOST_LOG_TRIVIAL(info) << "Update EPG of channel_id:" << channel_id;
 }
-void gst_task(string in_multicast, int port, int channel_id)
+void gst_task(Mongo& db, string in_multicast, int port, int channel_id)
 {
     using Glib::RefPtr;
     RefPtr<Glib::MainLoop> loop;
@@ -220,7 +220,7 @@ void gst_task(string in_multicast, int port, int channel_id)
         });
         sigc::connection m_timeout_pos = Glib::signal_timeout().connect([&]()->bool {
                 try{
-                    channel_epg_update(day_eit, channel_id);
+                    channel_epg_update(db, day_eit, channel_id);
                 }catch(std::exception& e){
                     BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
                 }

@@ -123,11 +123,11 @@ void SysUsage::calcCurrentInterfaces()
         string name = dir.path().filename().c_str();
         string rx_file = "/sys/class/net/"+name+"/statistics/rx_bytes";
         string tx_file = "/sys/class/net/"+name+"/statistics/tx_bytes";
-        auto read = get_file_content(rx_file);
+        auto read = Util::get_file_content(rx_file);
         if(read.size()){
             current.interfaces[name].read = stof(read);
         }
-        auto write = get_file_content(rx_file);
+        auto write = Util::get_file_content(rx_file);
         if(write.size()){
             current.interfaces[name].write = stof(write);
         }

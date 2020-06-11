@@ -14,7 +14,7 @@ void gst_task(string in_multicast, string file_path, int second);
 void start_channel(json channel, live_setting live_config)
 {
     live_config.type_id = channel["inputType"];
-    auto in_multicast = get_multicast(live_config, channel["input"]);
+    auto in_multicast = Util::get_multicast(live_config, channel["input"]);
     while(true){
         auto now = time(NULL);
         auto tm = localtime(&now);
@@ -23,7 +23,7 @@ void start_channel(json channel, live_setting live_config)
         auto path = boost::format("%s%s/%s") 
             % MEDIA_ROOT % "time_shift" % channel["name"].get<string>(); 
         int duration = (60 - tm->tm_min)*60;
-        check_path(path.str());
+        Util::check_path(path.str());
         string file_path = path.str() + "/" + date_fmt.str() + ".mp4"; 
         
 #if BY_FFMPEG
@@ -39,20 +39,21 @@ void start_channel(json channel, live_setting live_config)
 }
 int main()
 {
+    Mongo db;
     vector<thread> pool;
     live_setting live_config;
     CHECK_LICENSE;
-    init();
+    Util::init(db);
     string time_shift_dir = string(MEDIA_ROOT) + "time_shift";
     if(!boost::filesystem::exists(time_shift_dir)){
         BOOST_LOG_TRIVIAL(info) << "Create " << time_shift_dir;
         boost::filesystem::create_directory(time_shift_dir);
     }
-    if(!get_live_config(live_config, "archive")){
+    if(!Util::get_live_config(db, live_config, "archive")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
     }
-    json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
+    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         if(chan["active"] == true && chan["recordTime"] > 0){
             if(chan["inputType"] != live_config.virtual_dvb_id &&

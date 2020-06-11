@@ -43,16 +43,17 @@ struct live_setting {
     std::string multicast_iface;
     int virtual_net_id, virtual_dvb_id;
 };
-void boost_log_init();
-void exec_shell_loop(const std::string cmd);
-void report_error(const std::string, int level = 1);
-//void report_channels(const std::string, int level = 1);
-//void report_tuners(const std::string, int level = 1);
 int license_capability_bool(const char *var,int *val);
-bool get_live_config(live_setting& cfg, std::string type);
-std::string get_multicast(live_setting& config, int channel_id, bool out_multicast=false);
-std::string get_content_path(int id);
-void route_add(int multicast_class, std::string nic);
-void init();
-void check_path(const std::string path);
-const std::string get_file_content(const std::string name);
+namespace Util {
+    void wait(int millisecond);
+    void boost_log_init(Mongo& db);
+    void exec_shell_loop(const std::string cmd);
+    void report_error(Mongo& db, const std::string, int level = 1);
+    bool get_live_config(Mongo& db, live_setting& cfg, std::string type);
+    std::string get_multicast(live_setting& config, int channel_id, bool out_multicast=false);
+    std::string get_content_path(Mongo& db, int id);
+    void route_add(int multicast_class, std::string nic);
+    void init(Mongo& db);
+    void check_path(const std::string path);
+    const std::string get_file_content(const std::string name);
+}

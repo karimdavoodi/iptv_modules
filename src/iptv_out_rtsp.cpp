@@ -13,16 +13,18 @@ void start_channel(json channel, live_setting live_config)
 }
 int main()
 {
+    Mongo db;
+
     CHECK_LICENSE;
-    init();
-    json license = json::parse(Mongo::find_id("system_license", 1));
+    Util::init(db);
+    json license = json::parse(db.find_id("system_license", 1));
     if(license["license"].is_null()){
         BOOST_LOG_TRIVIAL(error) << "License in empty!";
         return -1;
     }
     if(license["license"]["LiveStreamer"]["LVS_Output_RTSP"] > 0){
         string nic_ip = "";
-        json net = json::parse(Mongo::find_id("system_network",1));
+        json net = json::parse(db.find_id("system_network",1));
         int m_id = net["mainInterface"]; 
         for(auto& iface : net["interfaces"]){
             if(iface["_id"] == m_id){

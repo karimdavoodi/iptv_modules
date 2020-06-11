@@ -46,7 +46,7 @@ void gst_task(string  in_multicast, string out_multicast)
         udpsink->set_property("sync", 1);
         
         PIPLINE_WATCH;
-        PIPLINE_POSITION;
+        //PIPLINE_POSITION;
         
         pipeline->set_state(Gst::STATE_PLAYING);
         loop->run();

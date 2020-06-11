@@ -30,7 +30,7 @@ void start_channel(json tuner, live_setting live_config)
     string cfg_name = "/opt/sms/tmp/fromdvb_"+ to_string(tuner["_id"]);
     ofstream cfg(cfg_name);
     for(auto& chan : tuner["channels"]){
-        auto multicast = get_multicast(live_config, chan["_id"]);
+        auto multicast = Util::get_multicast(live_config, chan["_id"]);
         auto addr = boost::format("%s:%d@127.0.0.1  1   %d\n") 
             % multicast % INPUT_PORT % chan["sid"];
         cfg << addr.str(); 
@@ -49,20 +49,21 @@ void start_channel(json tuner, live_setting live_config)
 }
 int main()
 {
+    Mongo db;
     vector<thread> pool;
     live_setting live_config;
     CHECK_LICENSE;
-    init();
-    if(!get_live_config(live_config, "dvb")){
+    Util::init(db);
+    if(!Util::get_live_config(db, live_config, "dvb")){
         BOOST_LOG_TRIVIAL(error) << "Error in live config! Exit.";
         return -1;
     }
-    json tuners = json::parse(Mongo::find_mony("live_tuners_input", "{}"));
-    json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
+    json tuners = json::parse(db.find_mony("live_tuners_input", "{}"));
+    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["inputType"] == live_config.type_id){
-            json dvb_chan = json::parse(Mongo::find_id("live_inputs_dvb", chan["input"]));
+            json dvb_chan = json::parse(db.find_id("live_inputs_dvb", chan["input"]));
             IS_CHANNEL_VALID(dvb_chan);
             for(auto& tuner : tuners ){
                 int t_id = tuner["_id"];

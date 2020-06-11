@@ -97,7 +97,7 @@ def make_channel_config(chan_type, number):
                 "name": name, 
                 "input": i, 
                 "inputType": 2,
-                "profile": 1
+                "profile": 100072
                 })
         if chan_type == "unscramble":
             name = "unscramble"+str(i)
@@ -138,7 +138,7 @@ def make_channel_config(chan_type, number):
         mdb.insert_or_replace_id("live_output_silver", silver_id, {
             "_id": silver_id,
             "active": True,
-            "inputId": i,
+            "input": i,
             "inputType": channel_type,
             "name": name, 
             "permission": 1,

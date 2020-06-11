@@ -13,6 +13,7 @@ using nlohmann::json;
 void gst_task(string media_path, string multicast_addr, int port);
 void start_channel(json channel, live_setting live_config)
 {
+    Mongo db;
 /*
         "_id": 1,
         "active": True,
@@ -27,15 +28,15 @@ void start_channel(json channel, live_setting live_config)
         BOOST_LOG_TRIVIAL(info) << channel["name"] << " is not Active. Exit!";
         return;
     }
-    json profile = json::parse(Mongo::find_id("live_transcode_profile",channel["profile"])); 
+    json profile = json::parse(db.find_id("live_transcode_profile",channel["profile"])); 
     if(profile["_id"].is_null()){
         BOOST_LOG_TRIVIAL(error) << "transcode profile id is in invalid:" 
                                  << channel["profile"];
         return;
     }
-    auto out_multicast = get_multicast(live_config, channel["_id"]);
+    auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
     live_config.type_id = channel["inputType"];
-    auto in_multicast  = get_multicast(live_config, channel["input"]);
+    auto in_multicast  = Util::get_multicast(live_config, channel["input"]);
     // TODO: do by Gst
    /* 
                 "_id": 1,
@@ -69,7 +70,7 @@ void start_channel(json channel, live_setting live_config)
         % FFMPEG % in_multicast % INPUT_PORT % codecs.str() 
         % opts.str() % out_multicast % INPUT_PORT;
     
-    exec_shell_loop(cmd.str());
+    Util::exec_shell_loop(cmd.str());
 #else
     string in_uri = "udp://" + in_multicast + ":" + to_string(INPUT_PORT);
     gst_task(in_uri, multicast_out, INPUT_PORT);
@@ -78,23 +79,23 @@ void start_channel(json channel, live_setting live_config)
 }
 int main()
 {
+    Mongo db;
     vector<thread> pool;
     live_setting live_config;
     CHECK_LICENSE;
-    init();
-    if(!get_live_config(live_config, "transcode")){
+    Util::init(db);
+    if(!Util::get_live_config(db, live_config, "transcode")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
     }
-    json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
+    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["inputType"] == live_config.type_id){
-            json transcode = json::parse(Mongo::find_id("live_inputs_transcode", 
+            json transcode = json::parse(db.find_id("live_inputs_transcode", 
                         chan["input"]));
             IS_CHANNEL_VALID(transcode);
             pool.emplace_back(start_channel, transcode, live_config);
-            break;
         }
     }
     for(auto& t : pool)

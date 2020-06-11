@@ -50,16 +50,17 @@ void start_channel(json channel)
 }
 int main()
 {
+    Mongo db;
     vector<thread> pool;
     live_setting live_config;
     CHECK_LICENSE;
-    init();
+    Util::init(db);
     signal(SIGPIPE, SIG_IGN);
-    if(!get_live_config(live_config, "archive")){
+    if(!Util::get_live_config(db, live_config, "archive")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
     }
-    json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
+    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["http"] == true){
@@ -69,7 +70,7 @@ int main()
                 C->id = chan["_id"];
                 C->name = chan["name"];
                 live_config.type_id = chan["inputType"];
-                C->multicast = get_multicast(live_config, chan["input"]);
+                C->multicast = Util::get_multicast(live_config, chan["input"]);
                 C->tsb = {};
                 chan_map[chan["_id"]] = C;
                 pool.emplace_back(start_channel, chan);

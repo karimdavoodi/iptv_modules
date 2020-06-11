@@ -6,7 +6,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
-#define BY_FFMPEG 0  
+#define BY_FFMPEG 1  
 using namespace std;
 void gst_task(string media_path, string multicast_addr, int port);
 bool time_to_play(bool schedule, json& media)
@@ -38,9 +38,9 @@ int current_time()
     start += tm->tm_sec;
     return start;
 }
-void update_epg(int silver_chan_id, int content_id)
+void update_epg(Mongo& db, int silver_chan_id, int content_id)
 {
-    json content_info = json::parse(Mongo::find_id("storage_contents_info",content_id)); 
+    json content_info = json::parse(db.find_id("storage_contents_info",content_id)); 
     json j;
     j["start"] = current_time();
     j["name"] = content_info["name"];
@@ -55,24 +55,29 @@ void update_epg(int silver_chan_id, int content_id)
     epg["total"] = 1;
     epg["content"] = json::array();
     epg["content"].push_back(j);
-    Mongo::insert_or_replace_id("live_output_silver_epg", silver_chan_id, epg.dump());
+    db.insert_or_replace_id("live_output_silver_epg", silver_chan_id, epg.dump());
     BOOST_LOG_TRIVIAL(info) << "Update EPG of channel_id:" << silver_chan_id;
 }
 void start_channel(json channel, int silver_chan_id, live_setting live_config)
 {
+    Mongo db;
     BOOST_LOG_TRIVIAL(info) << "Start Channel: " << channel["name"];
     if(!channel["active"]){
         BOOST_LOG_TRIVIAL(info) << channel["name"] << " is not Active. Exit!";
         return;
     }
-    auto multicast = get_multicast(live_config, channel["_id"]);
+    auto multicast = Util::get_multicast(live_config, channel["_id"]);
     bool schedule = channel["manualSchedule"];
     while(true){
         for(auto& media : channel["contents"]){
             if(time_to_play(schedule, media)){
                 BOOST_LOG_TRIVIAL(debug) << "Play media id: " << media["content"];
-                update_epg(silver_chan_id, media["content"]);
-                auto media_path = get_content_path(media["content"]);
+                update_epg(db, silver_chan_id, media["content"]);
+                auto media_path = Util::get_content_path(db, media["content"]);
+                if(media_path.size() == 0){
+                    BOOST_LOG_TRIVIAL(error) << "Invalid media path";
+                    continue;
+                } 
 #if BY_FFMPEG
                 auto cmd = boost::format("%s -re -i '%s' -codec copy -f mpegts "
                         "'udp://%s:%d?pkt_size=1316'")
@@ -90,29 +95,30 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
                     << " due to time.";
             }
         }
-        if(schedule) std::this_thread::sleep_for(std::chrono::seconds(5*60));
-        break;  // FIXME 
+        if(schedule) Util::wait(5*60*1000);
+        else Util::wait(5000);
     }
 }
 int main()
 {
     vector<thread> pool;
     live_setting live_config;
+    Mongo db;
     
     CHECK_LICENSE;
-    init();
-    if(!get_live_config(live_config, "archive")){
+    Util::init(db);
+    if(!Util::get_live_config(db, live_config, "archive")){
         BOOST_LOG_TRIVIAL(error) << "Error in live config! Exit.";
         return -1;
     }
-    json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
+    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["inputType"] == live_config.type_id){
-            json archive = json::parse(Mongo::find_id("live_inputs_archive", chan["input"]));
+            json archive = json::parse(db.find_id("live_inputs_archive", chan["input"]));
             IS_CHANNEL_VALID(archive);
             pool.emplace_back(start_channel, archive, chan["_id"], live_config);
-            break;
+            //wait(100);
         }
     }
     for(auto& t : pool)

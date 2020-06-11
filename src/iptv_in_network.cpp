@@ -21,32 +21,33 @@ void start_channel(string channel_str, live_setting live_config)
         BOOST_LOG_TRIVIAL(info) << channel["name"] << " is not Static. Exit!";
         return;
     }
-    auto out_multicast = get_multicast(live_config, channel["_id"]);
+    auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
 #if BY_FFMPEG
     auto cmd = boost::format("%s -i '%s' -codec copy "
             " -f mpegts 'udp://%s:%d?pkt_size=1316' ")
         % FFMPEG % channel["url"].get<string>() % out_multicast % INPUT_PORT; 
-    exec_shell_loop(cmd.str());
+    Util::exec_shell_loop(cmd.str());
 #else
     gst_task(channel["url"], out_multicast, INPUT_PORT);
 #endif
 }
 int main()
 {
+    Mongo db;
     vector<thread> pool;
     live_setting live_config;
     
     CHECK_LICENSE;
-    init();
-    if(!get_live_config(live_config, "network")){
+    Util::init(db);
+    if(!Util::get_live_config(db, live_config, "network")){
         BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
         return -1;
     }
-    json silver_channels = json::parse(Mongo::find_mony("live_output_silver", "{}"));
+    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["inputType"] == live_config.type_id){
-            string network = Mongo::find_id("live_inputs_network", chan["input"]);
+            string network = db.find_id("live_inputs_network", chan["input"]);
             pool.emplace_back(start_channel, network, live_config);
         }
     }

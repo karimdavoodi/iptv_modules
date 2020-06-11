@@ -66,7 +66,7 @@ void gst_task(string  in_multicast, string file_path, int duration)
                 }
                 });
         PIPLINE_WATCH;
-        PIPLINE_POSITION;
+        //PIPLINE_POSITION;
         m_timeout_connection = Glib::signal_timeout().connect([&]()->bool {
                 BOOST_LOG_TRIVIAL(info) <<  "End of duration";    
                 //pipeline->send_event(Gst::EventEos::create());
