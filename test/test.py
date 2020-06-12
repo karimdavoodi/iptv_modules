@@ -33,6 +33,17 @@ def make_channel_config(chan_type, number):
                 "scramble": False, 
                 "symb": 1
                 })
+            mdb.insert_or_replace_id("live_tuners_input", 1,{  
+                "_id": 1,
+                "name": "t1", 
+                "active": True,
+                "is_dvbt": True, 
+                "freq": 650000,        # from 10000 .. 1000000
+                "errrate": "",  # from 'AUTO', '1/2', '1/3', '3/4', '5/6', '7/8'
+                "pol": "",      # from 'H', 'V'
+                "symrate": 0,     # from 1 .. 50000
+                "switch": 0       # from 1 .. 4
+                })
         if chan_type == "archive":
             name = "hdd"+str(i)
             mdb.insert_or_replace_id("live_inputs_archive", i,{  
@@ -376,5 +387,5 @@ init_db()
 """
 for ch_type in ["dvb", "archive", "network", "web", "virtual_dvb", "virtual_net",
         "transcode", "scramble", "unscramble", "mixed"]:
-    make_channel_config(ch_type, 10)
+    make_channel_config(ch_type, 2)
 

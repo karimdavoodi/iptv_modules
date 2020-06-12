@@ -4,7 +4,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Debug)
 
 add_definitions( 
                  -fdiagnostics-show-location=every-line
@@ -23,6 +23,7 @@ pkg_check_modules(GSTMM REQUIRED
         gstreamermm-1.0 
         glibmm-2.4
         gstreamer-mpegts-1.0
+        gdk-pixbuf-2.0
         )
 #LIBMONGOCXX
 set(CMAKE_MODULE_PATH /usr/local/lib/cmake )
@@ -62,7 +63,7 @@ set( project_EXES
      iptv_out_http         # TODO: do by Gst 
      iptv_out_gold         # TODO: do
      iptv_out_dlna         # TODO: disabled. do by Rygel library
-     iptv_out_snapshot     # TODO: 
+     iptv_out_snapshot     # TODO: test it 
      iptv_utils
    )
 

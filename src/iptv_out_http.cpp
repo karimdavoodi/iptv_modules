@@ -74,6 +74,7 @@ int main()
                 C->tsb = {};
                 chan_map[chan["_id"]] = C;
                 pool.emplace_back(start_channel, chan);
+                Util::wait(100);
             }
         }
     }

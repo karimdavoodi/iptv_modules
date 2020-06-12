@@ -47,11 +47,11 @@ namespace Util {
             string out_file = "/dev/stdout";
             if(debug_level < 5) out_file = "/opt/sms/tmp/log.log"; 
             debug_level = abs(5-debug_level);
-            BOOST_LOG_TRIVIAL(debug) << "Log file " << out_file;
+            BOOST_LOG_TRIVIAL(info) << "Log file " << out_file;
             logging::add_file_log
                 (
                  keywords::file_name = out_file,
-                 keywords::format = "%Process% %ThreadID%: %Message%",
+                 keywords::format = "%Process% %ThreadID% %Severity%: %Message%",
                  keywords::auto_flush = true,
                  keywords::open_mode = std::ios_base::app
                  //%TimeStamp% %Process% %ThreadID% %Severity% %LineID% %Message%"     

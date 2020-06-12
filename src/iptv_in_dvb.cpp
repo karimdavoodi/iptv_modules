@@ -59,6 +59,9 @@ int main()
         return -1;
     }
     json tuners = json::parse(db.find_mony("live_tuners_input", "{}"));
+    if(tuners.is_null() || tuners.size() == 0){
+        BOOST_LOG_TRIVIAL(warning) << "Live input tuners in empty!";
+    }
     json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);

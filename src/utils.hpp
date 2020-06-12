@@ -28,7 +28,7 @@
             continue;                                        \
         }                                                    \
         if(chan["active"] == false) {                        \
-            BOOST_LOG_TRIVIAL(warning) << "Inactive channel!";\
+            BOOST_LOG_TRIVIAL(warning) << "Inactive channel " << chan["name"];\
             continue;                                        \
         }                                                    \
         if(!chan["input"].is_null() &&                     \

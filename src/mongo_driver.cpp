@@ -1,4 +1,3 @@
-#include "mongo_driver.hpp"
 #include <exception>
 #include <string>
 #include <utility>
@@ -10,9 +9,11 @@
 #include <bsoncxx/builder/basic/kvp.hpp>
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/stdx/make_unique.hpp>
+#include "mongo_driver.hpp"
 
 using bsoncxx::builder::basic::make_document;
 using bsoncxx::builder::basic::kvp;
+static mongocxx::instance inst{};
 
 void Mongo::fill_defauls(){
     try{

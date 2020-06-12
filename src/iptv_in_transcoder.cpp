@@ -14,16 +14,7 @@ void gst_task(string media_path, string multicast_addr, int port);
 void start_channel(json channel, live_setting live_config)
 {
     Mongo db;
-/*
-        "_id": 1,
-        "active": True,
-        "name": "hdd1_ssd", 
-        "input": 1, 
-        "inputType": 2,
-        "profile": 1,
- * */
     BOOST_LOG_TRIVIAL(info) << "Start Channel: " << channel["name"];
-    //BOOST_LOG_TRIVIAL(debug) << channel.dump(4);
     if(!channel["active"]){
         BOOST_LOG_TRIVIAL(info) << channel["name"] << " is not Active. Exit!";
         return;
@@ -39,32 +30,56 @@ void start_channel(json channel, live_setting live_config)
     auto in_multicast  = Util::get_multicast(live_config, channel["input"]);
     // TODO: do by Gst
    /* 
-                "_id": 1,
-                "name":"base_sd",
-                "preset": "ultrafast",
-                "videoCodec": "h264", 
-                "videoSize": "720x576", 
-                "videoRate": "2000k", 
-                "videoFps": "24", 
-                "videoProfile": "main", 
-                "audioCodec": "aac", 
-                "audioRate": "128k", 
-                "extra": ""
+                "_id": int,
+                "active": boolean,
+                "name": string, 
+                "preset": string,       # from 'ultrafast','fast','medium','slow','veryslow' 
+                "videoCodec": string,   # from  'h265','h264','mpeg2' 
+                "videoSize": string,    # from '4K', 'FHD', 'HD', 'SD', 'CD' 
+                "videoRate": int,       # from 1 .. 100000000 
+                "videoFps": int,        # from 1 .. 60
+                "videoProfile": string, # from 'Baseline', 'Main', 'High'
+                "audioCodec": string,   # from 'aac','mp3','mp2' 
+                "audioRate": int,       # from 1 to 1000000
+                "extra": string 
     */
 #if BY_FFMPEG 
-    string vcodec = "copy" ,acodec = "copy";
-    if(profile["videoCodec"].get<string>().find("264") != string::npos) 
-        vcodec = "libx264";
-    else if(profile["videoCodec"].get<string>().find("mpeg") != string::npos) 
-        vcodec = "mpeg2video";
-    else
-        vcodec = profile["videoCodec"];
-    acodec = profile["audioCodec"];
+    // TODO: apply  videoProfile and extra
+    string vcodec = "copy" ,acodec = "copy", vsize = "720x576";
+    string p_vcodec = profile["videoCodec"].get<string>();
+    string p_acodec = profile["audioCodec"].get<string>();
+    string p_vsize = profile["videoSize"].get<string>();
+    if(p_vcodec.find("264") != string::npos)         vcodec = "libx264";
+    else if(p_vcodec.find("mpeg2") != string::npos)  vcodec = "mpeg2video";
+    else{
+        BOOST_LOG_TRIVIAL(error) << "Vicedo Codec not support " << p_vcodec 
+            << " for channel " << channel["name"];
+        return;
+    }
+    if(p_acodec.find("mp3") != string::npos)         acodec = "libmp3lame";
+    else if(p_acodec.find("mp2") != string::npos)    acodec = "mp2";
+    else if(p_acodec.find("aac") != string::npos)    acodec = "aac";
+    else{
+        BOOST_LOG_TRIVIAL(error) << "Audio Codec not support " << p_acodec 
+            << " for channel " << channel["name"];
+        return;
+    }
+    if(p_vsize.find("SD") != string::npos)         vsize = "720x576";
+    else if(p_vsize.find("FHD") != string::npos)  vsize = "1920x1080";
+    else if(p_vsize.find("4K") != string::npos)   vsize = "4096x2048";
+    else if(p_vsize.find("HD") != string::npos)   vsize = "1280x720";
+    else if(p_vsize.find("CD") != string::npos)   vsize = "320x240";
+    else{
+        BOOST_LOG_TRIVIAL(error) << "Video size not support " << p_vsize 
+            << " for channel " << channel["name"];
+        return;
+    }
     auto opts = boost::format(" -preset %s -s %s -r %s -g %s -b:v %s -b:a %s   ")
-            % profile["preset"] % profile["videoSize"] % profile["videoFps"] 
+            % profile["preset"] % vsize % profile["videoFps"] 
             % profile["videoFps"] % profile["videoRate"] % profile["audioRate"];
-    auto codecs = boost::format("-vcodec %s -acodec %s") 
-            % vcodec % acodec;
+    string extra = profile["extra"];
+    auto codecs = boost::format("-vcodec %s -acodec %s %s") 
+            % vcodec % acodec % extra ;
     auto cmd = boost::format("%s -i 'udp://%s:%d?reuse=1' "
             " %s %s -f mpegts 'udp://%s:%d?pkt_size=1316' ")
         % FFMPEG % in_multicast % INPUT_PORT % codecs.str() 

@@ -6,7 +6,6 @@
 #define QUERY_SIZE  10
 #define DB_NAME     "iptv"
 #define SERVER      "mongodb://127.0.0.1:27017"
-static mongocxx::instance inst{};
 class Mongo {
     private:
         mongocxx::client client{mongocxx::uri{SERVER}};
