@@ -18,6 +18,13 @@
 #include "utils.hpp"
 using namespace std;
 namespace Util {
+    void system(const std::string cmd)
+    {
+        BOOST_LOG_TRIVIAL(trace) << "Run shell command:" << cmd;
+        if(std::system(cmd.c_str())){
+            BOOST_LOG_TRIVIAL(error) << "Error in run " << cmd;
+        }
+    }
     void wait(int millisecond)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(millisecond));
@@ -25,10 +32,9 @@ namespace Util {
     void exec_shell_loop(const std::string cmd)
     {
         while(true){
-            BOOST_LOG_TRIVIAL(info) << cmd;
-            std::system(cmd.c_str());
-            std::this_thread::sleep_for(std::chrono::seconds(5));
-            BOOST_LOG_TRIVIAL(error) << "Rerun: "<<  cmd;
+            system(cmd);
+            wait(5000);
+            BOOST_LOG_TRIVIAL(error) << "Re Run: "<<  cmd;
         }
     }
     void boost_log_init(Mongo& db)
@@ -41,7 +47,7 @@ namespace Util {
             logging::core::get()->add_global_attribute(
                     "Process", attrs::current_process_name());
             // Set Debug level
-            json system_location = json::parse(db.find_id("system_hidden",1));
+            json system_location = json::parse(db.find_id("system_general",1));
             int debug_level = (!system_location["debug"].is_null())? 
                 system_location["debug"].get<int>():5;
             string out_file = "/dev/stdout";
@@ -79,9 +85,8 @@ namespace Util {
     {
         string multicat_addr = to_string(multicast_class) + ".0.0.0";
         string netmask = "255.0.0.0";
-        string cmd = "route add -net " + multicat_addr + " netmask 255.0.0.0 dev " + nic; 
-        BOOST_LOG_TRIVIAL(info) << cmd;
-        std::system(cmd.c_str());
+        string cmd = "ip route add " + multicat_addr + "/8 dev " + nic;
+        system(cmd);
     }
     void live_input_type_id(Mongo& db, live_setting& cfg, const string type)
     {

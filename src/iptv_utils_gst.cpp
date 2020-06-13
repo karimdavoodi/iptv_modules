@@ -75,7 +75,7 @@ const string SysUsage::getUsageJson()
         usage["time"] = now.time_since_epoch().count()/1000000000;
         usage["sysLoad"] = current.sysLoad;
         usage["cpuUsage"] = delta.cpuUsage;
-        usage["memUsage"] = (current.cpuTotal - current.memAvailable) / current.memTotal;
+        usage["memUsage"] = (current.memTotal - current.memAvailable) / current.memTotal;
         usage["diskUsage"] = diskUsage / 100;
         usage["networkInterfaces"] = json::array();
         for(const auto& interface : delta.interfaces){

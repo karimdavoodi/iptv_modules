@@ -34,7 +34,7 @@ int main()
         return -1;
     }
     Util::boost_log_init(db);
-    system("rm -f /run/sms/*");
+    Util::system("rm -f /run/sms/*");
     CHECK_LICENSE;
     check_license_db(db);
     SysUsage usage;

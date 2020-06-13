@@ -85,8 +85,7 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
                     % media_path 
                     % multicast
                     % INPUT_PORT;
-                BOOST_LOG_TRIVIAL(info) << cmd.str();
-                std::system(cmd.str().c_str());
+                Util::system(cmd.str());
 #else
                 gst_task(media_path, multicast, INPUT_PORT);
 #endif

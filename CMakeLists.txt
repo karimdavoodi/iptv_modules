@@ -11,7 +11,7 @@ add_definitions(
                  -fdiagnostics-generate-patch 
                  -DBOOST_LOG_DYN_LINK=1
                  -DGST_USE_UNSTABLE_API=1
-                 #-O3
+                 -O3
                  )
 #BOOST
 find_package(Boost COMPONENTS system log log_setup REQUIRED)

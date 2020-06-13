@@ -18,32 +18,37 @@ using nlohmann::json;
 void start_channel(json tuner, live_setting live_config)
 {
     BOOST_LOG_TRIVIAL(debug) << tuner.dump(4);
+#if BY_DVBLAST
     string fromdvb_args = "";
     if (tuner["is_dvbt"])   
         fromdvb_args = "-f" + to_string(tuner["freq"]) + "000";
     else{
         int pol = tuner["pol"] == "H" ? 18 : 13;
         auto args = boost::format("-f%d000 -s%d000 -v%d -S%d") 
-            % tuner["freq"] % tuner["symb"] % pol % tuner["switch"];
+            % tuner["freq"].get<int>() 
+            % tuner["symrate"].get<int>() 
+            % pol 
+            % tuner["switch"].get<int>();
         fromdvb_args = args.str();
     }
     string cfg_name = "/opt/sms/tmp/fromdvb_"+ to_string(tuner["_id"]);
     ofstream cfg(cfg_name);
+    if(!cfg.is_open()) BOOST_LOG_TRIVIAL(error) << "Can't open fromdvb config file";
     for(auto& chan : tuner["channels"]){
         auto multicast = Util::get_multicast(live_config, chan["_id"]);
+
+        int sid = chan["sid"].is_string() ? 
+            std::stol(string(chan["sid"])) : chan["sid"].get<int>();
         auto addr = boost::format("%s:%d@127.0.0.1  1   %d\n") 
-            % multicast % INPUT_PORT % chan["sid"];
+            % multicast % INPUT_PORT % sid;
         cfg << addr.str(); 
         BOOST_LOG_TRIVIAL(info) << "DVB:" << tuner["_id"] << " chan:" 
             << chan["name"]  << " -> " << multicast; 
     }
     cfg.close();
-#if BY_DVBLAST
     auto cmd = boost::format("/opt/sms/bin/fromdvb -WYCUlu -t0 -a%d -c%s %s")
             % tuner["_id"] % cfg_name % fromdvb_args ; 
-    string cmd_str = cmd.str();
-    BOOST_LOG_TRIVIAL(info) <<  cmd_str;
-    system(cmd_str.c_str());
+    Util::system(cmd.str());
 #else
 #endif
 }

@@ -34,8 +34,7 @@ int main()
         } 
         if(nic_ip.size() > 0){
             string cmd = "/opt/sms/bin/iptv2rtsp-proxy -s " + nic_ip;
-            BOOST_LOG_TRIVIAL(info) << "Start RTSP service: " << cmd;
-            system(cmd.c_str());
+            Util::system(cmd);
         }else{
             BOOST_LOG_TRIVIAL(error) << "Main NIC IP not found";
         }

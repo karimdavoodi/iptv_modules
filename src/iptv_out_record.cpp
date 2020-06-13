@@ -36,8 +36,7 @@ void start_channel(json channel, live_setting live_config)
         #define FFMPEG_REC_OPTS  " -bsf:a aac_adtstoasc -movflags empty_moov -y -f mp4 "
         auto cmd = boost::format("%s -i udp://%s:%d -t %d -codec copy %s '%s'")
             % FFMPEG % in_multicast % INPUT_PORT % duration % FFMPEG_REC_OPTS % file_path;
-        BOOST_LOG_TRIVIAL(info) << cmd.str();
-        std::system(cmd.str().c_str());
+        Util::system(cmd.str());
 #else
         gst_task(in_multicast, file_path.str(), duration); 
 #endif

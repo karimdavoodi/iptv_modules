@@ -38,8 +38,7 @@ album_art_names=AlbumArt.jpg/albumart.jpg/Album.jpg/album.jpg
 album_art_names=Folder.jpg/folder.jpg/Thumb.jpg/thumb.jpg
             )" ;
             dlna.close();
-            BOOST_LOG_TRIVIAL(info) << "Start DLNA";
-            system("minidlnad -f /opt/sms/tmp/dlna.conf");
+            Util::system("minidlnad -f /opt/sms/tmp/dlna.conf");
         }else{
             BOOST_LOG_TRIVIAL(error) << "Can't open dlna config file";
         }

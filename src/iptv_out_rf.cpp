@@ -97,8 +97,8 @@ int main()
             << tuner_id << " " <<  rf.first << " " << port << " &";
         BOOST_LOG_TRIVIAL(info) << tomts.str();
         BOOST_LOG_TRIVIAL(info) << torf.str();
-        std::system(tomts.str().c_str());
-        std::system(torf.str().c_str());
+        Util::system(tomts.str());
+        Util::system(torf.str());
         tid++;
     }
     THE_END;
