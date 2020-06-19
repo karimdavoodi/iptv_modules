@@ -5,8 +5,9 @@
 #include <vector>
 #include <thread>
 #include <boost/format.hpp>
+#include <boost/filesystem/operations.hpp>
 #include "utils.hpp"
-#define BY_FFMPEG 1  
+#define TEST_BY_FFMPEG 0
 using namespace std;
 void gst_task(string media_path, string multicast_addr, int port);
 bool time_to_play(bool schedule, json& media)
@@ -76,9 +77,15 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
                 auto media_path = Util::get_content_path(db, media["content"]);
                 if(media_path.size() == 0){
                     BOOST_LOG_TRIVIAL(error) << "Invalid media path";
+                    Util::wait(50000);
                     continue;
                 } 
-#if BY_FFMPEG
+                if(!boost::filesystem::exists(media_path)){
+                    BOOST_LOG_TRIVIAL(error) << "Media not exists!";
+                    Util::wait(50000);
+                    continue;
+                }
+#if TEST_BY_FFMPEG
                 auto cmd = boost::format("%s -re -i '%s' -codec copy -f mpegts "
                         "'udp://%s:%d?pkt_size=1316'")
                     % FFMPEG 
@@ -117,7 +124,7 @@ int main()
             json archive = json::parse(db.find_id("live_inputs_archive", chan["input"]));
             IS_CHANNEL_VALID(archive);
             pool.emplace_back(start_channel, archive, chan["_id"], live_config);
-            //wait(100);
+            //break; // for test
         }
     }
     for(auto& t : pool)

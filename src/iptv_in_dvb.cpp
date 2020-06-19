@@ -1,6 +1,4 @@
 // TODO: implement save stat of players for resume in restart
-#include <boost/filesystem/operations.hpp>
-#include <boost/format/format_fwd.hpp>
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
@@ -9,8 +7,8 @@
 #include <vector>
 #include <fstream>
 #include <thread>
-#include <gstreamermm.h>
 #include <boost/format.hpp>
+#include <boost/filesystem/operations.hpp>
 #include "utils.hpp"
 #define BY_DVBLAST 1
 using namespace std;

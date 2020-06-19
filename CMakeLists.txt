@@ -36,9 +36,9 @@ set(ALL_LIBS
     /opt/sms/src/lock/licpp.a 
     )
 set(ALL_INCS  /usr/local/include ${LIBMONGOCXX_INCLUDE_DIRS} ${GSTMM_INCLUDE_DIRS})
-set(MYLIBS    src/mongo_driver.cpp src/utils.cpp)
+set(MYLIBS    src/mongo_driver.cpp src/utils.cpp src/gst.cpp)
 
-add_library(utils src/mongo_driver.cpp src/utils.cpp )
+add_library(utils ${MYLIBS})
 target_include_directories(utils PUBLIC ${ALL_INCS})
 target_link_libraries(utils ${ALL_LIBS} )
 set_target_properties(utils PROPERTIES
@@ -47,13 +47,12 @@ set_target_properties(utils PROPERTIES
 
 set( project_EXES
      iptv_in_archive       # TODO: support mp4,mkv,... by GST 
-     iptv_in_network       # TODO: test (not work by channels_http buffer)
+     iptv_in_network       # TODO: test it
      iptv_in_transcoder    # TODO: do by Gst
      iptv_in_web           # TODO: ...
      iptv_in_dvb           # TODO: do by Gst
      iptv_in_unscramble    ##TODO: ...
      iptv_in_scramble      ##TODO: ...
-  
      iptv_out_hls          # TODO: do by Gst 
      iptv_out_epg          # TODO: test 
      iptv_out_multicast    # TODO: test

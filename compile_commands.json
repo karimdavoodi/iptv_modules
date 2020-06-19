@@ -51,6 +51,11 @@
 },
 {
   "directory": "/s/iptv_modules",
+  "command": "/usr/bin/c++  -DBOOST_ALL_NO_LIB -DBOOST_ATOMIC_DYN_LINK -DBOOST_CHRONO_DYN_LINK -DBOOST_DATE_TIME_DYN_LINK -DBOOST_FILESYSTEM_DYN_LINK -DBOOST_LOG_DYN_LINK -DBOOST_LOG_DYN_LINK=1 -DBOOST_LOG_SETUP_DYN_LINK -DBOOST_REGEX_DYN_LINK -DBOOST_SYSTEM_DYN_LINK -DBOOST_THREAD_DYN_LINK -DGST_USE_UNSTABLE_API=1 -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/libmount -I/usr/include/blkid -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include  -g   -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -O3 -std=gnu++17 -o CMakeFiles/utils.dir/src/gst.cpp.o -c /s/iptv_modules/src/gst.cpp",
+  "file": "/s/iptv_modules/src/gst.cpp"
+},
+{
+  "directory": "/s/iptv_modules",
   "command": "/usr/bin/c++  -DBOOST_ALL_NO_LIB -DBOOST_ATOMIC_DYN_LINK -DBOOST_CHRONO_DYN_LINK -DBOOST_DATE_TIME_DYN_LINK -DBOOST_FILESYSTEM_DYN_LINK -DBOOST_LOG_DYN_LINK -DBOOST_LOG_DYN_LINK=1 -DBOOST_LOG_SETUP_DYN_LINK -DBOOST_REGEX_DYN_LINK -DBOOST_SYSTEM_DYN_LINK -DBOOST_THREAD_DYN_LINK -DGST_USE_UNSTABLE_API=1 -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -I/usr/include/gstreamermm-1.0 -I/usr/lib/x86_64-linux-gnu/gstreamermm-1.0/include -I/usr/include/giomm-2.4 -I/usr/lib/x86_64-linux-gnu/giomm-2.4/include -I/usr/include/gstreamer-1.0 -I/usr/include/orc-0.4 -I/usr/include/glibmm-2.4 -I/usr/lib/x86_64-linux-gnu/glibmm-2.4/include -I/usr/include/sigc++-2.0 -I/usr/lib/x86_64-linux-gnu/sigc++-2.0/include -I/usr/include/gdk-pixbuf-2.0 -I/usr/include/libmount -I/usr/include/blkid -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include  -g   -fdiagnostics-show-location=every-line -fdiagnostics-generate-patch -O3 -std=gnu++17 -o CMakeFiles/iptv_out_snapshot.dir/src/iptv_out_snapshot.cpp.o -c /s/iptv_modules/src/iptv_out_snapshot.cpp",
   "file": "/s/iptv_modules/src/iptv_out_snapshot.cpp"
 },

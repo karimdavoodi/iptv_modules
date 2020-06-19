@@ -5,6 +5,7 @@
 #include <vector>
 #include <thread>
 #include <map>
+#include <signal.h>
 #include "utils.hpp"
 using namespace std;
 struct ts_buffer {

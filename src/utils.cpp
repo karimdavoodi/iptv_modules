@@ -1,6 +1,7 @@
 #include <boost/log/core/record_view.hpp>
 #include <exception>    
 #include <iostream>
+#include <fstream>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -16,6 +17,7 @@
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/attributes/current_process_name.hpp>
 #include "utils.hpp"
+#include "gst.hpp"
 using namespace std;
 namespace Util {
     void system(const std::string cmd)
@@ -28,6 +30,16 @@ namespace Util {
     void wait(int millisecond)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(millisecond));
+    }
+    const std::string shell_out(const std::string cmd) {
+        std::array<char, 128> buffer;
+        std::string result;
+        std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+        if (!pipe) return "";
+        while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+            result += buffer.data();
+        }
+        return result;
     }
     void exec_shell_loop(const std::string cmd)
     {
@@ -50,14 +62,22 @@ namespace Util {
             json system_location = json::parse(db.find_id("system_general",1));
             int debug_level = (!system_location["debug"].is_null())? 
                 system_location["debug"].get<int>():5;
-            string out_file = "/dev/stdout";
-            if(debug_level < 5) out_file = "/opt/sms/tmp/log.log"; 
+            // Check evnironment debug variable
+            char* env_iptv_debug_level = getenv("IPTV_DEBUG_LEVEL");
+            if(env_iptv_debug_level != NULL){
+                debug_level = atoi(env_iptv_debug_level);
+            }
+            string out_file = "/opt/sms/tmp/log.log"; 
+            char* env_iptv_debug_file = getenv("IPTV_DEBUG_FILE");
+            if(env_iptv_debug_file != NULL){
+                out_file = env_iptv_debug_file; 
+            }
+            BOOST_LOG_TRIVIAL(info) << "Log file:" << out_file << " level:" << debug_level;
             debug_level = abs(5-debug_level);
-            BOOST_LOG_TRIVIAL(info) << "Log file " << out_file;
             logging::add_file_log
                 (
                  keywords::file_name = out_file,
-                 keywords::format = "%Process% %ThreadID% %Severity%: %Message%",
+                 keywords::format = "%TimeStamp% %Process% %ThreadID% %Severity%: %Message%",
                  keywords::auto_flush = true,
                  keywords::open_mode = std::ios_base::app
                  //%TimeStamp% %Process% %ThreadID% %Severity% %LineID% %Message%"     
@@ -72,10 +92,38 @@ namespace Util {
     {
         try{
             boost_log_init(db);
-            Gst::init();
+            gst_init(NULL, NULL);
+            char* d_level = getenv("GST_DEBUG_LEVEL");
+            string debug_level = (d_level != NULL) ? d_level : "";
+            if(debug_level  == "WARNING"){
+                gst_debug_set_default_threshold(GST_LEVEL_WARNING);
+            }else if(debug_level  == "ERROR"){
+                gst_debug_set_default_threshold(GST_LEVEL_ERROR);
+            }else if(debug_level  == "DEBUG"){
+                gst_debug_set_default_threshold(GST_LEVEL_DEBUG);
+            }else if(debug_level  == "LOG"){
+                gst_debug_set_default_threshold(GST_LEVEL_LOG);
+            }else if(debug_level  == "INFO"){
+                gst_debug_set_default_threshold(GST_LEVEL_INFO);
+            }else if(debug_level  == "TRACE"){
+                gst_debug_set_default_threshold(GST_LEVEL_TRACE);
+            }
             // Add internal multicast net to localhost 
             if( geteuid() == 0 ){
-                route_add(INPUT_MULTICAST, "lo");
+                bool found = false;
+                ifstream route("/proc/net/route");
+                string line;
+                while(route.good()){
+                    std::getline(route, line);
+                    if(line.find("lo") != string::npos &&
+                            line.find("000000E5")/*229.0.0.0*/ != string::npos ){
+                        found = true;
+                    }
+                }
+                if(!found)
+                    route_add(INPUT_MULTICAST, "lo");
+                else
+                    BOOST_LOG_TRIVIAL(trace) << "Found local multicast route, not add it";
             }
         }catch(std::exception& e){
             BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();
@@ -91,6 +139,7 @@ namespace Util {
     void live_input_type_id(Mongo& db, live_setting& cfg, const string type)
     {
         try{
+            cfg.type_id = 0;
             json input_types = json::parse(db.find_mony("live_inputs_types", "{}"));
             for(auto& t : input_types){
                 if(t["name"] == type)
@@ -110,14 +159,20 @@ namespace Util {
             live_input_type_id(db, cfg, type);
             json net = json::parse(db.find_id("system_network",1));
             cfg.multicast_iface = "lo";
+            cfg.main_iface = "";
             cfg.multicast_class = net["multicastBase"];
             int m_id = net["multicastInterface"]; 
+            int main_id = net["mainInterface"]; 
             for(auto& iface : net["interfaces"]){
                 if(iface["_id"] == m_id){
                     cfg.multicast_iface = iface["name"];
-                    break;
+                }
+                if(iface["_id"] == main_id){
+                    cfg.main_iface = iface["name"];
                 }
             } 
+            if(cfg.multicast_class > 239 || cfg.multicast_class < 224)
+                cfg.multicast_class = 239;
             BOOST_LOG_TRIVIAL(debug) 
                 << "Live config:  "
                 << " multicast_class:" << cfg.multicast_class 
@@ -137,14 +192,16 @@ namespace Util {
             return false;
         }
     }
-    string get_multicast(live_setting& config, int channel_id, bool out_multicast)  
+    const string get_multicast(const live_setting& config, int channel_id, bool out_multicast)  
     {
         uint32_t address = 0;
+        uint8_t channel_id_byte1 = (channel_id & 0x000000ff);  
+        uint8_t channel_id_byte2 = (channel_id & 0x0000ff00) >> 8;  
         address  = out_multicast ? config.multicast_class : INPUT_MULTICAST ;
         if(address < 224 || address > 239) address = 239;
         address += config.type_id << 8;
-        address += (channel_id & 0x0000ff00) << 16;
-        address += (channel_id & 0x000000ff) << 24;
+        address += channel_id_byte2 << 16;
+        address += channel_id_byte1 << 24;
         struct in_addr addr;
         addr.s_addr = address;
         string addr_str =  inet_ntoa(addr);
@@ -155,7 +212,7 @@ namespace Util {
             << " --> " << addr_str;
         return addr_str;
     }
-    string get_content_path(Mongo& db, int id)
+    const string get_content_path(Mongo& db, int id)
     {
         try{
             json content_info = json::parse(db.find_id("storage_contents_info",id));

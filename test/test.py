@@ -16,7 +16,8 @@ def make_channel_config(chan_type, number):
         print(("Invalid channel type:"+chan_type))
         return
     channel_type = live_inputs_types["_id"]
-    for i in range(number):
+    for ii in range(number):
+        i = ii + 1000671
         if chan_type == "dvb":
             name = "IRIB TV"+str(i)
             mdb.insert_or_replace_id("live_inputs_dvb", i,{  

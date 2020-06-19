@@ -1,5 +1,6 @@
 #include <exception>
 #include <gst/gst.h>
+#include <thread>
 #include <boost/log/trivial.hpp>
 #include "config.hpp"
 #include "utils.hpp"
@@ -50,8 +51,18 @@ bool gst_task(string in_multicast, int port, const string pic_path)
         auto _bus_and_bool = bus_and_bool{bus, &first};
         gst_pad_add_probe(filesink_pad, GST_PAD_PROBE_TYPE_BUFFER, 
                 GstPadProbeCallback(filesink_get_buffer), &_bus_and_bool, NULL);
+        bool running = true;
+        bool thread_running = true;
+        std::thread timeout([&](){
+                for(size_t i=0; i<30 && thread_running; ++i){
+                    Util::wait(1000);
+                }
+                running = false;
+                //BOOST_LOG_TRIVIAL(error) << "Ignor after 30 sec";
+                });
+        timeout.detach();
         GstMessage* msg;
-        while(true){
+        while(running){
             msg = gst_bus_pop(bus);
             if(msg == NULL) continue;
             if(msg->type == GST_MESSAGE_EOS){
@@ -60,6 +71,8 @@ bool gst_task(string in_multicast, int port, const string pic_path)
             } 
             gst_message_unref(msg);
         }
+        thread_running = false;
+        
         gst_object_unref(filesink_pad);
         gst_object_unref(bus);
         gst_element_set_state(pipeline, GST_STATE_NULL);

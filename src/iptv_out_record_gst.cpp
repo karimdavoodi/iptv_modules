@@ -3,7 +3,7 @@
 #include <gstreamermm.h>
 #include <glibmm.h>
 #include <boost/log/trivial.hpp>
-#include "config.hpp"
+#include "gst.hpp"
 using namespace std;
 /*
 gst-launch-1.0 -v udpsrc uri=udp://229.2.0.1:3200 ! queue \
@@ -65,7 +65,7 @@ void gst_task(string  in_multicast, string file_path, int duration)
                     queue->sync_state_with_parent();
                 }
                 });
-        PIPLINE_WATCH;
+        //PIPLINE_WATCH;
         //PIPLINE_POSITION;
         m_timeout_connection = Glib::signal_timeout().connect([&]()->bool {
                 BOOST_LOG_TRIVIAL(info) <<  "End of duration";    

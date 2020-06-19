@@ -10,16 +10,6 @@
 #include "iptv_utils_gst.hpp"
 #include "utils.hpp"
 using namespace std;
-std::string exec(const char* cmd) {
-    std::array<char, 128> buffer;
-    std::string result;
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
-    if (!pipe) return "";
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        result += buffer.data();
-    }
-    return result;
-}
 void SysUsage::calcCurrentUsage()
 {
     BOOST_LOG_TRIVIAL(debug) << __func__;
@@ -28,6 +18,7 @@ void SysUsage::calcCurrentUsage()
     calcCurrentCpu();
     calcCurrentMem();
     calcCurrentLoad();
+    calcCurrentContents();
 }
 const string SysUsage::getUsageJson()
 {
@@ -58,10 +49,8 @@ const string SysUsage::getUsageJson()
         }
         // Total Disk Usage
         float diskUsage = 0;
-        string line = exec("df -l --total | tail -1");
-        boost::tokenizer<> tok(line);
-        auto it = tok.begin(); ++it; ++it; ++it; ++it;
-        string percent = *it;
+        string percent = Util::shell_out("df /opt/sms/www/iptv/media/Video "
+                                      "| tail -1 | awk '{print $5}' ");
         if(percent.find('%') != string::npos)
             diskUsage = stof(percent.substr(0,percent.find('%')));
         else
@@ -93,6 +82,12 @@ const string SysUsage::getUsageJson()
             part["write"] = int(partition.second.write);
             usage["diskPartitions"].push_back(part);
         }
+        json contents = json::object();
+        for(const auto content : current.contents){
+            contents[content.first] = content.second; 
+        }
+        usage["contents"] = contents;
+
         return usage.dump(2);
     }catch(std::exception& e){
         BOOST_LOG_TRIVIAL(error) << e.what();
@@ -188,4 +183,19 @@ void SysUsage::calcCurrentLoad()
     ifstream load("/proc/loadavg");
     if(!load.is_open()) return;
     load >> current.sysLoad;
+}
+void SysUsage::calcCurrentContents()
+{
+    long all_size = 1024 * stol(Util::shell_out("df /opt/sms/www/iptv/media/Video "
+                                       "| tail -1 | awk '{print $2}' ")) ;
+    current.contents["All"] = all_size;
+    for(const auto& content : contents_dir){
+        auto path = "/opt/sms/www/iptv/media/" + content;
+        if(boost::filesystem::exists(path)){
+            current.contents[content] = stol(Util::shell_out(
+                    "du -sb " + path + "| tail -1 | awk '{print $1}' ")) ;
+        }else{
+            current.contents[content] = 0;
+        }
+    }
 }

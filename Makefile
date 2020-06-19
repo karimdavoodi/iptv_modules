@@ -370,6 +370,33 @@ iptv_out_rtsp/fast:
 	$(MAKE) -f CMakeFiles/iptv_out_rtsp.dir/build.make CMakeFiles/iptv_out_rtsp.dir/build
 .PHONY : iptv_out_rtsp/fast
 
+src/gst.o: src/gst.cpp.o
+
+.PHONY : src/gst.o
+
+# target to build an object file
+src/gst.cpp.o:
+	$(MAKE) -f CMakeFiles/utils.dir/build.make CMakeFiles/utils.dir/src/gst.cpp.o
+.PHONY : src/gst.cpp.o
+
+src/gst.i: src/gst.cpp.i
+
+.PHONY : src/gst.i
+
+# target to preprocess a source file
+src/gst.cpp.i:
+	$(MAKE) -f CMakeFiles/utils.dir/build.make CMakeFiles/utils.dir/src/gst.cpp.i
+.PHONY : src/gst.cpp.i
+
+src/gst.s: src/gst.cpp.s
+
+.PHONY : src/gst.s
+
+# target to generate assembly for a file
+src/gst.cpp.s:
+	$(MAKE) -f CMakeFiles/utils.dir/build.make CMakeFiles/utils.dir/src/gst.cpp.s
+.PHONY : src/gst.cpp.s
+
 src/iptv_in_archive.o: src/iptv_in_archive.cpp.o
 
 .PHONY : src/iptv_in_archive.o
@@ -1424,6 +1451,9 @@ help:
 	@echo "... iptv_out_multicast"
 	@echo "... iptv_out_record"
 	@echo "... iptv_out_rtsp"
+	@echo "... src/gst.o"
+	@echo "... src/gst.i"
+	@echo "... src/gst.s"
 	@echo "... src/iptv_in_archive.o"
 	@echo "... src/iptv_in_archive.i"
 	@echo "... src/iptv_in_archive.s"

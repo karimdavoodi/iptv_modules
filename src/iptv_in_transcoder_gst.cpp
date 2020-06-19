@@ -3,7 +3,7 @@
 #include <gstreamermm.h>
 #include <glibmm.h>
 #include <boost/log/trivial.hpp>
-#include "config.hpp"
+#include "gst.hpp"
 using namespace std;
 void gst_task(string media_path, string multicast_addr, int port)
 {
@@ -51,8 +51,8 @@ void gst_task(string media_path, string multicast_addr, int port)
         udpsink->set_property("host", multicast_addr);
         udpsink->set_property("port", port);
         udpsink->set_property("sync", 1);
-        PIPLINE_WATCH;
-        PIPLINE_POSITION;
+        //PIPLINE_WATCH;
+        //PIPLINE_POSITION;
         pipeline->set_state(Gst::STATE_PLAYING);
         loop->run();
         pipeline->set_state(Gst::STATE_NULL);

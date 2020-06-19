@@ -3,7 +3,7 @@
 #include <gstreamermm.h>
 #include <glibmm.h>
 #include <boost/log/trivial.hpp>
-#include "config.hpp"
+#include "gst.hpp"
 using namespace std;
 /*
 gst-launch-1.0 -v --gst-debug-level=3  udpsrc uri=udp://229.2.0.1:3200 \
@@ -86,8 +86,8 @@ void gst_task(string in_multicast, int in_port, string hls_root)
                 }
                 });
         //hlssink->set_property("multicast-iface", string("lo"));
-        PIPLINE_WATCH;
-        PIPLINE_POSITION;
+        //PIPLINE_WATCH;
+        //PIPLINE_POSITION;
         pipeline->set_state(Gst::STATE_PLAYING);
         loop->run();
         pipeline->set_state(Gst::STATE_NULL);

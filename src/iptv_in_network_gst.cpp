@@ -1,14 +1,9 @@
 #include <exception>
-#include <gstreamermm.h>
-#include <glibmm.h>
 #include <stdexcept>
 #include <thread>
 #include <iostream>
 #include <boost/log/trivial.hpp>
-#include "config.hpp"
-#include "gstreamermm/caps.h"
-#include "gstreamermm/pad.h"
-#include "gstreamermm/query.h"
+#include "gst.hpp"
 /*
             urisourcebin ---> queue1 -->  parsebin 
                         src_0 --> queue  --> mpegtsmux.video --> 
@@ -16,107 +11,90 @@
                                        queue2 --> rndbuffersize ---> udpsink
  * */
 using namespace std;
+void parsebin_pad_added(GstElement* elem, GstPad* pad, gpointer pipeline)
+{
+    auto query_caps = gst_caps_new_any();
+    auto pad_caps = gst_pad_query_caps(pad, query_caps); 
+    auto pad_struct = gst_caps_get_structure(pad_caps, 0);
+    string name = gst_structure_get_name(pad_struct);
+    BOOST_LOG_TRIVIAL(trace) << gst_caps_to_string(pad_caps);
+    gst_caps_unref(query_caps);
+    gst_caps_unref(pad_caps);
+
+    GstElement* queue = NULL;
+    if(name.find("video") != string::npos){
+        queue = gst_bin_get_by_name(GST_BIN(pipeline), "queue_video");
+    }else if(name.find("audio") != string::npos){
+        queue = gst_bin_get_by_name(GST_BIN(pipeline), "queue_audio");
+    }
+    if(queue != NULL){
+        auto queue_sink_pad = gst_element_get_static_pad(GST_ELEMENT(queue), "sink");
+        if(gst_pad_link(pad, queue_sink_pad) != GST_PAD_LINK_OK){
+            BOOST_LOG_TRIVIAL(error) << "Can't link parsebin to queue_src";
+        }else{
+            BOOST_LOG_TRIVIAL(debug) << "Link parsebin to queue type:" << name;
+        }
+        gst_object_unref(queue_sink_pad);
+    }else{
+        BOOST_LOG_TRIVIAL(warning) << "Not link parsebin src pad " 
+            << gst_pad_get_name(pad) << " type:" << name;
+    }
+}
+void urisourcebin_pad_added(GstElement* elem, GstPad* pad, gpointer queue_src)
+{
+    auto queue_sink_pad = gst_element_get_static_pad(GST_ELEMENT(queue_src), "sink");
+    if(gst_pad_link(pad, queue_sink_pad) != GST_PAD_LINK_OK){
+        BOOST_LOG_TRIVIAL(error) << "Can't link urisourcebin to queue_src";
+    }else{
+        BOOST_LOG_TRIVIAL(trace) << "Link urisourcebin to queue_src";
+    }
+    gst_object_unref(queue_sink_pad);
+}
 void gst_task(string in_url, string out_multicast, int port)
 {
-    using Glib::RefPtr;
-    RefPtr<Glib::MainLoop> loop;
-    RefPtr<Gst::Pipeline>  pipeline;
-    RefPtr<Gst::Element>   urisourcebin;
-    RefPtr<Gst::Element>   queue1;
-    RefPtr<Gst::Element>   parsebin;
-    RefPtr<Gst::Element>   mpegtsmux;
-    RefPtr<Gst::Element>   queue2;
-    RefPtr<Gst::Element>   queue_v;
-    RefPtr<Gst::Element>   queue_a;
-    RefPtr<Gst::Element>   rndbuffersize;
-    RefPtr<Gst::Element>   udpsink;
-    sigc::connection m_timeout_connection;
+    BOOST_LOG_TRIVIAL(info) << in_url << " --> " 
+        << out_multicast << ":" << port;
+    auto loop = g_main_loop_new(NULL, false);
+    auto pipeline = gst_element_factory_make("pipeline", "pipeline");
     try{
-        BOOST_LOG_TRIVIAL(info) << in_url << " --> " 
-            << out_multicast << ":" << port;
-        loop = Glib::MainLoop::create();
-        pipeline = Gst::Pipeline::create();
-        urisourcebin = Gst::ElementFactory::create_element("urisourcebin");
-        queue1  = Gst::ElementFactory::create_element("queue","urisourcebin_Q_parsebin");
-        queue2  = Gst::ElementFactory::create_element("queue","tsmux_Q_rndbuffersize");
-        queue_v  = Gst::ElementFactory::create_element("queue","Q_to_video_mux");
-        queue_a  = Gst::ElementFactory::create_element("queue","Q_to_audio_mux");
-        parsebin = Gst::ElementFactory::create_element("parsebin");
-        mpegtsmux = Gst::ElementFactory::create_element("mpegtsmux");
-        rndbuffersize = Gst::ElementFactory::create_element("rndbuffersize");
-        udpsink = Gst::ElementFactory::create_element("udpsink");
         
-        if( !urisourcebin || !udpsink ){
-            BOOST_LOG_TRIVIAL(debug) << "Error in create";
-            return;
-        }
-        try{
-            pipeline->add(urisourcebin)->add(queue1)->add(parsebin)->
-                add(mpegtsmux)->add(queue2)->add(rndbuffersize)->
-                add(udpsink)->add(queue_a)->add(queue_v);
-            // connect urisourcebin --> queue1 dynamicly
-            queue1->link(parsebin);
-            // connect parsebin --> mpegtsmux's queue dynamicly
-            mpegtsmux->link(queue2)->link(rndbuffersize)->link(udpsink);
-            queue_a->link(mpegtsmux);
-            queue_v->link(mpegtsmux);
-        } catch(std::runtime_error& e){
-            BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
-        }
-        urisourcebin->set_property("uri", in_url);
-        rndbuffersize->set_property("min", 1316);
-        rndbuffersize->set_property("max", 1316);
-        udpsink->set_property("multicast-iface", string("lo"));
-        udpsink->set_property("host", out_multicast);
-        udpsink->set_property("port", port);
-        udpsink->set_property("sync", 1);
-        urisourcebin->signal_pad_added().connect([&](const RefPtr<Gst::Pad>& pad){
-                auto name = pad->get_name();
-                BOOST_LOG_TRIVIAL(info) << "urisourcebin add pad: " << name;
-                try{
-                    if(!pad->can_link(queue1->get_static_pad("sink")))
-                        BOOST_LOG_TRIVIAL(error) << "Can't link";
-                    if(pad->link(queue1->get_static_pad("sink")) != Gst::PAD_LINK_OK){
-                        BOOST_LOG_TRIVIAL(error) << "urisourcebin Not link";
-                    }
-                    pad->set_active();
-                }catch(std::exception& e){
-                    BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
-                }
-                });
-        parsebin->signal_pad_added().connect([&](const RefPtr<Gst::Pad>& pad){
-                try{
-                auto caps = pad->query_caps(Gst::Caps::create_any());
-                string pad_type = caps->get_structure(0).get_name();
-                BOOST_LOG_TRIVIAL(info) 
-                << "ParseBin add pad: " << pad->get_name()
-                << " type:" << pad_type; 
-                if(pad_type.find("video") != string::npos){
-                    if(!pad->can_link(queue_v->get_static_pad("sink")))
-                        BOOST_LOG_TRIVIAL(error) << "Can't link parsebin to queue";
-                    else
-                        pad->link(queue_v->get_static_pad("sink"));
-                    pad->set_active();
-                }
-                if(pad_type.find("audio") != string::npos){
-                    if(!pad->can_link(queue_a->get_static_pad("sink")))
-                        BOOST_LOG_TRIVIAL(error) << "Can't link";
-                    else
-                        pad->link(queue_a->get_static_pad("sink"));
-                    pad->set_active();
-                }
-                }catch(std::exception& e){
-                    BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
-                }
-        });
-        PIPLINE_WATCH;
-        //PIPLINE_POSITION;
-        pipeline->set_state(Gst::STATE_PLAYING);
-        loop->run();
-        pipeline->set_state(Gst::STATE_NULL);
-        m_timeout_connection.disconnect();
+        auto urisourcebin   = Gst::add_element(pipeline, "urisourcebin"),
+             queue_src      = Gst::add_element(pipeline, "queue", "queue_src"),
+             parsebin       = Gst::add_element(pipeline, "parsebin"),
+             queue_video    = Gst::add_element(pipeline, "queue", "queue_video"),
+             queue_audio    = Gst::add_element(pipeline, "queue", "queue_audio"),
+             mpegtsmux      = Gst::add_element(pipeline, "mpegtsmux"),
+             rndbuffersize  = Gst::add_element(pipeline, "rndbuffersize"),
+             udpsink        = Gst::add_element(pipeline, "udpsink");
+
+        gst_element_link_many(queue_src, parsebin, NULL);
+        Gst::element_link_request(queue_video, "src", mpegtsmux, "sink_%d");
+        Gst::element_link_request(queue_audio, "src", mpegtsmux, "sink_%d");
+        gst_element_link_many(mpegtsmux, rndbuffersize, udpsink, NULL);
+
+        g_object_set(urisourcebin, "uri",  in_url.c_str(), NULL);
+        g_object_set(udpsink, "multicast_iface", "lo", 
+                "host", out_multicast.c_str() ,
+                "port", port,
+                "sync", true, NULL);
+        g_object_set(rndbuffersize, 
+                "min", 1316,
+                "max", 1316, NULL);
+
+        g_signal_connect(urisourcebin, "pad-added", 
+                G_CALLBACK(urisourcebin_pad_added), queue_src);
+        g_signal_connect(parsebin, "pad-added", 
+                G_CALLBACK(parsebin_pad_added), pipeline);
+
+        //Gst::add_bus_watch(pipeline, loop);
+        Gst::dot_file(pipeline, "iptv_in_network", 5);
+
+        gst_element_set_state(pipeline, GST_STATE_PLAYING);
+        g_main_loop_run(loop);
         BOOST_LOG_TRIVIAL(info) << "Finish";
     }catch(std::exception& e){
         BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
     }
+    g_main_loop_unref(loop);
+    gst_object_unref(pipeline);
 }

@@ -39,14 +39,19 @@
 #define INPUT_UDP_TIMEOUT  20
 #define RECORD_SCHEDULING_DAYS 7
 using namespace std;
-int debug = 1;
 void Log(int level, const char *format, ...)
 {
+    char line[514];
     va_list args;
-    if(level <= debug){
-        va_start(args, format);
-        vprintf(format, args);
-        va_end(args);
+    va_start(args, format);
+    vsnprintf(line, 512, format, args);
+    va_end(args);
+    switch(level){
+        case 0: BOOST_LOG_TRIVIAL(error) << line; break;
+        case 1: BOOST_LOG_TRIVIAL(warning) << line; break;
+        case 2: BOOST_LOG_TRIVIAL(info) << line; break;
+        case 3: BOOST_LOG_TRIVIAL(debug) << line; break;
+        case 4: BOOST_LOG_TRIVIAL(trace) << line; break;
     }
 }
 // int x<::> = <% %>;   === int x[] = {2,3,4};   C17
@@ -162,7 +167,8 @@ void send_http_response( int sockfd, int code, const char* reason)
             "Content-Type:application/octet-stream\r\n\r\n",
             code, reason );
     if( msglen <= 0 ) return;
-    write(sockfd, msg, msglen);
+    if(write(sockfd, msg, msglen) == -1)
+        BOOST_LOG_TRIVIAL(error) << "Can't send response " << strerror(errno); 
     return;
 }
 int tcp_sock_opt(int clientfd)
@@ -207,8 +213,8 @@ int write_all(int s, char *buf, int len)
 #define MAX_USER_PARALLEL_REQ 500
 #define MAX_USERS   1000
 #define HEADER  "HTTP/1.1 200 OK\r\n"                       \
-        "Server: Moojafzar IPTV server (IP Unicaster)\r\n"  \
-        "Content-Type:application/octet-stream\r\n\r\n"     
+    "Server: Moojafzar IPTV server (IP Unicaster)\r\n"  \
+    "Content-Type:application/octet-stream\r\n\r\n"     
 long MAX_CHANNEL_DATA = 3000*PKT_SIZE;
 int BUFFER_SEC = 10;   
 int max_users = MAX_USERS;
@@ -223,25 +229,26 @@ int get_request_chan_addr(char *client_req, int *chan_id)
     char tmp[2048];
     *chan_id = -1;
     strncpy(tmp,client_req,2048);
-    p         = strtok_r (tmp,"/.",&tok);  
-    channel_id   = strtok_r (NULL ," ",&tok);  
+    p = strtok_r (tmp,"/",&tok);  
+    channel_id   = strtok_r (NULL ,".",&tok);  
+    Log(0,"chan_id:  %s\n",channel_id);
     if(channel_id == NULL || !std::isdigit(channel_id[0]))
-            return false;
+        return false;
     *chan_id = atoi(channel_id);
     return true;
 }
 /*
-bool get_chan_multicast(Mongo& db, int chan_id, char *chan_multicast)
-{
-    live_setting live_config;
-    json silver_channel = json::parse(db.find_id("live_output_silver", chan_id));
-    if(silver_channel.is_null()) return false;
-    live_config.type_id = silver_channel["inputType"];
-    auto in_multicast = Util::get_multicast(live_config, silver_channel["input"]);
-    strncpy(chan_multicast, in_multicast.c_str(), 20);
-    return true;
-}
-*/
+   bool get_chan_multicast(Mongo& db, int chan_id, char *chan_multicast)
+   {
+   live_setting live_config;
+   json silver_channel = json::parse(db.find_id("live_output_silver", chan_id));
+   if(silver_channel.is_null()) return false;
+   live_config.type_id = silver_channel["inputType"];
+   auto in_multicast = Util::get_multicast(live_config, silver_channel["input"]);
+   strncpy(chan_multicast, in_multicast.c_str(), 20);
+   return true;
+   }
+   */
 int find_ts(int n,int max,uint8_t *ts)
 {
     int i = n;
@@ -335,12 +342,10 @@ void relay_traffic(int client_sock,int chan_id,char *client_http_req,struct in_a
         len = 0;
     }
     strncpy(client_ip,inet_ntoa(client_addr),20);
-    if(debug>1){
-        Log(3, "Client:%s\n",client_http_req);
-        Log(2, "%d(%s->%s): len %d,sec %d,dl %d,ts_i %d,max %ld\n",
-                c->id,c->multicast.c_str(),client_ip,len,sec,c->tsb.dl,c->tsb.ts_i,
-                MAX_CHANNEL_DATA);
-    }
+    Log(3, "Client:%s\n",client_http_req);
+    Log(2, "%d(%s->%s): len %d,sec %d,dl %d,ts_i %d,max %ld\n",
+            c->id,c->multicast.c_str(),client_ip,len,sec,c->tsb.dl,c->tsb.ts_i,
+            MAX_CHANNEL_DATA);
     if(write(client_sock, HEADER, strlen(HEADER)) == -1){
         Log(1,"(%s) Connection lost(1)!\n",client_ip);
         return;

@@ -6,7 +6,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
-#define BY_FFMPEG 1
+#define TEST_BY_FFMPEG 1
 using namespace std;
 void gst_task(string in_url, string out_multicast, int port);
 void start_channel(string channel_str, live_setting live_config)
@@ -22,13 +22,16 @@ void start_channel(string channel_str, live_setting live_config)
         return;
     }
     auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
-#if BY_FFMPEG
+    auto url = channel["url"].get<string>();
+#if TEST_BY_FFMPEG
     auto cmd = boost::format("%s -i '%s' -codec copy "
             " -f mpegts 'udp://%s:%d?pkt_size=1316' ")
-        % FFMPEG % channel["url"].get<string>() % out_multicast % INPUT_PORT; 
+        % FFMPEG % url % out_multicast % INPUT_PORT; 
     Util::exec_shell_loop(cmd.str());
 #else
-    gst_task(channel["url"], out_multicast, INPUT_PORT);
+    //url = "rtsp://192.168.56.12:554/iptv/239.1.1.3/3200";  //for test
+    //url = "http://192.168.56.12:8001/34/hdd11.ts";   // for test
+    gst_task(url, out_multicast, INPUT_PORT);
 #endif
 }
 int main()

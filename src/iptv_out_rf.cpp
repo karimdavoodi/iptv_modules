@@ -4,9 +4,10 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <sstream>
 #include <map>
 #include <thread>
-#include <boost/filesystem.hpp>
+#include <boost/filesystem/operations.hpp>
 #include "utils.hpp"
 using namespace std;
 void gst_task(string in_multicast, string out_multicast);
