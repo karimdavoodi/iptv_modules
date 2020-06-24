@@ -225,7 +225,7 @@ void gst_task(Mongo& db, string in_multicast, int port, int channel_id)
                     BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
                 }
                 return true;
-                }, EPG_UPDATE_TIME );
+                }, EPG_UPDATE_TIME*1000 );
         pipeline->set_state(Gst::STATE_PLAYING);
         loop->run();
         pipeline->set_state(Gst::STATE_NULL);

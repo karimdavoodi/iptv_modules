@@ -7,6 +7,7 @@
 using namespace std;
 void gst_task(string media_path, string multicast_addr, int port)
 {
+
     using Glib::RefPtr;
     RefPtr<Glib::MainLoop> loop;
     RefPtr<Gst::Pipeline>  pipeline;
@@ -17,6 +18,7 @@ void gst_task(string media_path, string multicast_addr, int port)
     sigc::connection m_timeout_connection;
     
     // gst-launch-1.0 filesrc location=/tmp/2.ts ! 
+    // decodebin
     //      tsparse set-timestamps=1 ! 
     //      udpsink blocksize=1316 multicast-iface=lo host=239.1.1.2 port=3200 sync=true
     try{

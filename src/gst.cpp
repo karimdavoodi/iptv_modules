@@ -2,7 +2,6 @@
 #include <iostream>
 #include <thread>
 #include <sstream>
-#include <boost/log/trivial.hpp>
 using namespace std;
 
 namespace Gst {
@@ -29,6 +28,16 @@ namespace Gst {
                 "max-size-time", 0,
                 NULL);
     }
+    const std::string pad_caps_type(GstPad* pad)
+    {
+        auto caps_filter = gst_caps_new_any();
+        auto caps = gst_pad_query_caps(pad, caps_filter);
+        auto caps_struct = gst_caps_get_structure(caps, 0);
+        auto pad_type = string(gst_structure_get_name(caps_struct));
+        gst_caps_unref(caps_filter);
+        gst_caps_unref(caps);
+        return pad_type;
+    }
     const std::string pad_caps_string(GstPad* pad)
     {
         auto caps_filter = gst_caps_new_any();
@@ -38,7 +47,7 @@ namespace Gst {
         gst_caps_unref(caps);
         return caps_string;
     }
-    GstElement* add_element(GstElement* pipeline, const std::string plugin, 
+    GstElement* add_element(GstPipeline* pipeline, const std::string plugin, 
                                                   const std::string name, bool stat_playing)
     {
         GstElement* element = NULL;
@@ -54,7 +63,7 @@ namespace Gst {
         BOOST_LOG_TRIVIAL(info) << "Make element " << gst_element_get_name(element);
         return element;
     }
-    void dot_file(const GstElement* pipeline, const std::string name, int sec)
+    void dot_file(const GstPipeline* pipeline, const std::string name, int sec)
     {
         char* env = getenv("GST_DEBUG_DUMP_DOT_DIR");
         string make_dot_file = (env != NULL) ? env : "";
@@ -94,6 +103,10 @@ namespace Gst {
     bool element_link_request(GstElement* src, const char* src_name, 
             GstElement* sink, const char* sink_name)
     {
+        if(!src || !sink){
+            BOOST_LOG_TRIVIAL(error) << "invalid src or sink in " << __func__;
+            return false;
+        }
         auto pad_sink = gst_element_get_request_pad(sink, sink_name);
         if(!pad_sink){
             BOOST_LOG_TRIVIAL(error) << "Can't get pads " << sink_name << " in " << __func__;
@@ -155,11 +168,18 @@ namespace Gst {
             }
             return true;
         }
-    guint add_bus_watch(GstElement* pipeline, GMainLoop* loop){
-        auto bus = gst_element_get_bus (pipeline);
-        auto watch_id = gst_bus_add_watch(bus, on_bus_message, loop);
-        gst_object_unref (bus);
-        return watch_id;
+    bool add_bus_watch(Data& d){
+        if(!d.pipeline){
+            BOOST_LOG_TRIVIAL(error) << "Pipeline is NULL";
+            return false;
+        }
+        d.bus = gst_element_get_bus (GST_ELEMENT(d.pipeline));
+        if(!d.bus){
+            BOOST_LOG_TRIVIAL(error) << "Can't get bus";
+            return false;
+        }
+        d.watch_id = gst_bus_add_watch(d.bus, on_bus_message, d.loop);
+        return d.watch_id != 0;
     }
 
 }

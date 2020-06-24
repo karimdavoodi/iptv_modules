@@ -59,7 +59,7 @@ int main()
         if(chan["inputType"] == live_config.type_id){
             string network = db.find_id("live_inputs_network", chan["input"]);
             pool.emplace_back(start_channel, network, live_config);
-            break;  // for test
+            //break;  // for test
         }
     }
     for(auto& t : pool)

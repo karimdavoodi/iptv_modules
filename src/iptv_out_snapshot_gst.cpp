@@ -1,87 +1,82 @@
 #include <exception>
-#include <gst/gst.h>
 #include <thread>
 #include <boost/log/trivial.hpp>
-#include "config.hpp"
+#include "gst.hpp"
 #include "utils.hpp"
 using namespace std;
-
-struct bus_and_bool {
+struct ProbData {
+    int buffer_count;
     GstBus* bus;
-    bool* first;
+    GstElement* src; 
 };
 GstPadProbeReturn filesink_get_buffer(
         GstPad *pad,
         GstPadProbeInfo *info,
         gpointer user_data)
 {
-    auto _bus_and_bool = (bus_and_bool*)user_data;
+    auto d = (ProbData *)user_data;
     BOOST_LOG_TRIVIAL(debug) << "Got Buffer in filesink";
-    if(! *( _bus_and_bool->first)){
-        GstElement* parent = gst_pad_get_parent_element(pad);
-        gst_bus_post(_bus_and_bool->bus, gst_message_new_eos(GST_OBJECT(parent)));
+    d->buffer_count++;
+    if(d->buffer_count > 1){
+        gst_bus_post(d->bus, gst_message_new_eos(GST_OBJECT(d->src)));
+        BOOST_LOG_TRIVIAL(debug) << "Post EOS message";
     }
-    *_bus_and_bool->first = false;
     return GST_PAD_PROBE_OK;
+}
+void uridecodebin_pad_added(GstElement* object, GstPad* pad, gpointer data)
+{
+    auto capsfilter = (GstElement*) data;
+    BOOST_LOG_TRIVIAL(debug) << "uridecodebin pad caps:" << Gst::pad_caps_string(pad);
+    auto pad_type = Gst::pad_caps_type(pad);
+    if(pad_type.find("video") != string::npos)
+        Gst::pad_link_element_static(pad, capsfilter, "sink");
 }
 bool gst_task(string in_multicast, int port, const string pic_path)
 {
-    GstElement* pipeline;
-    try{
-        GError* error = NULL;
-        string uri = "udp://" + in_multicast + ":" + to_string(port);
-        BOOST_LOG_TRIVIAL(info) << "Start " << uri << " => " << pic_path;
-        //gst_debug_set_default_threshold(GST_LEVEL_INFO); 
-        auto descr = g_strdup_printf (
-                "uridecodebin uri=\"%s\" ! capsfilter caps=\"video/x-raw\" "
-                " ! jpegenc snapshot=true ! filesink location=\"%s\" name=sink", 
-                uri.c_str(), pic_path.c_str()); 
-        BOOST_LOG_TRIVIAL(debug) << "PIPLINE:" << descr;
-        pipeline = gst_parse_launch( descr, &error);
-        if(error != NULL){
-            BOOST_LOG_TRIVIAL(error) << "Not create pipeline:" << error->message;
-            return false;
-        }
-        gst_element_set_state(pipeline, GST_STATE_PLAYING);
+    Gst::Data d;
+    d.loop = g_main_loop_new(NULL, false);
+    d.pipeline = GST_PIPELINE(gst_element_factory_make("pipeline", NULL));
+    BOOST_LOG_TRIVIAL(error) << "TEST0";
+    LOG_AT(error) << "TEST1";
+    return false;
+    string uri = "udp://" + in_multicast + ":" + to_string(port);
+    BOOST_LOG_TRIVIAL(info) << "Start " << uri << " --> " << pic_path;
 
-        auto filesink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
-        auto filesink_pad = gst_element_get_static_pad(filesink, "sink");
-        auto bus = gst_pipeline_get_bus( GST_PIPELINE(pipeline));
-        bool first = true;
-        auto _bus_and_bool = bus_and_bool{bus, &first};
-        gst_pad_add_probe(filesink_pad, GST_PAD_PROBE_TYPE_BUFFER, 
-                GstPadProbeCallback(filesink_get_buffer), &_bus_and_bool, NULL);
-        bool running = true;
-        bool thread_running = true;
-        std::thread timeout([&](){
-                for(size_t i=0; i<30 && thread_running; ++i){
-                    Util::wait(1000);
-                }
-                running = false;
-                //BOOST_LOG_TRIVIAL(error) << "Ignor after 30 sec";
-                });
-        timeout.detach();
-        GstMessage* msg;
-        while(running){
-            msg = gst_bus_pop(bus);
-            if(msg == NULL) continue;
-            if(msg->type == GST_MESSAGE_EOS){
-                gst_message_unref(msg);
-                break;
-            } 
-            gst_message_unref(msg);
-        }
-        thread_running = false;
+    try{
+        auto uridecodebin   = Gst::add_element(d.pipeline, "uridecodebin"),
+             capsfilter     = Gst::add_element(d.pipeline, "capsfilter"),
+             jpegenc        = Gst::add_element(d.pipeline, "jpegenc"),
+             filesink       = Gst::add_element(d.pipeline, "filesink");
         
+        gst_element_link_many(uridecodebin, capsfilter, jpegenc, filesink, NULL);
+        
+        g_object_set(uridecodebin, "uri", uri.c_str(), NULL);
+        g_object_set(jpegenc, "snapshot", true, NULL);
+        g_object_set(filesink, "location", pic_path.c_str(), NULL);
+        auto caps = gst_caps_from_string("video/x-raw, format=(string)RGB");
+        g_object_set(capsfilter, "caps", caps, NULL);
+        gst_caps_unref(caps);
+
+        g_signal_connect(uridecodebin, "pad-added",G_CALLBACK(uridecodebin_pad_added),
+                                                capsfilter);
+
+        
+        Gst::add_bus_watch(d);
+        ProbData pd { 0, d.bus, uridecodebin  };
+        auto filesink_pad = gst_element_get_static_pad(filesink, "sink");
+        gst_pad_add_probe(filesink_pad, GST_PAD_PROBE_TYPE_BUFFER, 
+                GstPadProbeCallback(filesink_get_buffer), &pd, NULL);
+        
+        
+        BOOST_LOG_TRIVIAL(debug) << "Wait to snapshot:" << SNAPSHOT_TIMEOUT; 
+        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
+        g_main_loop_run(d.loop);
+        
+        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_NULL);
         gst_object_unref(filesink_pad);
-        gst_object_unref(bus);
-        gst_element_set_state(pipeline, GST_STATE_NULL);
-        gst_object_unref(pipeline);
-        return true;
+        return pd.buffer_count > 1 ;
     }catch(std::exception& e){
         BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
-        gst_element_set_state(pipeline, GST_STATE_NULL);
-        gst_object_unref(pipeline);
         return false;
     }
 }

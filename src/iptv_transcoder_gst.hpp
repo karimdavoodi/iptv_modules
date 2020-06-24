@@ -2,7 +2,6 @@
 #include <glibmm.h>
 #include <iostream>
 #include "../third_party/json.hpp"
-#define TIME_INTERVAL_STATE_SAVE 3000  // msec
 using std::string;
 using nlohmann::json;
 class IptvTranscode {

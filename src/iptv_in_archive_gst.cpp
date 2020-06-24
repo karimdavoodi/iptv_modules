@@ -1,7 +1,5 @@
 #include <boost/log/trivial.hpp>
 #include "gst.hpp"
-#include <gst/base/gstbasesrc.h>
-#include <thread>
 
 using namespace std;
 /*
@@ -138,9 +136,8 @@ void gst_task(string media_path, string multicast_addr, int port)
         << "Start " << media_path 
         << " --> udp://" << multicast_addr << ":" << port;
     Gst::Data d;
-    d.loop = g_main_loop_new(NULL, false);
-    d.pipeline   = gst_element_factory_make("pipeline","pipeline");
-    guint watch_id = 0;
+    d.loop      = g_main_loop_new(NULL, false);
+    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", NULL));
 
     try{
         auto filesrc    = Gst::add_element(d.pipeline, "filesrc"),
@@ -170,18 +167,12 @@ void gst_task(string media_path, string multicast_addr, int port)
         g_object_set(tsparse, "set-timestamps", true, NULL);
         g_object_set(identity, "sync", true, NULL);
 
-        watch_id = Gst::add_bus_watch(d.pipeline, d.loop);
-        gst_element_set_state(d.pipeline, GST_STATE_PLAYING);
+        Gst::add_bus_watch(d);
+        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
         Gst::dot_file(d.pipeline, "iptv_archive", 5);
-        //Gst::print_int_property_delay(queue_src, "avg-in-rate", 5);
         g_main_loop_run(d.loop);
         
     }catch(std::exception& e){
         BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
     }
-    gst_element_set_state(d.pipeline, GST_STATE_NULL);
-    if(watch_id) g_source_remove(watch_id);
-    gst_object_unref(d.pipeline);
-    g_main_loop_unref(d.loop);
-    BOOST_LOG_TRIVIAL(debug) << "Finish";
 }

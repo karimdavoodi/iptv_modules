@@ -56,8 +56,8 @@ namespace Util {
             namespace keywords = logging::keywords;
             namespace attrs = logging::attributes;
             logging::add_common_attributes();
-            logging::core::get()->add_global_attribute(
-                    "Process", attrs::current_process_name());
+            logging::core::get()->add_global_attribute("Process", attrs::current_process_name());
+
             // Set Debug level
             json system_location = json::parse(db.find_id("system_general",1));
             int debug_level = (!system_location["debug"].is_null())? 
@@ -74,6 +74,7 @@ namespace Util {
             }
             BOOST_LOG_TRIVIAL(info) << "Log file:" << out_file << " level:" << debug_level;
             debug_level = abs(5-debug_level);
+
             logging::add_file_log
                 (
                  keywords::file_name = out_file,

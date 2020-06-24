@@ -9,13 +9,15 @@
 #define SNAPSHOT_PERIOD 120
 using namespace std;
 bool gst_task(string in_multicast, int port, const string pic_path);
-void start_snapshot(const json& channel, const live_setting live_config)
+void start_snapshot(const json& channel, live_setting live_config)
 {
     Mongo db;
+    live_config.type_id = channel["inputType"].get<int>();
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
     int pic_id = channel["_id"].get<int>();
     auto pic_path = boost::format("%sSnapshot/%d.jpg")
         % MEDIA_ROOT % pic_id; 
+    BOOST_LOG_TRIVIAL(debug) << "Try to snapsot from " << channel["name"];
     if(gst_task(in_multicast, INPUT_PORT, pic_path.str())){
         BOOST_LOG_TRIVIAL(info) << "Capture snapsot for " << channel["name"];
         string name = channel["name"].get<string>();
@@ -55,7 +57,7 @@ int main()
     CHECK_LICENSE;
     Util::init(db);
     if(!Util::get_live_config(db, live_config, "dvb")){
-        BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
+        BOOST_LOG_TRIVIAL(error) << "Error in live config! Exit.";
         return -1;
     }
     Util::check_path(string(MEDIA_ROOT) + "Snapshot");
@@ -64,6 +66,7 @@ int main()
         auto start = time(NULL);
         for(auto& chan : silver_channels ){
             IS_CHANNEL_VALID(chan);
+            if(chan["inputType"] == 2)
             start_snapshot(chan, live_config);
             Util::wait(1000);
         }
