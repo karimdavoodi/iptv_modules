@@ -16,7 +16,7 @@ GstPadProbeReturn filesink_get_buffer(
         gpointer user_data)
 {
     auto _bus_and_bool = (bus_and_bool*)user_data;
-    BOOST_LOG_TRIVIAL(trace) << "Got Buffer in filesink";
+    BOOST_LOG_TRIVIAL(debug) << "Got Buffer in filesink";
     if(! *( _bus_and_bool->first)){
         GstElement* parent = gst_pad_get_parent_element(pad);
         gst_bus_post(_bus_and_bool->bus, gst_message_new_eos(GST_OBJECT(parent)));
@@ -36,7 +36,7 @@ bool gst_task(string in_multicast, int port, const string pic_path)
                 "uridecodebin uri=\"%s\" ! capsfilter caps=\"video/x-raw\" "
                 " ! jpegenc snapshot=true ! filesink location=\"%s\" name=sink", 
                 uri.c_str(), pic_path.c_str()); 
-        BOOST_LOG_TRIVIAL(trace) << "PIPLINE:" << descr;
+        BOOST_LOG_TRIVIAL(debug) << "PIPLINE:" << descr;
         pipeline = gst_parse_launch( descr, &error);
         if(error != NULL){
             BOOST_LOG_TRIVIAL(error) << "Not create pipeline:" << error->message;

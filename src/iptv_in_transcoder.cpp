@@ -8,9 +8,11 @@
 #include <boost/format.hpp>
 #include "utils.hpp"
 #define BY_FFMPEG 1
+
 using namespace std;
-using nlohmann::json;
+
 void gst_task(string media_path, string multicast_addr, int port);
+
 void start_channel(json channel, live_setting live_config)
 {
     Mongo db;

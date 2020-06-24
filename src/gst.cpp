@@ -10,15 +10,48 @@ namespace Gst {
     {
         gst_init(NULL, NULL);
     }
-    GstElement* add_element(GstElement* pipeline, const std::string plugin, 
-                                                  const std::string name)
+    void print_int_property_delay(GstElement* element, const char* attr, int seconds)
     {
-        string element_name = (name != "") ? name : plugin;
-        GstElement* element = gst_element_factory_make(plugin.c_str(), element_name.c_str());
+        std::thread t([&](){
+                    std::this_thread::sleep_for(std::chrono::seconds(seconds));
+                    if(GST_OBJECT_REFCOUNT_VALUE(element) == 0 ) return;
+                    guint d;
+                    g_object_get(element, attr, &d, NULL);
+                    BOOST_LOG_TRIVIAL(info) << "Read  " << attr << ":" << d; 
+                    });
+            t.detach();
+    }
+    void zero_queue_buffer(GstElement* queue)
+    {
+        g_object_set(queue,
+                "max-size-buffers", 0,
+                "max-size-bytes", 0,
+                "max-size-time", 0,
+                NULL);
+    }
+    const std::string pad_caps_string(GstPad* pad)
+    {
+        auto caps_filter = gst_caps_new_any();
+        auto caps = gst_pad_query_caps(pad, caps_filter);
+        std::string caps_string = gst_caps_to_string(caps);
+        gst_caps_unref(caps_filter);
+        gst_caps_unref(caps);
+        return caps_string;
+    }
+    GstElement* add_element(GstElement* pipeline, const std::string plugin, 
+                                                  const std::string name, bool stat_playing)
+    {
+        GstElement* element = NULL;
+        if(name == "") element = gst_element_factory_make(plugin.c_str(), NULL);
+        else           element = gst_element_factory_make(plugin.c_str(), name.c_str());
         if(element == NULL){
-            throw std::runtime_error("Can't make elemen" + element_name);
+            BOOST_LOG_TRIVIAL(error) << "Can't make elemen " << name;
+            return NULL;
         }
         gst_bin_add(GST_BIN(pipeline), element);
+        if(stat_playing) 
+            gst_element_set_state(element, GST_STATE_PLAYING);
+        BOOST_LOG_TRIVIAL(info) << "Make element " << gst_element_get_name(element);
         return element;
     }
     void dot_file(const GstElement* pipeline, const std::string name, int sec)
@@ -32,7 +65,8 @@ namespace Gst {
             std::thread t([pipeline, fname, sec, make_dot_file](){
 
                     std::this_thread::sleep_for(std::chrono::seconds(sec));
-                    BOOST_LOG_TRIVIAL(trace) << "Make DOT file " 
+                    if(GST_OBJECT_REFCOUNT_VALUE(pipeline) == 0 ) return;
+                    BOOST_LOG_TRIVIAL(debug) << "Make DOT file " 
                             << make_dot_file << "/" << fname << ".dot";
                     gst_debug_bin_to_dot_file(
                             GST_BIN(pipeline), 
@@ -41,7 +75,7 @@ namespace Gst {
                     });
             t.detach();
         }else{
-            BOOST_LOG_TRIVIAL(trace) << "Not make DOT file";
+            BOOST_LOG_TRIVIAL(debug) << "Not make DOT file";
         }
     }
         
@@ -50,32 +84,42 @@ namespace Gst {
         auto element_pad = gst_element_get_static_pad(element, pad_name.c_str());
         bool ret = gst_pad_link(pad, element_pad);
         gst_object_unref(element_pad);
-        return ret == GST_PAD_LINK_OK;
+        if(ret != GST_PAD_LINK_OK){
+            BOOST_LOG_TRIVIAL(error) << "Can'n link " << gst_pad_get_name(pad) 
+                << " to " << gst_element_get_name(element);
+            return false;
+        }
+        return true;
     }
     bool element_link_request(GstElement* src, const char* src_name, 
             GstElement* sink, const char* sink_name)
     {
         auto pad_sink = gst_element_get_request_pad(sink, sink_name);
+        if(!pad_sink){
+            BOOST_LOG_TRIVIAL(error) << "Can't get pads " << sink_name << " in " << __func__;
+            return false;
+        }
         auto pad_src  = gst_element_get_static_pad(src, src_name);
-        if(!pad_sink || !pad_src){
-            throw std::runtime_error("Can't get pads in " + string( __func__));
+        if(!pad_src){
+            BOOST_LOG_TRIVIAL(error) << "Can't get pads " << src_name << " in " << __func__;
+            return false;
         }
         if(gst_pad_link(pad_src, pad_sink) != GST_PAD_LINK_OK){
             gst_object_unref(pad_sink);
             gst_object_unref(pad_src);
-            throw std::runtime_error("Can't link pads in " + string( __func__));
+            BOOST_LOG_TRIVIAL(error) << "Can't link pads in " <<  __func__;
+            return false;
         }
         gst_object_unref(pad_sink);
         gst_object_unref(pad_src);
         return true;
-
     }
     int on_bus_message (GstBus * bus, GstMessage * message, gpointer user_data)
         {
             GMainLoop* loop = (GMainLoop*)user_data;
-            //BOOST_LOG_TRIVIAL(trace) 
-            //    << "Got message from:" << GST_MESSAGE_SRC_NAME(message)
-            //    << " Type:" << GST_MESSAGE_TYPE_NAME(message);
+            BOOST_LOG_TRIVIAL(trace) 
+                << "Message from:" << GST_MESSAGE_SRC_NAME(message)
+                << " Type:" << GST_MESSAGE_TYPE_NAME(message);
             
             switch (GST_MESSAGE_TYPE (message)) {
                 case GST_MESSAGE_ERROR:

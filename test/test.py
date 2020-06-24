@@ -46,7 +46,7 @@ def make_channel_config(chan_type, number):
                 "switch": 0       # from 1 .. 4
                 })
         if chan_type == "archive":
-            name = "hdd"+str(i)
+            name = "hdd "+str(i)
             mdb.insert_or_replace_id("live_inputs_archive", i,{  
                 "_id": i,
                 "name": name,
@@ -55,7 +55,7 @@ def make_channel_config(chan_type, number):
                 "manualSchedule": False,
                 "contents": [ 
                         {
-                        "content": 3002,
+                        "content": 3001+ii,
                         "weekday": 1,
                         "time": 1,
                         }
@@ -388,5 +388,5 @@ init_db()
 """
 for ch_type in ["dvb", "archive", "network", "web", "virtual_dvb", "virtual_net",
         "transcode", "scramble", "unscramble", "mixed"]:
-    make_channel_config(ch_type, 2)
+    make_channel_config(ch_type, 10)
 

@@ -6,9 +6,11 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
-#define TEST_BY_FFMPEG 1
+#define TEST_BY_FFMPEG 0
+
 using namespace std;
 void gst_task(string in_url, string out_multicast, int port);
+
 void start_channel(string channel_str, live_setting live_config)
 {
     json channel = json::parse(channel_str);
@@ -23,16 +25,21 @@ void start_channel(string channel_str, live_setting live_config)
     }
     auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
     auto url = channel["url"].get<string>();
+    while(true){
 #if TEST_BY_FFMPEG
-    auto cmd = boost::format("%s -i '%s' -codec copy "
-            " -f mpegts 'udp://%s:%d?pkt_size=1316' ")
-        % FFMPEG % url % out_multicast % INPUT_PORT; 
-    Util::exec_shell_loop(cmd.str());
+        auto cmd = boost::format("%s -i '%s' -codec copy "
+                " -f mpegts 'udp://%s:%d?pkt_size=1316' ")
+            % FFMPEG % url % out_multicast % INPUT_PORT; 
+        Util::exec_shell_loop(cmd.str());
 #else
-    //url = "rtsp://192.168.56.12:554/iptv/239.1.1.3/3200";  //for test
-    //url = "http://192.168.56.12:8001/34/hdd11.ts";   // for test
-    gst_task(url, out_multicast, INPUT_PORT);
+        //url = "udp://229.1.0.0:3200";
+        //url = "rtsp://192.168.56.12:554/iptv/239.1.1.2/3200"; 
+        //url = "http://192.168.56.12:8001/34/hdd11.ts";   
+        //url = "http://192.168.56.12/HLS/HLS/hdd11/p.m3u8";
+        gst_task(url, out_multicast, INPUT_PORT);
 #endif
+        Util::wait(5000);
+    }
 }
 int main()
 {
@@ -52,6 +59,7 @@ int main()
         if(chan["inputType"] == live_config.type_id){
             string network = db.find_id("live_inputs_network", chan["input"]);
             pool.emplace_back(start_channel, network, live_config);
+            break;  // for test
         }
     }
     for(auto& t : pool)

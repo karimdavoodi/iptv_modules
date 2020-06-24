@@ -11,7 +11,7 @@ add_definitions(
                  -fdiagnostics-generate-patch 
                  -DBOOST_LOG_DYN_LINK=1
                  -DGST_USE_UNSTABLE_API=1
-                 -O3
+                 -g
                  )
 #BOOST
 find_package(Boost COMPONENTS system log log_setup REQUIRED)
@@ -46,7 +46,7 @@ set_target_properties(utils PROPERTIES
     )
 
 set( project_EXES
-     iptv_in_archive       # TODO: support mp4,mkv,... by GST 
+     iptv_in_archive       # TODO: fix ts file timestamp
      iptv_in_network       # TODO: test it
      iptv_in_transcoder    # TODO: do by Gst
      iptv_in_web           # TODO: ...

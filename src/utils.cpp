@@ -22,7 +22,7 @@ using namespace std;
 namespace Util {
     void system(const std::string cmd)
     {
-        BOOST_LOG_TRIVIAL(trace) << "Run shell command:" << cmd;
+        BOOST_LOG_TRIVIAL(debug) << "Run shell command:" << cmd;
         if(std::system(cmd.c_str())){
             BOOST_LOG_TRIVIAL(error) << "Error in run " << cmd;
         }
@@ -123,7 +123,7 @@ namespace Util {
                 if(!found)
                     route_add(INPUT_MULTICAST, "lo");
                 else
-                    BOOST_LOG_TRIVIAL(trace) << "Found local multicast route, not add it";
+                    BOOST_LOG_TRIVIAL(debug) << "Found local multicast route, not add it";
             }
         }catch(std::exception& e){
             BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();

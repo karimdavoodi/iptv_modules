@@ -51,7 +51,7 @@ void Log(int level, const char *format, ...)
         case 1: BOOST_LOG_TRIVIAL(warning) << line; break;
         case 2: BOOST_LOG_TRIVIAL(info) << line; break;
         case 3: BOOST_LOG_TRIVIAL(debug) << line; break;
-        case 4: BOOST_LOG_TRIVIAL(trace) << line; break;
+        case 4: BOOST_LOG_TRIVIAL(debug) << line; break;
     }
 }
 // int x<::> = <% %>;   === int x[] = {2,3,4};   C17

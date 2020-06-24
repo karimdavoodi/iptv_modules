@@ -41,7 +41,7 @@ int main()
     while(true){
         std::this_thread::sleep_for(chrono::seconds(60));
         string usage_json = usage.getUsageJson();
-        //BOOST_LOG_TRIVIAL(trace) << usage_json;
+        //BOOST_LOG_TRIVIAL(debug) << usage_json;
         db.insert("report_system_usage", usage_json);
     }
     return 0;

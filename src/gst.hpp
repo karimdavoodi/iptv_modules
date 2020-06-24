@@ -8,9 +8,12 @@ namespace Gst {
         GstElement* pipeline;
     };
     void init();
+    void print_int_property_delay(GstElement* element, const char* attr, int seconds);
+    void zero_queue_buffer(GstElement* queue);
+    const std::string pad_caps_string(GstPad* pad);
     void dot_file(const GstElement* pipeline, const std::string name, int sec = 5);
     GstElement* add_element(GstElement* pipeline, const std::string plugin, 
-                                                  const std::string name = "");
+                            const std::string name = "", bool stat_playing = false);
     bool pad_link_element_static(GstPad* pad, GstElement* element, const std::string pad_name);
     guint add_bus_watch(GstElement* pipeline, GMainLoop* loop);
     bool element_link_request(GstElement* src, const char* src_name, 

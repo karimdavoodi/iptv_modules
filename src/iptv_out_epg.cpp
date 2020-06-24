@@ -6,7 +6,9 @@
 #include <thread>
 #include "utils.hpp"
 using namespace std;
+
 void gst_task(Mongo& db, string in_multicast, int port, int chan_id);
+
 void start_channel(json channel, live_setting live_config)
 {
     Mongo db;

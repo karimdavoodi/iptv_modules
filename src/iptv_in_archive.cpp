@@ -8,8 +8,10 @@
 #include <boost/filesystem/operations.hpp>
 #include "utils.hpp"
 #define TEST_BY_FFMPEG 0
+
 using namespace std;
 void gst_task(string media_path, string multicast_addr, int port);
+
 bool time_to_play(bool schedule, json& media)
 {
     if(!schedule) return true; // play anytime in non schedule mode
@@ -69,48 +71,53 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
     }
     auto multicast = Util::get_multicast(live_config, channel["_id"]);
     bool schedule = channel["manualSchedule"];
-    while(true){
-        for(auto& media : channel["contents"]){
-            if(time_to_play(schedule, media)){
-                BOOST_LOG_TRIVIAL(debug) << "Play media id: " << media["content"];
-                update_epg(db, silver_chan_id, media["content"]);
-                auto media_path = Util::get_content_path(db, media["content"]);
-                if(media_path.size() == 0){
-                    BOOST_LOG_TRIVIAL(error) << "Invalid media path";
-                    Util::wait(50000);
-                    continue;
-                } 
-                if(!boost::filesystem::exists(media_path)){
-                    BOOST_LOG_TRIVIAL(error) << "Media not exists!";
-                    Util::wait(50000);
-                    continue;
-                }
+    try{
+        while(true){
+           for(auto& media : channel["contents"]){
+                if(time_to_play(schedule, media)){
+                    BOOST_LOG_TRIVIAL(debug) << "Play media id: " << media["content"];
+                    update_epg(db, silver_chan_id, media["content"]);
+                    auto media_path = Util::get_content_path(db, media["content"]);
+                    if(media_path.size() == 0){
+                        BOOST_LOG_TRIVIAL(error) << "Invalid media path";
+                        Util::wait(50000);
+                        continue;
+                    } 
+                    if(!boost::filesystem::exists(media_path)){
+                        BOOST_LOG_TRIVIAL(error) << "Media not exists:" << media_path;
+                        Util::wait(50000);
+                        continue;
+                    }
 #if TEST_BY_FFMPEG
-                auto cmd = boost::format("%s -re -i '%s' -codec copy -f mpegts "
-                        "'udp://%s:%d?pkt_size=1316'")
-                    % FFMPEG 
-                    % media_path 
-                    % multicast
-                    % INPUT_PORT;
-                Util::system(cmd.str());
+                    auto cmd = boost::format("%s -re -i '%s' -codec copy -f mpegts "
+                            "'udp://%s:%d?pkt_size=1316'")
+                        % FFMPEG 
+                        % media_path 
+                        % multicast
+                        % INPUT_PORT;
+                    Util::system(cmd.str());
 #else
-                gst_task(media_path, multicast, INPUT_PORT);
+                    gst_task(media_path, multicast, INPUT_PORT);
 #endif
-            }else{
-                BOOST_LOG_TRIVIAL(debug) << "Not play media id: " << media["content"]
-                    << " due to time.";
+                }else{
+                    BOOST_LOG_TRIVIAL(debug) << "Not play media id: " << media["content"]
+                        << " due to time.";
+                }
             }
+            if(schedule) Util::wait(5*60*1000);
+            else Util::wait(5000);
         }
-        if(schedule) Util::wait(5*60*1000);
-        else Util::wait(5000);
+    }catch(std::exception& e){
+        BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
     }
+
 }
 int main()
 {
     vector<thread> pool;
     live_setting live_config;
     Mongo db;
-    
+
     CHECK_LICENSE;
     Util::init(db);
     if(!Util::get_live_config(db, live_config, "archive")){
@@ -124,7 +131,7 @@ int main()
             json archive = json::parse(db.find_id("live_inputs_archive", chan["input"]));
             IS_CHANNEL_VALID(archive);
             pool.emplace_back(start_channel, archive, chan["_id"], live_config);
-            //break; // for test
+            //break; //for test 
         }
     }
     for(auto& t : pool)
