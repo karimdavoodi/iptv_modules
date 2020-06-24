@@ -16,11 +16,11 @@ int main()
     Mongo db;
 
     CHECK_LICENSE;
-    BOOST_LOG_TRIVIAL(warning) << "Contents are not in filesystem structure. disable dlna!";
+    LOG(warning) << "Contents are not in filesystem structure. disable dlna!";
     Util::init(db);
     json license = json::parse(db.find_id("system_license", 1));
     if(license["license"].is_null()){
-        BOOST_LOG_TRIVIAL(error) << "License in empty!";
+        LOG(error) << "License in empty!";
         return -1;
     }
     if(license["license"]["Global"]["GB_DLNA"] == true){
@@ -40,11 +40,11 @@ album_art_names=Folder.jpg/folder.jpg/Thumb.jpg/thumb.jpg
             dlna.close();
             Util::system("minidlnad -f /opt/sms/tmp/dlna.conf");
         }else{
-            BOOST_LOG_TRIVIAL(error) << "Can't open dlna config file";
+            LOG(error) << "Can't open dlna config file";
         }
         
     }else{
-        BOOST_LOG_TRIVIAL(info) << "DLNA dosen't have license.";
+        LOG(info) << "DLNA dosen't have license.";
     }
     
     THE_END;

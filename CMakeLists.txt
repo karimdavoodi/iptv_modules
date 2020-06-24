@@ -20,10 +20,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GSTMM REQUIRED 
         gstreamer-1.0 
         glib-2.0 
-        gstreamermm-1.0 
-        glibmm-2.4
         gstreamer-mpegts-1.0
-        gdk-pixbuf-2.0
         )
 #LIBMONGOCXX
 set(CMAKE_MODULE_PATH /usr/local/lib/cmake )
@@ -53,10 +50,10 @@ set( project_EXES
      iptv_in_dvb           # TODO: do by Gst
      iptv_in_unscramble    ##TODO: ...
      iptv_in_scramble      ##TODO: ...
-     iptv_out_hls          # TODO: do by Gst 
-     iptv_out_epg          # TODO: test 
-     iptv_out_multicast    # TODO: test
-     iptv_out_record       # TODO: test
+     iptv_out_hls          # TODO: test it 
+     iptv_out_epg          # TODO: test it 
+     iptv_out_multicast    # TODO: test it
+     iptv_out_record       # TODO: test it
      iptv_out_rtsp         # TODO: do by Gst-rtsp-server library
      iptv_out_rf           # TODO: do by Gst
      iptv_out_http         # TODO: do by Gst 

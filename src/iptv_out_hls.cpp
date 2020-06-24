@@ -6,7 +6,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
-#define BY_FFMPEG 1
+#define BY_FFMPEG 0
 using namespace std;
 void gst_task(string in_multicast, int in_port, string hls_root);
 void start_channel(json channel, live_setting live_config)
@@ -16,11 +16,10 @@ void start_channel(json channel, live_setting live_config)
     string hls_root = string(HLS_ROOT) + channel["name"].get<string>();
     Util::check_path(hls_root);
 #if BY_FFMPEG
-    hls_root += "/p.m3u8";
     auto cmd = boost::format("%s -i 'udp://%s:%d' "
             "-codec copy -map 0 -ac 2 "
             "-hls_time 4 -hls_list_size 10 -hls_flags delete_segments "
-            " '%s'")
+            " '%s/p.m3u8'")
         % FFMPEG % in_multicast % INPUT_PORT % hls_root;
     Util::exec_shell_loop(cmd.str());
 #else
@@ -35,7 +34,7 @@ int main()
     CHECK_LICENSE;
     Util::init(db);
     if(!Util::get_live_config(db, live_config, "archive")){
-        BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
+        LOG(info) << "Error in live config! Exit.";
         return -1;
     }
     Util::check_path(HLS_ROOT);
@@ -44,8 +43,10 @@ int main()
         IS_CHANNEL_VALID(chan);
         if(chan["hls"] == true){
             if(chan["inputType"] != live_config.virtual_dvb_id &&
-               chan["inputType"] != live_config.virtual_net_id  )
+               //chan["inputType"] == live_config.type_id && 
+               chan["inputType"] != live_config.virtual_net_id  ){
                 pool.emplace_back(start_channel, chan, live_config);
+            }
         }
     }
     for(auto& t : pool)

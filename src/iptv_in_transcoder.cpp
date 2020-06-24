@@ -16,14 +16,14 @@ void gst_task(string media_path, string multicast_addr, int port);
 void start_channel(json channel, live_setting live_config)
 {
     Mongo db;
-    BOOST_LOG_TRIVIAL(info) << "Start Channel: " << channel["name"];
+    LOG(info) << "Start Channel: " << channel["name"];
     if(!channel["active"]){
-        BOOST_LOG_TRIVIAL(info) << channel["name"] << " is not Active. Exit!";
+        LOG(info) << channel["name"] << " is not Active. Exit!";
         return;
     }
     json profile = json::parse(db.find_id("live_transcode_profile",channel["profile"])); 
     if(profile["_id"].is_null()){
-        BOOST_LOG_TRIVIAL(error) << "transcode profile id is in invalid:" 
+        LOG(error) << "transcode profile id is in invalid:" 
                                  << channel["profile"];
         return;
     }
@@ -54,7 +54,7 @@ void start_channel(json channel, live_setting live_config)
     if(p_vcodec.find("264") != string::npos)         vcodec = "libx264";
     else if(p_vcodec.find("mpeg2") != string::npos)  vcodec = "mpeg2video";
     else{
-        BOOST_LOG_TRIVIAL(error) << "Vicedo Codec not support " << p_vcodec 
+        LOG(error) << "Vicedo Codec not support " << p_vcodec 
             << " for channel " << channel["name"];
         return;
     }
@@ -62,7 +62,7 @@ void start_channel(json channel, live_setting live_config)
     else if(p_acodec.find("mp2") != string::npos)    acodec = "mp2";
     else if(p_acodec.find("aac") != string::npos)    acodec = "aac";
     else{
-        BOOST_LOG_TRIVIAL(error) << "Audio Codec not support " << p_acodec 
+        LOG(error) << "Audio Codec not support " << p_acodec 
             << " for channel " << channel["name"];
         return;
     }
@@ -72,7 +72,7 @@ void start_channel(json channel, live_setting live_config)
     else if(p_vsize.find("HD") != string::npos)   vsize = "1280x720";
     else if(p_vsize.find("CD") != string::npos)   vsize = "320x240";
     else{
-        BOOST_LOG_TRIVIAL(error) << "Video size not support " << p_vsize 
+        LOG(error) << "Video size not support " << p_vsize 
             << " for channel " << channel["name"];
         return;
     }
@@ -102,7 +102,7 @@ int main()
     CHECK_LICENSE;
     Util::init(db);
     if(!Util::get_live_config(db, live_config, "transcode")){
-        BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
+        LOG(info) << "Error in live config! Exit.";
         return -1;
     }
     json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));

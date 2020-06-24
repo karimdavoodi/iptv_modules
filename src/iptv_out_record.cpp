@@ -9,7 +9,7 @@
 #include "utils.hpp"
 #define BY_FFMPEG 0
 using namespace std;
-void gst_task(string in_multicast, string file_path, int second);
+void gst_task(string in_multicast, int port,  string file_path, int second);
 void start_channel(json channel, live_setting live_config)
 {
     Mongo db;
@@ -37,7 +37,7 @@ void start_channel(json channel, live_setting live_config)
             % FFMPEG % in_multicast % INPUT_PORT % duration % FFMPEG_REC_OPTS % file_path;
         Util::system(cmd.str());
 #else
-        gst_task(in_multicast, file_path.str(), duration); 
+        gst_task(in_multicast, INPUT_PORT ,file_path.str(), duration); 
 #endif
         json media = json::object();
         media["_id"] = std::chrono::system_clock::now().time_since_epoch().count();
@@ -65,7 +65,7 @@ void start_channel(json channel, live_setting live_config)
         };
         media["name"] = name.str();
         db.insert("storage_contents_info", media.dump());
-        BOOST_LOG_TRIVIAL(info) << "Record " << name.str();
+        LOG(info) << "Record " << name.str();
         Util::wait(1000);
     }
 }
@@ -78,19 +78,22 @@ int main()
     Util::init(db);
     string time_shift_dir = string(MEDIA_ROOT) + "TimeShift";
     if(!boost::filesystem::exists(time_shift_dir)){
-        BOOST_LOG_TRIVIAL(info) << "Create " << time_shift_dir;
+        LOG(info) << "Create " << time_shift_dir;
         boost::filesystem::create_directory(time_shift_dir);
     }
     if(!Util::get_live_config(db, live_config, "archive")){
-        BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
+        LOG(info) << "Error in live config! Exit.";
         return -1;
     }
     json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         if(chan["active"] == true && chan["recordTime"] > 0){
             if(chan["inputType"] != live_config.virtual_dvb_id &&
+                    chan["inputType"] == live_config.type_id  && 
                     chan["inputType"] != live_config.virtual_net_id  ){
+                
                 pool.emplace_back(start_channel, chan, live_config);
+                break;
                 Util::wait(100);
             }
                 

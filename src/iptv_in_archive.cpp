@@ -22,7 +22,7 @@ bool time_to_play(bool schedule, json& media)
     auto now_tm = localtime(&now);
     auto now_wday = (now_tm->tm_wday + 1) % 7;
     auto now_hhmm = now_tm->tm_hour * 100 + now_tm->tm_min;
-    BOOST_LOG_TRIVIAL(debug)  << "Check media time to play: "
+    LOG(debug)  << "Check media time to play: "
         << " now_wday " << now_wday
         << " now_hhmm " << now_hhmm
         << " media_weekday " << media_weekday
@@ -59,14 +59,14 @@ void update_epg(Mongo& db, int silver_chan_id, int content_id)
     epg["content"] = json::array();
     epg["content"].push_back(j);
     db.insert_or_replace_id("live_output_silver_epg", silver_chan_id, epg.dump());
-    BOOST_LOG_TRIVIAL(info) << "Update EPG of channel_id:" << silver_chan_id;
+    LOG(info) << "Update EPG of channel_id:" << silver_chan_id;
 }
 void start_channel(json channel, int silver_chan_id, live_setting live_config)
 {
     Mongo db;
-    BOOST_LOG_TRIVIAL(info) << "Start Channel: " << channel["name"];
+    LOG(info) << "Start Channel: " << channel["name"];
     if(!channel["active"]){
-        BOOST_LOG_TRIVIAL(info) << channel["name"] << " is not Active. Exit!";
+        LOG(info) << channel["name"] << " is not Active. Exit!";
         return;
     }
     auto multicast = Util::get_multicast(live_config, channel["_id"]);
@@ -75,16 +75,16 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
         while(true){
            for(auto& media : channel["contents"]){
                 if(time_to_play(schedule, media)){
-                    BOOST_LOG_TRIVIAL(debug) << "Play media id: " << media["content"];
+                    LOG(debug) << "Play media id: " << media["content"];
                     update_epg(db, silver_chan_id, media["content"]);
                     auto media_path = Util::get_content_path(db, media["content"]);
                     if(media_path.size() == 0){
-                        BOOST_LOG_TRIVIAL(error) << "Invalid media path";
+                        LOG(error) << "Invalid media path";
                         Util::wait(50000);
                         continue;
                     } 
                     if(!boost::filesystem::exists(media_path)){
-                        BOOST_LOG_TRIVIAL(error) << "Media not exists:" << media_path;
+                        LOG(error) << "Media not exists:" << media_path;
                         Util::wait(50000);
                         continue;
                     }
@@ -100,7 +100,7 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
                     gst_task(media_path, multicast, INPUT_PORT);
 #endif
                 }else{
-                    BOOST_LOG_TRIVIAL(debug) << "Not play media id: " << media["content"]
+                    LOG(debug) << "Not play media id: " << media["content"]
                         << " due to time.";
                 }
             }
@@ -108,7 +108,7 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
             else Util::wait(5000);
         }
     }catch(std::exception& e){
-        BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
+        LOG(error) << "Exception:" << e.what();
     }
 
 }
@@ -121,7 +121,7 @@ int main()
     CHECK_LICENSE;
     Util::init(db);
     if(!Util::get_live_config(db, live_config, "archive")){
-        BOOST_LOG_TRIVIAL(error) << "Error in live config! Exit.";
+        LOG(error) << "Error in live config! Exit.";
         return -1;
     }
     json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));

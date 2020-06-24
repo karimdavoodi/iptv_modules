@@ -15,7 +15,7 @@ void start_channel(json channel, live_setting live_config)
 {
     live_config.type_id = channel["inputType"];
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
-    BOOST_LOG_TRIVIAL(error) << "TODO: implement RF ...";
+    LOG(error) << "TODO: implement RF ...";
 }
 int main()
 {
@@ -28,14 +28,14 @@ int main()
     CHECK_LICENSE;
     Util::init(db);
     if(!Util::get_live_config(db, live_config, "archive")){
-        BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
+        LOG(info) << "Error in live config! Exit.";
         return -1;
     }
     json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["freq"].is_null()){
-            BOOST_LOG_TRIVIAL(info) << chan.dump();
+            LOG(info) << chan.dump();
             continue;
         }
         int freq = chan["freq"].get<int>() / 1000;
@@ -49,7 +49,7 @@ int main()
     int tid = 1, i = 1;
     json live_tuners_output = json::parse(db.find_id("live_tuners_output", 1));
     if(live_tuners_output["_id"].is_null()){
-        BOOST_LOG_TRIVIAL(error) << "Invalid live_tuners_output!";
+        LOG(error) << "Invalid live_tuners_output!";
         return 0;
     }
     int pcr = live_tuners_output["dvbtPcr"];
@@ -58,17 +58,17 @@ int main()
     for(const auto& rf : chan_by_freq){
         auto pos = std::find(dvbt_freq.begin(), dvbt_freq.end(), rf.first);
         if(pos == dvbt_freq.end()){
-            BOOST_LOG_TRIVIAL(error) << "Output Tuner frequency not set " << rf.first;
+            LOG(error) << "Output Tuner frequency not set " << rf.first;
             continue;
         }
         int tuner_id = pos - dvbt_freq.begin();
         if(!boost::filesystem::exists("/dev/usb-it950x"+to_string(tuner_id))){
-            BOOST_LOG_TRIVIAL(error) << "Output Tuner not found: " << tuner_id;
+            LOG(error) << "Output Tuner not found: " << tuner_id;
             continue;
         }
         ofstream cfg("/opt/sms/tmp/mts_chan"+to_string(tid)+".conf");
         if(!cfg.is_open()){
-            BOOST_LOG_TRIVIAL(error) << "Can't open tomts cfg file!";
+            LOG(error) << "Can't open tomts cfg file!";
             continue;
         }
         cfg << "[Global]\n"
@@ -96,8 +96,8 @@ int main()
         std::ostringstream torf;
         torf << "/opt/sms/bin/torft "
             << tuner_id << " " <<  rf.first << " " << port << " &";
-        BOOST_LOG_TRIVIAL(info) << tomts.str();
-        BOOST_LOG_TRIVIAL(info) << torf.str();
+        LOG(info) << tomts.str();
+        LOG(info) << torf.str();
         Util::system(tomts.str());
         Util::system(torf.str());
         tid++;

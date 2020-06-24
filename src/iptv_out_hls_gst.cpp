@@ -1,99 +1,108 @@
-#include <exception>
 #include <thread>
-#include <gstreamermm.h>
-#include <glibmm.h>
-#include <boost/log/trivial.hpp>
+#include "utils.hpp"
 #include "gst.hpp"
 using namespace std;
-/*
-gst-launch-1.0 -v --gst-debug-level=3  udpsrc uri=udp://229.2.0.1:3200 \
-    ! queue ! parsebin name=demux \
-    ! video/x-h264 ! h264parse \
-    ! queue ! hlssink2  name=sink \
-    #demux. ! queue ! audio/mpeg ! aacparse ! sink.
- */
-void gst_task(string in_multicast, int in_port, string hls_root)
+
+// TODO: find keyframe
+void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
 {
-    using Glib::RefPtr;
-    RefPtr<Glib::MainLoop> loop;
-    RefPtr<Gst::Pipeline>  pipeline;
-    RefPtr<Gst::Element>   udpsrc;
-    RefPtr<Gst::Element>   parsebin;
-    RefPtr<Gst::Element>   queue1;
-    RefPtr<Gst::Element>   queue_v;
-    RefPtr<Gst::Element>   queue_a;
-    RefPtr<Gst::Element>   hlssink;
-    sigc::connection m_timeout_connection;
-   
+    auto d = (Gst::Data*) data;
+    auto caps_filter = gst_caps_new_any();
+    auto caps = gst_pad_query_caps(pad, caps_filter);
+    auto caps_struct = gst_caps_get_structure(caps, 0);
+    auto caps_string = string(gst_caps_to_string(caps));
+    auto pad_type = string(gst_structure_get_name(caps_struct));
+
+    LOG(debug) << gst_pad_get_name(pad) << " Caps:" << caps_string;
+    GstElement* videoparse = NULL;
+    GstElement* audioparse = NULL;
+    if(pad_type.find("video/x-h264") != string::npos){
+        videoparse = Gst::add_element(d->pipeline, "h264parse", "", true);
+        g_object_set(videoparse, "config-interval", 1, NULL);
+    }else if(pad_type.find("video/mpeg") != string::npos){
+        int m_version = 1;
+        gst_structure_get_int(caps_struct, "mpegversion", &m_version);
+        LOG(debug) << "Mpeg version type:" <<  m_version;
+        if(m_version == 4){
+            videoparse = Gst::add_element(d->pipeline, "mpeg4videoparse", "", true);
+            g_object_set(videoparse, "config-interval", 1, NULL);
+        }else{
+            videoparse = Gst::add_element(d->pipeline, "mpegvideoparse", "", true);
+        }
+    }else if(pad_type.find("audio/mpeg") != string::npos){
+        int m_version = 1;
+        gst_structure_get_int(caps_struct, "mpegversion", &m_version);
+        LOG(debug) << "Mpeg version type:" <<  m_version;
+        if(m_version == 1){
+            audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", "", true);
+        }else{
+            audioparse = Gst::add_element(d->pipeline, "aacparse", "", true);
+        }
+    }else if(pad_type.find("audio/x-ac3") != string::npos ||
+             pad_type.find("audio/ac3") != string::npos){
+            audioparse = Gst::add_element(d->pipeline, "ac3parse", "", true);
+    }else{
+        LOG(warning) << "Not support:" << pad_type;
+    }
+    gst_caps_unref(caps_filter);
+    gst_caps_unref(caps);
+    // link tsdemux ---> queue --- > parse -->  qtmux
+    auto parse = (videoparse != NULL) ? videoparse : audioparse;
+    auto parse_name = string(gst_element_get_name(parse));
+    if(parse != NULL){
+        g_object_set(parse, "disable-passthrough", true, NULL);
+        auto queue = Gst::add_element(d->pipeline, "queue", "", true);
+        Gst::zero_queue_buffer(queue);
+        if(!Gst::pad_link_element_static(pad, queue, "sink")){
+            LOG(error) << "Can't link typefind to queue";
+            g_main_loop_quit(d->loop); return; 
+        }
+
+        if(!gst_element_link(queue, parse)){
+            LOG(error) << "Can't link  queue to " << parse_name; 
+            g_main_loop_quit(d->loop); return;
+        }
+        auto mux = gst_bin_get_by_name(GST_BIN(d->pipeline), "hlssink");
+        string type = videoparse ? "video" : "audio";
+        Gst::element_link_request(parse, "src", mux, type.c_str() );
+        gst_object_unref(mux);
+    }
+}
+
+void gst_task(string in_multicast, int port, string hls_root)
+{
+    in_multicast = "udp://" + in_multicast + ":" + to_string(port);
+    LOG(info) << "Start " << in_multicast << " -> " << hls_root;
+
+    Gst::Data d;
+    d.loop      = g_main_loop_new(NULL, false);
+    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", NULL));
     try{
-        in_multicast = "229.2.0.1";
-        in_multicast += ":" + to_string(in_port);
-        BOOST_LOG_TRIVIAL(info) 
-            << "Start " 
-            << in_multicast 
-            << " --> HLS in " << hls_root; 
-        loop = Glib::MainLoop::create();
-        pipeline = Gst::Pipeline::create();
-        
-        udpsrc = Gst::ElementFactory::create_element("udpsrc");
-        queue1 = Gst::ElementFactory::create_element("queue");
-        parsebin = Gst::ElementFactory::create_element("parsebin");
-        queue_v = Gst::ElementFactory::create_element("queue","queue_v");
-        queue_a = Gst::ElementFactory::create_element("queue", "queue_a");
-        hlssink = Gst::ElementFactory::create_element("hlssink2");
-        
-        if( !udpsrc || !hlssink || !parsebin ){
-            BOOST_LOG_TRIVIAL(debug) << "Error in create";
-            return;
-        }
-        try{
-            pipeline->add(udpsrc)->add(queue1)->add(parsebin)
-                ->add(queue_v)->add(queue_a)->add(hlssink);
-            udpsrc->link(queue1)->link(parsebin);
-            queue_v->get_static_pad("src")->link(hlssink->get_request_pad("video"));
-            queue_a->get_static_pad("src")->link(hlssink->get_request_pad("audio"));
-            // link parsebin->queue_v  in video
-            // link parsebin->queue_a  in audio
-        }catch(std::exception& e){
-            BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
-        }
-        
-        
-        udpsrc->set_property("uri", "udp://"+in_multicast);
-        parsebin->signal_pad_added().connect([&](const RefPtr<Gst::Pad>& pad){
-                try{
-                
-                    auto caps = pad->query_caps(Gst::Caps::create_any());
-                    string caps_name =  caps->get_structure(0).get_name();
-                    BOOST_LOG_TRIVIAL(info) << "add Pad:" << pad->get_name()
-                            << " Caps:" << caps_name;
-                    if(caps_name.find("video") != string::npos){
-                      if(pad->link(queue_v->get_static_pad("sink")) != Gst::PAD_LINK_OK)
-                        BOOST_LOG_TRIVIAL(info) << "error: parsebin_v -> queue_v"; 
-                      else
-                        BOOST_LOG_TRIVIAL(info) << "Link: parsebin_v -> queue_v"; 
-                    }else if(caps_name.find("audio") != string::npos){
-                      if(pad->link(queue_a->get_static_pad("sink")) != Gst::PAD_LINK_OK)
-                        BOOST_LOG_TRIVIAL(info) << "error: parsebin_a -> queue_a"; 
-                      else
-                        BOOST_LOG_TRIVIAL(info) << "Link: parsebin_a -> queue_a"; 
-                    }else{
-                        BOOST_LOG_TRIVIAL(info) << "Not link PAD"; 
-                    }
-                    pad->set_active();
-                }catch(std::exception& e){
-                    BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
-                }
-                });
-        //hlssink->set_property("multicast-iface", string("lo"));
-        //PIPLINE_WATCH;
-        //PIPLINE_POSITION;
-        pipeline->set_state(Gst::STATE_PLAYING);
-        loop->run();
-        pipeline->set_state(Gst::STATE_NULL);
-        m_timeout_connection.disconnect();
-        BOOST_LOG_TRIVIAL(debug) << "Finish";
+        auto udpsrc = Gst::add_element(d.pipeline, "udpsrc"),
+             queue_src  = Gst::add_element(d.pipeline, "queue", "queue_src"),
+             tsdemux    = Gst::add_element(d.pipeline, "tsdemux"),
+             hlssink   = Gst::add_element(d.pipeline, "hlssink2", "hlssink");
+
+        gst_element_link_many(udpsrc, queue_src, tsdemux, NULL);
+
+        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added), &d);
+        g_object_set(udpsrc, "uri", in_multicast.c_str(), NULL);
+        string segment_location = hls_root + "/segment__%05d.ts";
+        string playlist_location = hls_root + "/p.m3u8";
+        g_object_set(hlssink, 
+                "max-files", 14,
+                "playlist-length", 7,
+                "playlist-location", playlist_location.c_str(),
+                "location", segment_location.c_str(),
+                "message-forward", true,
+                "target-duration", 5,
+                NULL);
+
+        Gst::add_bus_watch(d);
+        Gst::dot_file(d.pipeline, "iptv_network", 5);
+        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
+        g_main_loop_run(d.loop);
     }catch(std::exception& e){
-        BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
+        LOG(error) << "Exception:" << e.what();
     }
 }

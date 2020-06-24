@@ -13,7 +13,10 @@ void start_channel(json channel, live_setting live_config)
 {
     Mongo db;
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
-    gst_task(db, in_multicast, INPUT_PORT, channel["_id"]); 
+    while(true){
+        gst_task(db, in_multicast, INPUT_PORT, channel["_id"]); 
+        Util::wait(3000);
+    }
 }
 int main()
 {
@@ -23,15 +26,16 @@ int main()
     CHECK_LICENSE;
     Util::init(db);
     if(!Util::get_live_config(db, live_config, "dvb")){
-        BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
+        LOG(info) << "Error in live config! Exit.";
         return -1;
     }
     json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
-        // Active EPG only for DVB channels
         IS_CHANNEL_VALID(chan);
+        // Active EPG only for DVB channels
         if(chan["inputType"] == live_config.type_id){
             pool.emplace_back(start_channel, chan, live_config);
+            //break;
         }
     }
     for(auto& t : pool)

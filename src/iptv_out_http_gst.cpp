@@ -47,11 +47,11 @@ void Log(int level, const char *format, ...)
     vsnprintf(line, 512, format, args);
     va_end(args);
     switch(level){
-        case 0: BOOST_LOG_TRIVIAL(error) << line; break;
-        case 1: BOOST_LOG_TRIVIAL(warning) << line; break;
-        case 2: BOOST_LOG_TRIVIAL(info) << line; break;
-        case 3: BOOST_LOG_TRIVIAL(debug) << line; break;
-        case 4: BOOST_LOG_TRIVIAL(debug) << line; break;
+        case 0: LOG(error) << line; break;
+        case 1: LOG(warning) << line; break;
+        case 2: LOG(info) << line; break;
+        case 3: LOG(debug) << line; break;
+        case 4: LOG(debug) << line; break;
     }
 }
 // int x<::> = <% %>;   === int x[] = {2,3,4};   C17
@@ -168,7 +168,7 @@ void send_http_response( int sockfd, int code, const char* reason)
             code, reason );
     if( msglen <= 0 ) return;
     if(write(sockfd, msg, msglen) == -1)
-        BOOST_LOG_TRIVIAL(error) << "Can't send response " << strerror(errno); 
+        LOG(error) << "Can't send response " << strerror(errno); 
     return;
 }
 int tcp_sock_opt(int clientfd)
@@ -311,7 +311,7 @@ void relay_traffic(int client_sock,int chan_id,char *client_http_req,struct in_a
     char *host;
     int  port;
     Channel* c = chan_map[chan_id];
-    BOOST_LOG_TRIVIAL(info) << "Start traffic relay to chan id " << chan_id;
+    LOG(info) << "Start traffic relay to chan id " << chan_id;
     sec = BUFFER_SEC;
     /* set buffer lenght, per client type */
     if(strstr(client_http_req,"Lavf52.104")) /* samsung hotel tv */
@@ -393,7 +393,7 @@ void http_unicast_relay(int clientfd, struct sockaddr_in sock)
     int client_id;
     char chan_multicast[20];
     signal(SIGPIPE, SIG_IGN);
-    BOOST_LOG_TRIVIAL(info) << "Accept Clinet "; 
+    LOG(info) << "Accept Clinet "; 
     tcp_sock_opt(clientfd);
     if((n=read(clientfd, client_req, 2048)) < 0 ){
         send_http_response(clientfd, 500, "Service error. Can't read req" );
@@ -427,7 +427,7 @@ void http_unicast_server()
     struct http_thread_arg *arg;
     struct sockaddr_in serveraddr;
     socklen_t clientlen;
-    BOOST_LOG_TRIVIAL(info) << "Start http server in port " << UNICAST_HTTP_PORT;
+    LOG(info) << "Start http server in port " << UNICAST_HTTP_PORT;
     if((parentfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ){
         Log(0, "Error open http socket:%s\n",  strerror(errno));
         return;

@@ -17,9 +17,9 @@ void start_snapshot(const json& channel, live_setting live_config)
     int pic_id = channel["_id"].get<int>();
     auto pic_path = boost::format("%sSnapshot/%d.jpg")
         % MEDIA_ROOT % pic_id; 
-    BOOST_LOG_TRIVIAL(debug) << "Try to snapsot from " << channel["name"];
+    LOG(debug) << "Try to snapsot from " << channel["name"];
     if(gst_task(in_multicast, INPUT_PORT, pic_path.str())){
-        BOOST_LOG_TRIVIAL(info) << "Capture snapsot for " << channel["name"];
+        LOG(info) << "Capture " << channel["name"] << " in " << pic_path.str();
         string name = channel["name"].get<string>();
         json media = json::object();
         media["_id"] = pic_id;
@@ -57,7 +57,7 @@ int main()
     CHECK_LICENSE;
     Util::init(db);
     if(!Util::get_live_config(db, live_config, "dvb")){
-        BOOST_LOG_TRIVIAL(error) << "Error in live config! Exit.";
+        LOG(error) << "Error in live config! Exit.";
         return -1;
     }
     Util::check_path(string(MEDIA_ROOT) + "Snapshot");
@@ -66,13 +66,12 @@ int main()
         auto start = time(NULL);
         for(auto& chan : silver_channels ){
             IS_CHANNEL_VALID(chan);
-            if(chan["inputType"] == 2)
             start_snapshot(chan, live_config);
             Util::wait(1000);
         }
         auto duration = time(NULL) - start;
         if(duration < SNAPSHOT_PERIOD){
-            BOOST_LOG_TRIVIAL(info) << "Wait for next snapshot for " 
+            LOG(info) << "Wait for next snapshot for " 
                 << SNAPSHOT_PERIOD - duration;
             Util::wait((SNAPSHOT_PERIOD - duration) * 1000);
         } 

@@ -1,59 +1,37 @@
 #include <exception>
 #include <thread>
-#include <gstreamermm.h>
-#include <glibmm.h>
-#include <boost/log/trivial.hpp>
 #include "gst.hpp"
 using namespace std;
-void gst_task(string  in_multicast, string out_multicast)
+void gst_task(string  in_multicast, string out_multicast, int port)
 {
-    using Glib::RefPtr;
-    RefPtr<Glib::MainLoop> loop;
-    RefPtr<Gst::Pipeline>  pipeline;
-    RefPtr<Gst::Element>   udpsrc;
-    RefPtr<Gst::Element>   rndbuffersize;
-    RefPtr<Gst::Element>   udpsink;
-    sigc::connection m_timeout_connection;
-    
+    in_multicast = "udp://" + in_multicast + ":" + to_string(port);
+    LOG(info) << "Start " << in_multicast << " -> udp://" << out_multicast << ":" << port;
+
+    Gst::Data d;
+    d.loop      = g_main_loop_new(NULL, false);
+    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", NULL));
+
     try{
-        in_multicast += ":" + to_string(INPUT_PORT);
-        BOOST_LOG_TRIVIAL(info) 
-            << "Start " 
-            << in_multicast 
-            << " --> " 
-            << out_multicast << ":" << INPUT_PORT;
-        loop = Glib::MainLoop::create();
-        pipeline = Gst::Pipeline::create();
+        auto udpsrc         = Gst::add_element(d.pipeline, "udpsrc"),
+             queue          = Gst::add_element(d.pipeline, "queue"),
+             rndbuffersize  = Gst::add_element(d.pipeline, "rndbuffersize"),
+             udpsink        = Gst::add_element(d.pipeline, "udpsink");
+
+        gst_element_link_many(udpsrc, queue, rndbuffersize, udpsink, NULL);
         
-        udpsrc = Gst::ElementFactory::create_element("udpsrc");
-        rndbuffersize = Gst::ElementFactory::create_element("rndbuffersize");
-        udpsink = Gst::ElementFactory::create_element("udpsink");
+        g_object_set(udpsrc, "uri", in_multicast.c_str(), NULL);
+        g_object_set(rndbuffersize, "min", 1316, "max", 1316, NULL);
+
+        g_object_set(udpsink, 
+                "multicast_iface", "lo", 
+                "host", out_multicast.c_str() ,
+                "port", port,
+                "sync", true, NULL);
         
-        if( !udpsrc || !udpsink || !rndbuffersize){
-            BOOST_LOG_TRIVIAL(debug) << "Error in create";
-            return;
-        }
-        pipeline->add(udpsrc)->add(rndbuffersize)->add(udpsink);
-        udpsrc->link(rndbuffersize);
-        rndbuffersize->link(udpsink);
-        
-        udpsrc->set_property("uri", "udp://"+in_multicast);
-        rndbuffersize->set_property("min", 1316);
-        rndbuffersize->set_property("max", 1316);
-        udpsink->set_property("multicast-iface", string("lo"));
-        udpsink->set_property("host", out_multicast);
-        udpsink->set_property("port", INPUT_PORT);
-        udpsink->set_property("sync", 1);
-        
-        //PIPLINE_WATCH;
-        //PIPLINE_POSITION;
-        
-        pipeline->set_state(Gst::STATE_PLAYING);
-        loop->run();
-        pipeline->set_state(Gst::STATE_NULL);
-        m_timeout_connection.disconnect();
-        BOOST_LOG_TRIVIAL(debug) << "Finish";
+        Gst::add_bus_watch(d);
+        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
+        g_main_loop_run(d.loop);
     }catch(std::exception& e){
-        BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
+        LOG(error) << "Exception:" << e.what();
     }
 }

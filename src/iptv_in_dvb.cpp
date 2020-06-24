@@ -15,7 +15,7 @@ using namespace std;
 using nlohmann::json;
 void start_channel(json tuner, live_setting live_config)
 {
-    BOOST_LOG_TRIVIAL(debug) << tuner.dump(4);
+    LOG(debug) << tuner.dump(4);
 #if BY_DVBLAST
     string fromdvb_args = "";
     if (tuner["is_dvbt"])   
@@ -31,7 +31,7 @@ void start_channel(json tuner, live_setting live_config)
     }
     string cfg_name = "/opt/sms/tmp/fromdvb_"+ to_string(tuner["_id"]);
     ofstream cfg(cfg_name);
-    if(!cfg.is_open()) BOOST_LOG_TRIVIAL(error) << "Can't open fromdvb config file";
+    if(!cfg.is_open()) LOG(error) << "Can't open fromdvb config file";
     for(auto& chan : tuner["channels"]){
         auto multicast = Util::get_multicast(live_config, chan["_id"]);
 
@@ -40,7 +40,7 @@ void start_channel(json tuner, live_setting live_config)
         auto addr = boost::format("%s:%d@127.0.0.1  1   %d\n") 
             % multicast % INPUT_PORT % sid;
         cfg << addr.str(); 
-        BOOST_LOG_TRIVIAL(info) << "DVB:" << tuner["_id"] << " chan:" 
+        LOG(info) << "DVB:" << tuner["_id"] << " chan:" 
             << chan["name"]  << " -> " << multicast; 
     }
     cfg.close();
@@ -58,12 +58,12 @@ int main()
     CHECK_LICENSE;
     Util::init(db);
     if(!Util::get_live_config(db, live_config, "dvb")){
-        BOOST_LOG_TRIVIAL(error) << "Error in live config! Exit.";
+        LOG(error) << "Error in live config! Exit.";
         return -1;
     }
     json tuners = json::parse(db.find_mony("live_tuners_input", "{}"));
     if(tuners.is_null() || tuners.size() == 0){
-        BOOST_LOG_TRIVIAL(warning) << "Live input tuners in empty!";
+        LOG(warning) << "Live input tuners in empty!";
     }
     json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
@@ -90,7 +90,7 @@ int main()
             if(boost::filesystem::exists(dvb_path)){
                 pool.emplace_back(start_channel, tuner, live_config);
             }else{
-                BOOST_LOG_TRIVIAL(error) << "DVB Not found: "<< dvb_path;
+                LOG(error) << "DVB Not found: "<< dvb_path;
             }
         }
     }

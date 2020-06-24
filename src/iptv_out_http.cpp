@@ -31,7 +31,7 @@ void start_channel(json channel)
     int sock;
     uint8_t buf[PKT_SIZE+1];
     int  n;
-    BOOST_LOG_TRIVIAL(info) << "Start http buffer for " << channel["name"];
+    LOG(info) << "Start http buffer for " << channel["name"];
     C->tsb.dl = C->tsb.dt = 0;
     C->tsb.ts_i = 0;
     C->tsb.ts = (uint8_t *)malloc(MAX_CHANNEL_DATA+1);
@@ -58,7 +58,7 @@ int main()
     Util::init(db);
     signal(SIGPIPE, SIG_IGN);
     if(!Util::get_live_config(db, live_config, "archive")){
-        BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
+        LOG(info) << "Error in live config! Exit.";
         return -1;
     }
     json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));

@@ -19,18 +19,18 @@ void check_license_db(Mongo& db)
         string licStr = Util::get_file_content("/run/sms/license.json");
         if(licStr.size()>0){
             license["license"] = json::parse(licStr);
-            BOOST_LOG_TRIVIAL(debug) << license.dump(2);
+            LOG(debug) << license.dump(2);
             db.insert_or_replace_id("system_license",1,license.dump());
         }
     }catch(std::exception& e){
-        BOOST_LOG_TRIVIAL(error) << e.what();
+        LOG(error) << e.what();
     }
 }
 int main()
 {
     Mongo db;
     if( geteuid() != 0 ){
-        BOOST_LOG_TRIVIAL(error) << "Must run by root";
+        LOG(error) << "Must run by root";
         return -1;
     }
     Util::boost_log_init(db);
@@ -41,7 +41,7 @@ int main()
     while(true){
         std::this_thread::sleep_for(chrono::seconds(60));
         string usage_json = usage.getUsageJson();
-        //BOOST_LOG_TRIVIAL(debug) << usage_json;
+        //LOG(debug) << usage_json;
         db.insert("report_system_usage", usage_json);
     }
     return 0;

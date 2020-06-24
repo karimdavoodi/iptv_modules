@@ -12,7 +12,6 @@
 using namespace std;
 void SysUsage::calcCurrentUsage()
 {
-    BOOST_LOG_TRIVIAL(debug) << __func__;
     calcCurrentPartitions();
     calcCurrentInterfaces();
     calcCurrentCpu();
@@ -24,7 +23,6 @@ const string SysUsage::getUsageJson()
 {
     Data delta;
     priviuse = current;
-    BOOST_LOG_TRIVIAL(debug) << __func__;
     try{
         calcCurrentUsage();
         // CPU Usage
@@ -90,14 +88,13 @@ const string SysUsage::getUsageJson()
 
         return usage.dump(2);
     }catch(std::exception& e){
-        BOOST_LOG_TRIVIAL(error) << e.what();
+        LOG(error) << e.what();
     }
     return "{}";
 }
 void SysUsage::calcCurrentPartitions()
 {
     string line;
-    BOOST_LOG_TRIVIAL(debug) << __func__;
     ifstream disk("/proc/diskstats");
     while(disk.good()){
         getline(disk, line);
@@ -113,7 +110,6 @@ void SysUsage::calcCurrentPartitions()
 }
 void SysUsage::calcCurrentInterfaces()
 {
-    BOOST_LOG_TRIVIAL(debug) << __func__;
     for(const auto& dir : boost::filesystem::directory_iterator("/sys/class/net")){
         string name = dir.path().filename().c_str();
         string rx_file = "/sys/class/net/"+name+"/statistics/rx_bytes";
@@ -131,7 +127,6 @@ void SysUsage::calcCurrentInterfaces()
 void SysUsage::calcCurrentCpu()
 {
     string line;
-    BOOST_LOG_TRIVIAL(debug) << __func__;
     ifstream stat("/proc/stat");
     if(!stat.is_open()) return;
     getline(stat, line);
@@ -157,7 +152,6 @@ void SysUsage::calcCurrentMem()
     float total = 0;
     float available = 0;
     string line;
-    BOOST_LOG_TRIVIAL(debug) << __func__;
     ifstream mem("/proc/meminfo");
     while(mem.good()){
         getline(mem, line);
@@ -179,7 +173,6 @@ void SysUsage::calcCurrentMem()
 void SysUsage::calcCurrentLoad()
 {
     string line;
-    BOOST_LOG_TRIVIAL(debug) << __func__;
     ifstream load("/proc/loadavg");
     if(!load.is_open()) return;
     load >> current.sysLoad;

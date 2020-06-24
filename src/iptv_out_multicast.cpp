@@ -6,14 +6,17 @@
 #include <thread>
 #include "utils.hpp"
 using namespace std;
-void gst_task(string in_multicast, string out_multicast);
+void gst_task(string in_multicast, string out_multicast, int port);
 void start_channel(json channel, live_setting live_config)
 {
-    BOOST_LOG_TRIVIAL(info) << "Start Multicast for " << channel["name"];
+    LOG(info) << "Start Multicast for " << channel["name"];
     live_config.type_id = channel["inputType"];
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
     auto out_multicast = Util::get_multicast(live_config, channel["_id"], true);
-    gst_task(in_multicast, out_multicast); 
+    while(true){
+        gst_task(in_multicast, out_multicast, INPUT_PORT); 
+        Util::wait(3000);
+    }
 }
 int main()
 {
@@ -22,7 +25,7 @@ int main()
     live_setting live_config;
     Util::init(db);
     if(!Util::get_live_config(db, live_config, "archive")){
-        BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
+        LOG(info) << "Error in live config! Exit.";
         return -1;
     }
     Util::route_add(live_config.multicast_class, live_config.multicast_iface);

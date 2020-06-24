@@ -5,12 +5,9 @@
 #include <glib-object.h>
 #include <glib/gprintf.h>
 #include <gst/mpegts/mpegts.h>
-#include <gstreamermm.h>
-#include <glibmm.h>
-#include <boost/log/trivial.hpp>
-#include "config.hpp"
-#include "gst/gstmessage.h"
 #include "utils.hpp"
+#include "gst.hpp"
+
 using namespace std;
 /*
    gst-launch-1.0 -v udpsrc uri=udp://229.2.0.1:3200 ! tsparse ! fakesink
@@ -96,10 +93,10 @@ void dump_eit(GstMpegtsSection *sec)
 {
     const GstMpegtsEIT *eit = gst_mpegts_section_get_eit(sec);
     if(eit == NULL){
-        BOOST_LOG_TRIVIAL(warning) << "Can't parse mpegts EIT";
+        LOG(warning) << "Can't parse mpegts EIT";
         return;
     } 
-    BOOST_LOG_TRIVIAL(debug) << "EIT:"
+    LOG(debug) << "EIT:"
         << " section_id " << sec->subtable_extension
         << " transport_stream_id " << eit->transport_stream_id
         << " original_network_id " << eit->original_network_id
@@ -108,12 +105,12 @@ void dump_eit(GstMpegtsSection *sec)
         << " actual_stream " << (eit->actual_stream ? "true" : "false") 
         << " present_following " << (eit->present_following ? "TRUE" : "FALSE");
     int len = eit->events->len;
-    BOOST_LOG_TRIVIAL(debug) << "Event number:" << len;
+    LOG(debug) << "Event number:" << len;
     for (int i = 0; i < len; i++) {
         GstMpegtsEITEvent *event = (GstMpegtsEITEvent *)
             g_ptr_array_index(eit->events, i);
         if(event->running_status != 0) continue;
-        BOOST_LOG_TRIVIAL(debug) 
+        LOG(debug) 
             <<  event->running_status
             << " event_id:" << event->event_id
             << " start_time:" << gst_date_to_str(event->start_time)
@@ -133,7 +130,7 @@ void channel_epg_update(Mongo& db, map<int, Event>& day_eit, int channel_id)
         j["duration"] = event.second.duration;
         j["text"] = event.second.text;
         eit.push_back(j);
-        BOOST_LOG_TRIVIAL(debug) 
+        LOG(debug) 
             <<  "Start:" << event.second.start
             <<  " Name:" << event.second.name
             <<  " Text:" << event.second.text
@@ -146,91 +143,90 @@ void channel_epg_update(Mongo& db, map<int, Event>& day_eit, int channel_id)
     epg["total"] = eit.size();
     epg["content"] = eit;
     db.insert_or_replace_id("live_output_silver_epg", channel_id, epg.dump());
-    BOOST_LOG_TRIVIAL(info) << "Update EPG of channel_id:" << channel_id;
+    LOG(info) << "Update EPG of channel_id:" << channel_id;
 }
+int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data)
+{
+    auto d = (Gst::Data*) user_data;
+
+    switch (GST_MESSAGE_TYPE (message)) {
+        case GST_MESSAGE_ELEMENT:
+                GstMpegtsSection *sec;
+                sec = gst_message_parse_mpegts_section(message);
+                if(sec == NULL){
+                    LOG(warning) << "Can't parse mpegts section";
+                    break;
+                }
+                if(sec->section_type == GST_MPEGTS_SECTION_EIT){
+                    LOG(debug) << "Got EIT";
+                    dump_eit(sec); 
+                }
+                gst_mpegts_section_unref (sec);
+#if 0
+                if(sec->section_type == GST_MPEGTS_SECTION_TOT)
+                    dump_tot(sec); 
+                if(sec->section_type == GST_MPEGTS_SECTION_TDT)
+                    dump_tdt(sec); 
+#endif
+                break;
+        case GST_MESSAGE_ERROR:
+                {
+                gchar *debug;
+                GError *err;
+                gst_message_parse_error (message, &err, &debug);
+                LOG(error) <<  err->message << " debug:" << debug;
+                g_error_free (err);
+                g_free (debug);
+                g_main_loop_quit (d->loop);
+                break;
+                }
+        case GST_MESSAGE_EOS:
+                LOG(error) <<  "Got EOS";    
+                g_main_loop_quit(d->loop);
+                break;
+        default: ;
+    }
+    return true;
+}
+
 void gst_task(Mongo& db, string in_multicast, int port, int channel_id)
 {
-    using Glib::RefPtr;
-    RefPtr<Glib::MainLoop> loop;
-    RefPtr<Gst::Pipeline>  pipeline;
-    RefPtr<Gst::Element>   udpsrc;
-    RefPtr<Gst::Element>   tsparse;
-    RefPtr<Gst::Element>   fakesink;
+    in_multicast = "udp://" + in_multicast + ":" + to_string(port);
+    LOG(info) << "Start in " << in_multicast;
+
+    Gst::Data d;
+    d.loop      = g_main_loop_new(NULL, false);
+    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", NULL));
+
     try{
-        in_multicast = "udp://" + in_multicast + ":" + to_string(INPUT_PORT);
-        BOOST_LOG_TRIVIAL(info) 
-            << in_multicast << " --> EPG";
-        loop = Glib::MainLoop::create();
-        pipeline = Gst::Pipeline::create();
-        udpsrc = Gst::ElementFactory::create_element("udpsrc");
-        tsparse = Gst::ElementFactory::create_element("tsparse");
-        fakesink = Gst::ElementFactory::create_element("fakesink");
-        if( !udpsrc || !fakesink || !tsparse ){
-            BOOST_LOG_TRIVIAL(debug) << "Error in create";
-            return;
-        }
-        pipeline->add(udpsrc)->add(tsparse)->add(fakesink);
-        udpsrc->link(tsparse)->link(fakesink);
-        udpsrc->set_property("uri", in_multicast);
-        pipeline->get_bus()->add_watch([loop](const RefPtr<Gst::Bus>&, 
-                    const RefPtr<Gst::Message>& msg){
-                BOOST_LOG_TRIVIAL(debug) 
-                    << "Got Msg: " << msg->get_message_type()
-                    << " From:  " << msg->get_source()->get_name()
-                    << " Struct: " <<  msg->get_structure().to_string();
-                GstMessage *m = msg->gobj();
-                GstMpegtsSection *sec;
-                switch(msg->get_message_type()){
-                    case Gst::MESSAGE_ELEMENT:
-                        sec = gst_message_parse_mpegts_section(m);
-                        if(sec == NULL){
-                            BOOST_LOG_TRIVIAL(warning) << "Can't parse mpegts section";
-                            return true;
-                        }
-                        if(sec->section_type == GST_MPEGTS_SECTION_EIT)
-                            dump_eit(sec); 
-                        gst_mpegts_section_unref (sec);
-#if 0
-                        if(sec->section_type == GST_MPEGTS_SECTION_TOT)
-                            dump_tot(sec); 
-                        if(sec->section_type == GST_MPEGTS_SECTION_TDT)
-                            dump_tdt(sec); 
-#endif
-                        break;
-                    case Gst::MESSAGE_ERROR:
-                        BOOST_LOG_TRIVIAL(error) << 
-                            RefPtr<Gst::MessageError>::cast_static(msg)->parse_debug();
-                        break;
-                    case Gst::MESSAGE_EOS:
-                        BOOST_LOG_TRIVIAL(info) <<  "Got EOS";    
-                        loop->quit();
-                        break;
-#if 0
-                    case Gst::MESSAGE_TAG:
-                        RefPtr<Gst::MessageTag>::cast_static(msg)
-                            ->parse_tag_list().foreach(
-                                [](const Glib::ustring name){
-                                BOOST_LOG_TRIVIAL(info) << "Tag:" <<  name;
-                                });
-                        break;
-#endif
-                    default: break;
+        auto udpsrc     = Gst::add_element(d.pipeline, "udpsrc"),
+             tsparse    = Gst::add_element(d.pipeline, "tsparse"),
+             fakesink   = Gst::add_element(d.pipeline, "fakesink");
+
+        gst_element_link_many(udpsrc, tsparse, fakesink, NULL);
+
+        g_object_set(udpsrc, "uri", in_multicast.c_str(), NULL);
+        d.bus = gst_pipeline_get_bus(d.pipeline);
+        d.watch_id = gst_bus_add_watch(d.bus, bus_on_message, &d); 
+        bool thread_running = true;
+        std::thread t([&](){
+                while(thread_running){
+                    int wait = EPG_UPDATE_TIME;
+                    while(thread_running && wait--) Util::wait(1000);
+                    try{
+                        LOG(info) << "Try to save EPG in DB";
+                        channel_epg_update(db, day_eit, channel_id);
+                    }catch(std::exception& e){
+                        LOG(error) << "Exception:" << e.what();
+                    }
                 }
-                return true;
-        });
-        sigc::connection m_timeout_pos = Glib::signal_timeout().connect([&]()->bool {
-                try{
-                    channel_epg_update(db, day_eit, channel_id);
-                }catch(std::exception& e){
-                    BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
-                }
-                return true;
-                }, EPG_UPDATE_TIME*1000 );
-        pipeline->set_state(Gst::STATE_PLAYING);
-        loop->run();
-        pipeline->set_state(Gst::STATE_NULL);
-        BOOST_LOG_TRIVIAL(info) << "Finish";
+                });
+        t.detach();
+
+        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
+        g_main_loop_run(d.loop);
+        thread_running = false;
     }catch(std::exception& e){
-        BOOST_LOG_TRIVIAL(error) << "Exception:" << e.what();
+        LOG(error) << "Exception:" << e.what();
     }
 }

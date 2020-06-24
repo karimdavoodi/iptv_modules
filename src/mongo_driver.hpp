@@ -6,6 +6,7 @@
 #define QUERY_SIZE  10
 #define DB_NAME     "iptv"
 #define SERVER      "mongodb://127.0.0.1:27017"
+#define LOG(level) BOOST_LOG_TRIVIAL(level) << "[" << __func__ << ":" <<__LINE__ << "] " 
 class Mongo {
     private:
         mongocxx::client client{mongocxx::uri{SERVER}};

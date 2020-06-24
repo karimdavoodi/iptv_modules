@@ -11,8 +11,8 @@ using nlohmann::json;
 void gst_task(string media_path, string multicast_addr, int port);
 void start_channel(json channel, live_setting live_config)
 {
-    BOOST_LOG_TRIVIAL(info) << "Start unscramble Channel: " << channel["name"];
-    BOOST_LOG_TRIVIAL(error) << "TODO ..";
+    LOG(info) << "Start unscramble Channel: " << channel["name"];
+    LOG(error) << "TODO ..";
     // TODO: ...
 }
 int main()
@@ -23,7 +23,7 @@ int main()
     CHECK_LICENSE;
     Util::init(db);
     if(!Util::get_live_config(db, live_config, "unscramble")){
-        BOOST_LOG_TRIVIAL(info) << "Error in live config! Exit.";
+        LOG(info) << "Error in live config! Exit.";
         return -1;
     }
     json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));

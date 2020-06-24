@@ -22,9 +22,9 @@ using namespace std;
 namespace Util {
     void system(const std::string cmd)
     {
-        BOOST_LOG_TRIVIAL(debug) << "Run shell command:" << cmd;
+        LOG(debug) << "Run shell command:" << cmd;
         if(std::system(cmd.c_str())){
-            BOOST_LOG_TRIVIAL(error) << "Error in run " << cmd;
+            LOG(error) << "Error in run " << cmd;
         }
     }
     void wait(int millisecond)
@@ -46,7 +46,7 @@ namespace Util {
         while(true){
             system(cmd);
             wait(5000);
-            BOOST_LOG_TRIVIAL(error) << "Re Run: "<<  cmd;
+            LOG(error) << "Re Run: "<<  cmd;
         }
     }
     void boost_log_init(Mongo& db)
@@ -72,7 +72,7 @@ namespace Util {
             if(env_iptv_debug_file != NULL){
                 out_file = env_iptv_debug_file; 
             }
-            BOOST_LOG_TRIVIAL(info) << "Log file:" << out_file << " level:" << debug_level;
+            LOG(info) << "Log file:" << out_file << " level:" << debug_level;
             debug_level = abs(5-debug_level);
 
             logging::add_file_log
@@ -86,7 +86,7 @@ namespace Util {
             logging::core::get()->set_filter(
                     logging::trivial::severity >= debug_level);
         }catch(std::exception& e){
-            BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();
+            LOG(error) << "Exception " << e.what();
         }
     }
     void init(Mongo& db)
@@ -124,10 +124,10 @@ namespace Util {
                 if(!found)
                     route_add(INPUT_MULTICAST, "lo");
                 else
-                    BOOST_LOG_TRIVIAL(debug) << "Found local multicast route, not add it";
+                    LOG(debug) << "Found local multicast route, not add it";
             }
         }catch(std::exception& e){
-            BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();
+            LOG(error) << "Exception"<< e.what();
         }
     }
     void route_add(int multicast_class, string nic)
@@ -151,7 +151,7 @@ namespace Util {
                     cfg.virtual_net_id =  t["_id"];
             }
         }catch(std::exception& e){
-            BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();
+            LOG(error) << "Exception " << e.what();
         }
     }
     bool get_live_config(Mongo& db, live_setting& cfg, string type)
@@ -174,7 +174,7 @@ namespace Util {
             } 
             if(cfg.multicast_class > 239 || cfg.multicast_class < 224)
                 cfg.multicast_class = 239;
-            BOOST_LOG_TRIVIAL(debug) 
+            LOG(debug) 
                 << "Live config:  "
                 << " multicast_class:" << cfg.multicast_class 
                 << " multicast_iface:" << cfg.multicast_iface 
@@ -183,12 +183,12 @@ namespace Util {
                     cfg.multicast_class > 239 ||
                     cfg.multicast_class < 224 ||
                     cfg.multicast_iface.size() < 1){
-                BOOST_LOG_TRIVIAL(error)  << "Error in " << __func__;
+                LOG(error)  << "invalid config";
                 return false;
             } 
             return true;
         }catch(std::exception& e){
-            BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();
+            LOG(error) << "Exception " << e.what();
             cfg.multicast_class = 239;
             return false;
         }
@@ -206,7 +206,7 @@ namespace Util {
         struct in_addr addr;
         addr.s_addr = address;
         string addr_str =  inet_ntoa(addr);
-        BOOST_LOG_TRIVIAL(debug) 
+        LOG(debug) 
             << " multicast_class:" << config.multicast_class 
             << " type_id:" << config.type_id 
             << " channel_id: " << channel_id
@@ -218,14 +218,14 @@ namespace Util {
         try{
             json content_info = json::parse(db.find_id("storage_contents_info",id));
             if(content_info["type"].is_null()){
-                BOOST_LOG_TRIVIAL(warning) << "Invalid content info by id " << id;
+                LOG(warning) << "Invalid content info by id " << id;
                 return "";
             }
             json content_type = json::parse(db.find_id("storage_contents_types",
                         content_info["type"]));
             json content_format = json::parse(db.find_id("storage_contents_formats",
                         content_info["format"]));
-            BOOST_LOG_TRIVIAL(debug) << content_info  << '\n'
+            LOG(debug) << content_info  << '\n'
                 << content_type << '\n'
                 << content_format << '\n';
             string path = string(MEDIA_ROOT);
@@ -234,17 +234,17 @@ namespace Util {
             path += to_string(id);
             path += ".";
             path += content_format["name"];
-            BOOST_LOG_TRIVIAL(debug) << "Media Path:" << path;
+            LOG(debug) << "Media Path:" << path;
             return path;
         }catch(std::exception& e){
-            BOOST_LOG_TRIVIAL(error) << "Exception in " << __func__ << ":" << e.what();
+            LOG(error) << "Exception " << e.what();
             return "";
         }
     }
     void check_path(const std::string path)
     {
         if(!boost::filesystem::exists(path)){
-            BOOST_LOG_TRIVIAL(info) << "Create " << path;
+            LOG(info) << "Create " << path;
             boost::filesystem::create_directories(path);
         }
     }
@@ -259,7 +259,7 @@ namespace Util {
             j["level"] = level;
             db.insert("report_error", j.dump());
         }catch(std::exception const& e){
-            BOOST_LOG_TRIVIAL(error)  <<  e.what();
+            LOG(error)  <<  e.what();
         }
     }
     const std::string get_file_content(const std::string name)
@@ -272,7 +272,7 @@ namespace Util {
                 return content;
             }
         }
-        BOOST_LOG_TRIVIAL(warning)  <<  "file not exists: " << name;
+        LOG(warning)  <<  "file not exists: " << name;
         return "";
     }
 }
