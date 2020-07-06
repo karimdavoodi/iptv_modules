@@ -9,6 +9,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/tokenizer.hpp>
 #include "utils.hpp"
 #define BY_DVBLAST 1
 using namespace std;
@@ -48,7 +49,52 @@ void start_channel(json tuner, live_setting live_config)
             % tuner["_id"] % cfg_name % fromdvb_args ; 
     Util::system(cmd.str());
 #else
+    // TODO: do by Gstreamer
 #endif
+}
+void report_tuners(Mongo& db)
+{
+    while(true){
+        json input_tuners = json::array();
+        for(size_t i=0; i<32; ++i){
+            string file_path = "/tmp/dvbstat_"+to_string(i)+".txt";
+            if(boost::filesystem::exists(file_path)){
+                string content = Util::get_file_content(file_path);
+                if(content.size() < 10) continue;
+                LOG(info) << content;
+                boost::tokenizer<> tok(content);
+                // 30176 48544 0 lock 3474 S 1732207376
+                auto it = tok.begin();
+                int signal = stoi(*(it++));
+                int snr = stoi(*(it++));
+                json input_tuner;
+                input_tuner["tuner"] = i;
+                input_tuner["signal"] = signal;
+                input_tuner["snr"] = snr;
+                input_tuners.push_back(input_tuner);
+            }
+        }
+        json output_tuners = json::array();
+        // FIXME: add real data ...
+        for(size_t i=0; i<4; ++i){
+                json output_tuner;
+                output_tuner["tuner"] = i;
+                output_tuner["capacity"] = 100;
+                output_tuners.push_back(output_tuner);
+        }
+        
+        json report_tuners;
+        long now = time(nullptr);
+        report_tuners["_id"] = now;
+        report_tuners["time"] = now;
+        report_tuners["systemId"] = Util::get_systemId(db);
+        report_tuners["input"] = input_tuners;
+        report_tuners["output"] = output_tuners;
+        db.insert("report_tuners", report_tuners.dump());
+        LOG(info) << "update tuners report";
+        Util::wait(1000 * 60);
+    }
+
 }
 int main()
 {
@@ -94,6 +140,8 @@ int main()
             }
         }
     }
+
+    report_tuners(db);
     for(auto& t : pool){
         t.join();
     }

@@ -179,8 +179,8 @@ void SysUsage::calcCurrentLoad()
 }
 void SysUsage::calcCurrentContents()
 {
-    long all_size = 1024 * stol(Util::shell_out("df /opt/sms/www/iptv/media/Video "
-                                       "| tail -1 | awk '{print $2}' ")) ;
+    long all_size = 1024 * stol(Util::shell_out(
+                "df /opt/sms/www/iptv/media/Video | tail -1 | awk '{print $2}' ")) ;
     current.contents["All"] = all_size;
     for(const auto& content : contents_dir){
         auto path = "/opt/sms/www/iptv/media/" + content;

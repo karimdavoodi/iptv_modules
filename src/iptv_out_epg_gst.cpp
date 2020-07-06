@@ -92,7 +92,7 @@ void dump_descriptors (GstMpegtsEITEvent *event)
 void dump_eit(GstMpegtsSection *sec)
 {
     const GstMpegtsEIT *eit = gst_mpegts_section_get_eit(sec);
-    if(eit == NULL){
+    if(eit == nullptr){
         LOG(warning) << "Can't parse mpegts EIT";
         return;
     } 
@@ -153,7 +153,7 @@ int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data)
         case GST_MESSAGE_ELEMENT:
                 GstMpegtsSection *sec;
                 sec = gst_message_parse_mpegts_section(message);
-                if(sec == NULL){
+                if(sec == nullptr){
                     LOG(warning) << "Can't parse mpegts section";
                     break;
                 }
@@ -195,17 +195,17 @@ void gst_task(Mongo& db, string in_multicast, int port, int channel_id)
     LOG(info) << "Start in " << in_multicast;
 
     Gst::Data d;
-    d.loop      = g_main_loop_new(NULL, false);
-    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", NULL));
+    d.loop      = g_main_loop_new(nullptr, false);
+    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
 
     try{
         auto udpsrc     = Gst::add_element(d.pipeline, "udpsrc"),
              tsparse    = Gst::add_element(d.pipeline, "tsparse"),
              fakesink   = Gst::add_element(d.pipeline, "fakesink");
 
-        gst_element_link_many(udpsrc, tsparse, fakesink, NULL);
+        gst_element_link_many(udpsrc, tsparse, fakesink, nullptr);
 
-        g_object_set(udpsrc, "uri", in_multicast.c_str(), NULL);
+        g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
         d.bus = gst_pipeline_get_bus(d.pipeline);
         d.watch_id = gst_bus_add_watch(d.bus, bus_on_message, &d); 
         bool thread_running = true;

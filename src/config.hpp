@@ -5,6 +5,7 @@
 #define PKT_SIZE         1316
 #define SOCK_BUF_SIZE    (PKT_SIZE*4000)
 #define INPUT_PORT       3200
+#define HTTP_STREAM_PORT 8004
 #define INPUT_MULTICAST  229
 #define EPG_UPDATE_TIME  15*60        // every 15 minute
 #define SNAPSHOT_TIMEOUT 30           // 30 seconds
@@ -12,4 +13,5 @@
 #define MEDIA_ROOT  "/opt/sms/www/iptv/media/"
 #define HLS_ROOT    "/opt/sms/tmp/HLS/"
 #define FFMPEG      "/usr/bin/ffmpeg -v quiet "
-#define LOG(level) BOOST_LOG_TRIVIAL(level) << "[" << __func__ << ":" <<__LINE__ << "] " 
+#define LOG(level) BOOST_LOG_TRIVIAL(level) << \
+                    "\033[0;32m[" << __func__ << ":" <<__LINE__ << "]\033[0m " 

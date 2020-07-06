@@ -20,6 +20,21 @@
 #include "gst.hpp"
 using namespace std;
 namespace Util {
+    int systemId = 0;
+    int get_systemId(Mongo& db)
+    {
+        try{
+            if(systemId > 0) return systemId;
+            json license = json::parse(db.find_id("system_license", 1));
+            if(license["license"].is_null()) return 0;
+            if(license["license"]["General"]["MMK_ID"].is_null()) return 0;
+            systemId = license["license"]["General"]["MMK_ID"];
+            return systemId;
+        }catch( ... ){
+            return 0;
+        }
+    }
+ 
     void system(const std::string cmd)
     {
         LOG(debug) << "Run shell command:" << cmd;
@@ -64,12 +79,12 @@ namespace Util {
                 system_location["debug"].get<int>():5;
             // Check evnironment debug variable
             char* env_iptv_debug_level = getenv("IPTV_DEBUG_LEVEL");
-            if(env_iptv_debug_level != NULL){
+            if(env_iptv_debug_level != nullptr){
                 debug_level = atoi(env_iptv_debug_level);
             }
             string out_file = "/opt/sms/tmp/log.log"; 
             char* env_iptv_debug_file = getenv("IPTV_DEBUG_FILE");
-            if(env_iptv_debug_file != NULL){
+            if(env_iptv_debug_file != nullptr){
                 out_file = env_iptv_debug_file; 
             }
             LOG(info) << "Log file:" << out_file << " level:" << debug_level;
@@ -93,9 +108,9 @@ namespace Util {
     {
         try{
             boost_log_init(db);
-            gst_init(NULL, NULL);
+            gst_init(nullptr, nullptr);
             char* d_level = getenv("GST_DEBUG_LEVEL");
-            string debug_level = (d_level != NULL) ? d_level : "";
+            string debug_level = (d_level != nullptr) ? d_level : "";
             if(debug_level  == "WARNING"){
                 gst_debug_set_default_threshold(GST_LEVEL_WARNING);
             }else if(debug_level  == "ERROR"){
@@ -225,16 +240,13 @@ namespace Util {
                         content_info["type"]));
             json content_format = json::parse(db.find_id("storage_contents_formats",
                         content_info["format"]));
-            LOG(debug) << content_info  << '\n'
-                << content_type << '\n'
-                << content_format << '\n';
             string path = string(MEDIA_ROOT);
             path += content_type["name"];
             path +=  "/";
             path += to_string(id);
             path += ".";
             path += content_format["name"];
-            LOG(debug) << "Media Path:" << path;
+            LOG(trace) << "Media Path:" << path;
             return path;
         }catch(std::exception& e){
             LOG(error) << "Exception " << e.what();
@@ -253,7 +265,7 @@ namespace Util {
         try{
             json j = json::object();
             j["_id"] = chrono::system_clock::now().time_since_epoch().count();
-            j["time"] = long(time(NULL));
+            j["time"] = long(time(nullptr));
             j["message"] = msg;
             j["message"] = "iptv_modules";
             j["level"] = level;

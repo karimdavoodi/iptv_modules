@@ -18,7 +18,8 @@ void start_snapshot(const json& channel, live_setting live_config)
     auto pic_path = boost::format("%sSnapshot/%d.jpg")
         % MEDIA_ROOT % pic_id; 
     LOG(debug) << "Try to snapsot from " << channel["name"];
-    if(gst_task(in_multicast, INPUT_PORT, pic_path.str())){
+    bool succesfull = gst_task(in_multicast, INPUT_PORT, pic_path.str());
+    if(succesfull){
         LOG(info) << "Capture " << channel["name"] << " in " << pic_path.str();
         string name = channel["name"].get<string>();
         json media = json::object();
@@ -26,7 +27,7 @@ void start_snapshot(const json& channel, live_setting live_config)
         media["format"] = 10;  // jpg
         media["type"] = 10;    // Snapshot
         media["price"] = 0;
-        media["date"] = time(NULL);
+        media["date"] = time(nullptr);
         media["languages"] = json::array();
         media["permission"] = channel["permission"];
         media["platform"] = json::array();
@@ -48,6 +49,14 @@ void start_snapshot(const json& channel, live_setting live_config)
         media["name"] = name;
         db.insert_or_replace_id("storage_contents_info", pic_id, media.dump());
     }
+    json report = json::object();
+    report["_id"] = std::chrono::system_clock::now().time_since_epoch().count();
+    report["time"] = time(nullptr);
+    report["systemId"] = Util::get_systemId(db);
+    report["inputId"] = channel["input"];
+    report["inputType"] = channel["inputType"];
+    report["status"] = succesfull ? 100 : 0;
+    db.insert("report_channels", report.dump());
 }
 int main()
 {
@@ -63,13 +72,13 @@ int main()
     Util::check_path(string(MEDIA_ROOT) + "Snapshot");
     json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     while(true){
-        auto start = time(NULL);
+        auto start = time(nullptr);
         for(auto& chan : silver_channels ){
             IS_CHANNEL_VALID(chan);
             start_snapshot(chan, live_config);
             Util::wait(1000);
         }
-        auto duration = time(NULL) - start;
+        auto duration = time(nullptr) - start;
         if(duration < SNAPSHOT_PERIOD){
             LOG(info) << "Wait for next snapshot for " 
                 << SNAPSHOT_PERIOD - duration;

@@ -21,6 +21,7 @@ pkg_check_modules(GSTMM REQUIRED
         gstreamer-1.0 
         glib-2.0 
         gstreamer-mpegts-1.0
+        gstreamer-video-1.0
         )
 #LIBMONGOCXX
 set(CMAKE_MODULE_PATH /usr/local/lib/cmake )
@@ -32,7 +33,7 @@ set(ALL_LIBS
     ${GSTMM_LIBRARIES} 
     /opt/sms/src/lock/licpp.a 
     )
-set(ALL_INCS  /usr/local/include ${LIBMONGOCXX_INCLUDE_DIRS} ${GSTMM_INCLUDE_DIRS})
+set(ALL_INCS  ${LIBMONGOCXX_INCLUDE_DIRS} ${GSTMM_INCLUDE_DIRS})
 set(MYLIBS    src/mongo_driver.cpp src/utils.cpp src/gst.cpp)
 
 add_library(utils ${MYLIBS})
@@ -43,9 +44,10 @@ set_target_properties(utils PROPERTIES
     )
 
 set( project_EXES
+     # TODO: test memory leak
      iptv_in_archive       # TODO: fix ts file timestamp
      iptv_in_network       # TODO: test it
-     iptv_in_transcoder    # TODO: do by Gst
+     iptv_in_transcoder    # TODO: test it
      iptv_in_web           # TODO: ...
      iptv_in_dvb           # TODO: do by Gst
      iptv_in_unscramble    ##TODO: ...
@@ -53,10 +55,10 @@ set( project_EXES
      iptv_out_hls          # TODO: test it 
      iptv_out_epg          # TODO: test it 
      iptv_out_multicast    # TODO: test it
-     iptv_out_record       # TODO: test it
+     iptv_out_record       # TODO: add moov table in mp4 when kill 
      iptv_out_rtsp         # TODO: do by Gst-rtsp-server library
      iptv_out_rf           # TODO: do by Gst
-     iptv_out_http         # TODO: do by Gst 
+     iptv_out_http         # TODO: work by keyframe 
      iptv_out_gold         # TODO: do
      iptv_out_dlna         # TODO: disabled. do by Rygel library
      iptv_out_snapshot     # TODO: test it 

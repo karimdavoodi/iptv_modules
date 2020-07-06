@@ -10,6 +10,7 @@
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/stdx/make_unique.hpp>
 #include "mongo_driver.hpp"
+#include "config.hpp"
 
 using bsoncxx::builder::basic::make_document;
 using bsoncxx::builder::basic::kvp;
@@ -41,7 +42,7 @@ bool Mongo::exists(const std::string col_name, const std::string doc)
     if(result > 0) return true;
     return false;
 }
-bool Mongo::exists_id(const std::string col_name, int id)
+bool Mongo::exists_id(const std::string col_name, long id)
 {
     LOG(trace) << " col:"<< col_name << " id:" << id;
     std::lock_guard<std::mutex> lo(db_mutex);
@@ -51,7 +52,7 @@ bool Mongo::exists_id(const std::string col_name, int id)
 }
 bool Mongo::insert(const std::string col, const std::string doc)
 {
-    LOG(trace) << " in col:" << col << " doc:" << doc;
+    LOG(info) << " in col:" << col << " doc:" << doc;
     std::lock_guard<std::mutex> lo(db_mutex);
     try{
         auto ret = db[col].insert_one(bsoncxx::from_json(doc));
@@ -63,7 +64,7 @@ bool Mongo::insert(const std::string col, const std::string doc)
 }
 bool Mongo::remove_mony(const std::string col, const std::string doc)
 {
-    LOG(trace) << " from col:" << col << " doc:" << doc;
+    LOG(info) << " from col:" << col << " doc:" << doc;
     std::lock_guard<std::mutex> lo(db_mutex);
     try{
         auto ret = db[col].delete_many(bsoncxx::from_json(doc));
@@ -73,9 +74,9 @@ bool Mongo::remove_mony(const std::string col, const std::string doc)
         return false;
     }
 }
-bool Mongo::remove_id(const std::string col, int id)
+bool Mongo::remove_id(const std::string col, long id)
 {
-    LOG(trace) << " from col:" << col << " id:" << id;
+    LOG(info) << " from col:" << col << " id:" << id;
     std::lock_guard<std::mutex> lo(db_mutex);
     try{
         auto ret = db[col].delete_one(make_document(kvp("_id", id)));
@@ -87,7 +88,7 @@ bool Mongo::remove_id(const std::string col, int id)
 }
 bool Mongo::replace(const std::string col, const std::string filter, const std::string doc)
 {
-    LOG(trace) << " in col:" << col << " filter:" << filter;
+    LOG(info) << "col:" << col << " filter:" << filter;
     std::lock_guard<std::mutex> lo(db_mutex);
     try{
         auto ret = db[col].replace_one(bsoncxx::from_json(filter) ,
@@ -98,10 +99,11 @@ bool Mongo::replace(const std::string col, const std::string filter, const std::
         return false;
     }
 }
-bool Mongo::insert_or_replace_id(const std::string col, int id, 
+bool Mongo::insert_or_replace_id(const std::string col, long id, 
         const std::string doc)
 {
-    LOG(trace) << " in col:" << col << " doc:" << doc;
+    LOG(info) << "col:" << col << " id:" << id;
+    LOG(trace) << "doc:" << doc;
     std::lock_guard<std::mutex> lo(db_mutex);
     try{
         mongocxx::options::replace options {};
@@ -115,9 +117,10 @@ bool Mongo::insert_or_replace_id(const std::string col, int id,
     }
     return false;
 }
-bool Mongo::replace_id(const std::string col, int id, const std::string doc)
+bool Mongo::replace_id(const std::string col, long id, const std::string doc)
 {
-    LOG(trace) << " id:" << id;
+    LOG(info) << "col:" << col << " id:" << id;
+    LOG(trace) << "doc:" << doc;
     std::lock_guard<std::mutex> lo(db_mutex);
     try{
         auto ret = db[col].replace_one(make_document(kvp("_id", id)) ,
@@ -131,7 +134,7 @@ bool Mongo::replace_id(const std::string col, int id, const std::string doc)
 }
 const std::string Mongo::find_mony( const std::string col, const std::string doc)
 {
-    LOG(trace) << " in col:" << col << " doc:" << doc;
+    LOG(trace) << "col:" << col << " doc:" << doc;
     std::lock_guard<std::mutex> lo(db_mutex);
     try{
         auto result = db[col].find(bsoncxx::from_json(doc));
@@ -148,7 +151,7 @@ const std::string Mongo::find_mony( const std::string col, const std::string doc
 }
 const std::string Mongo:: find_one( const std::string col, const std::string doc)
 {
-    LOG(trace) << " in col:" << col << " doc:" << doc;
+    LOG(trace) << "col:" << col << " doc:" << doc;
     std::lock_guard<std::mutex> lo(db_mutex);
     try{
         auto result = db[col].find_one(bsoncxx::from_json(doc));
@@ -161,9 +164,9 @@ const std::string Mongo:: find_one( const std::string col, const std::string doc
     }
     return "{}";
 }
-const std::string Mongo:: find_id(const std::string col, int id)
+const std::string Mongo:: find_id(const std::string col, long id)
 {
-    LOG(trace) << " in col:" << col << " id:" << id;
+    LOG(trace) << "col:" << col << " id:" << id;
     std::lock_guard<std::mutex> lo(db_mutex);
     try{
         auto result = db[col].find_one(make_document(kvp("_id", id)));
@@ -176,11 +179,11 @@ const std::string Mongo:: find_id(const std::string col, int id)
     }
     return "{}";
 }
-int Mongo::get_uniq_id()
+long Mongo::get_uniq_id()
 {
     std::lock_guard<std::mutex> lo(db_mutex);
     std::string col = "uniq_counter"; 
-    int id = 1;
+    long id = 1;
     try{
         mongocxx::options::find_one_and_update options {};
         options.return_document(mongocxx::options::return_document::k_after);
@@ -190,7 +193,7 @@ int Mongo::get_uniq_id()
                 options);
         if (result && !(result->view().empty())) {
             bsoncxx::document::view  v(result->view());
-            int newId = v["count"].get_int32(); 
+            long newId = v["count"].get_int32(); 
             return newId; 
         }
         return 1; 
@@ -199,17 +202,16 @@ int Mongo::get_uniq_id()
         return 1;
     }
 }
-const std::string Mongo:: find_range(const std::string col, int begin, int end)
+const std::string Mongo:: find_range(const std::string col, long begin, long end)
 {
-    LOG(trace) << " in col:" << col << 
-        " begin:" << begin << " end:" << end;
+    LOG(trace) << "col:" << col << " begin:" << begin << " end:" << end;
     std::lock_guard<std::mutex> lo(db_mutex);
     try{
         mongocxx::options::find options {};
         options.skip(begin);
         options.limit(end - begin + 1);
         bsoncxx::document::view  v;
-        int total = db[col].count_documents(v);
+        long total = db[col].count_documents(v);
         auto result = db[col].find(v, options);
         std::string result_str = "";
         for(auto e : result){
@@ -226,7 +228,7 @@ const std::string Mongo:: find_range(const std::string col, int begin, int end)
 }
 const std::string Mongo:: find_filter_range(const std::string col, 
         const std::string filter,
-        int begin, int end)
+        long begin, long end)
 {
     LOG(trace) << " begin:" << begin << " end:" << end
         << " col:" << col <<" filter:" << filter;
@@ -242,7 +244,7 @@ const std::string Mongo:: find_filter_range(const std::string col,
         }
         if(result_str.size() > 0)
             result_str.pop_back();
-        int total = db[col].count_documents(bsoncxx::from_json(filter));
+        long total = db[col].count_documents(bsoncxx::from_json(filter));
         return "{ \"total\": " + std::to_string(total) + 
             ", \"content\":[" + result_str + "] }";
     }catch(std::exception& e){

@@ -41,6 +41,7 @@ struct live_setting {
 };
 int license_capability_bool(const char *var,int *val);
 namespace Util {
+    int get_systemId(Mongo& db);
     void system(const std::string cmd);
     void wait(int millisecond);
     void boost_log_init(Mongo& db);

@@ -188,6 +188,54 @@ def init_db():
         "firewallRule": [ ]
         })
 
+def add_audio(path):
+    mdb = mongo.Mongo()
+    root_path = "/opt/sms/www/iptv/media/Audio/"
+    poster_path = "/opt/sms/www/iptv/media/Poster/"
+    os.system("mkdir -p "+root_path)
+    os.system("mkdir -p "+poster_path)
+    _id = 3300
+    t = int(time.time())
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            file_path = os.path.join(root, name)
+            fmt = 0
+            fmt_name = ""
+            if ".mp3" in name: 
+                fmt = 4
+                fmt_name = ".mp3"
+
+            if fmt == 0: continue
+            _id += 1
+            os.system("cp " + file_path + " " + root_path + str(_id) + fmt_name )        
+            chname = name[:-4] + " MP3" 
+            print(("add " + file_path))
+            mdb.insert_or_replace_id("storage_contents_info", _id, {
+                    "_id": _id,
+                    "type":4,
+                    "format": fmt,
+                    "category":[  1 ],
+                    "name": chname,
+                    "permission": [],
+                    "price": 0,
+                    "platform":[],
+                    "date": t,
+                    "languages" : [], 
+                    "description":{
+                            "en": {
+                                "name": chname,
+                                "description": ""
+                                },
+                            "fa": {
+                                "name": chname,
+                                "description": ""
+                                },
+                            "ar": {
+                                "name": chname,
+                                "description": ""
+                            }
+                        }
+                    })
 def add_video(path):
     mdb = mongo.Mongo()
     root_path = "/opt/sms/www/iptv/media/Video/"
@@ -319,7 +367,6 @@ def add_menu():
                     "platform":[],
                     "category":[j]
                     })
-
         _id = 100 + i 
         menu.append(_id)
         mdb.insert_or_replace_id("launcher_menu", _id, {
@@ -334,9 +381,6 @@ def add_menu():
             "permission": 1,
             "components": comp 
                 })
-    menu.append(1)
-    menu.append(2)
-    menu.append(3)
     mdb.insert_or_replace_id("launcher_setting", 10, {
             "_id": 10,
             "active": True,
@@ -380,13 +424,16 @@ def add_menu():
             "clientHotspot": "",
             "defaultChannel": 1 
             })
+add_audio("/home/karim/Music/mp3")
+
+#add_video("/home/karim/Music/Video_Music")
 """
-add_video("/home/karim/Music/Video_Music")
 add_menu()
+add_video("/home/karim/Music/Video_Music")
 add_picture("/home/karim/Pictures/mypic/990220")
 init_db()
-"""
 for ch_type in ["dvb", "archive", "network", "web", "virtual_dvb", "virtual_net",
         "transcode", "scramble", "unscramble", "mixed"]:
     make_channel_config(ch_type, 10)
 
+"""

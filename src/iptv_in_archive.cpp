@@ -18,7 +18,7 @@ bool time_to_play(bool schedule, json& media)
     int media_weekday = media["weekday"];
     int media_time = media["time"];
     
-    auto now = time(NULL);
+    auto now = time(nullptr);
     auto now_tm = localtime(&now);
     auto now_wday = (now_tm->tm_wday + 1) % 7;
     auto now_hhmm = now_tm->tm_hour * 100 + now_tm->tm_min;
@@ -33,7 +33,7 @@ bool time_to_play(bool schedule, json& media)
 }
 int current_time()
 {
-    auto now = time(NULL);
+    auto now = time(nullptr);
     auto tm = localtime(&now);
     int  start = 0;
     start = 3600 * tm->tm_hour;
@@ -47,7 +47,7 @@ void update_epg(Mongo& db, int silver_chan_id, int content_id)
     json j;
     j["start"] = current_time();
     j["name"] = content_info["name"];
-    j["duration"] = 1000; // FIXME: real duration!
+    j["duration"] = 0; // FIXME: real duration!
     j["text"] = "";
     if(!content_info["description"].is_null() &&
             !content_info["description"]["en"].is_null() &&
@@ -72,11 +72,10 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
     auto multicast = Util::get_multicast(live_config, channel["_id"]);
     bool schedule = channel["manualSchedule"];
     try{
-        while(true){
+       while(true){ 
            for(auto& media : channel["contents"]){
                 if(time_to_play(schedule, media)){
                     LOG(debug) << "Play media id: " << media["content"];
-                    update_epg(db, silver_chan_id, media["content"]);
                     auto media_path = Util::get_content_path(db, media["content"]);
                     if(media_path.size() == 0){
                         LOG(error) << "Invalid media path";
@@ -88,6 +87,8 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
                         Util::wait(50000);
                         continue;
                     }
+                    update_epg(db, silver_chan_id, media["content"]);
+
 #if TEST_BY_FFMPEG
                     auto cmd = boost::format("%s -re -i '%s' -codec copy -f mpegts "
                             "'udp://%s:%d?pkt_size=1316'")

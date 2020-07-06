@@ -7,11 +7,12 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
-#define BY_FFMPEG 1
+#define TEST_BY_FFMPEG 1
 
 using namespace std;
 
-void gst_task(string media_path, string multicast_addr, int port);
+void gst_task(string in_multicast, int port, string out_multicast, json& profile);
+const string profile_resolution(const string p_vsize);
 
 void start_channel(json channel, live_setting live_config)
 {
@@ -45,6 +46,7 @@ void start_channel(json channel, live_setting live_config)
                 "audioRate": int,       # from 1 to 1000000
                 "extra": string 
     */
+    LOG(trace) << profile.dump(2);
 #if BY_FFMPEG 
     // TODO: apply  videoProfile and extra
     string vcodec = "copy" ,acodec = "copy", vsize = "720x576";
@@ -66,12 +68,8 @@ void start_channel(json channel, live_setting live_config)
             << " for channel " << channel["name"];
         return;
     }
-    if(p_vsize.find("SD") != string::npos)         vsize = "720x576";
-    else if(p_vsize.find("FHD") != string::npos)  vsize = "1920x1080";
-    else if(p_vsize.find("4K") != string::npos)   vsize = "4096x2048";
-    else if(p_vsize.find("HD") != string::npos)   vsize = "1280x720";
-    else if(p_vsize.find("CD") != string::npos)   vsize = "320x240";
-    else{
+    vsize = profile_resolution(p_vsize);
+    if(!vsize.size()){
         LOG(error) << "Video size not support " << p_vsize 
             << " for channel " << channel["name"];
         return;
@@ -89,8 +87,7 @@ void start_channel(json channel, live_setting live_config)
     
     Util::exec_shell_loop(cmd.str());
 #else
-    string in_uri = "udp://" + in_multicast + ":" + to_string(INPUT_PORT);
-    gst_task(in_uri, multicast_out, INPUT_PORT);
+    gst_task(in_multicast, INPUT_PORT, out_multicast, profile);
 #endif
     
 }
@@ -113,6 +110,7 @@ int main()
                         chan["input"]));
             IS_CHANNEL_VALID(transcode);
             pool.emplace_back(start_channel, transcode, live_config);
+            //break;  // for test
         }
     }
     for(auto& t : pool)

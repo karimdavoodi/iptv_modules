@@ -33,7 +33,7 @@ int main()
             }
         } 
         if(nic_ip.size() > 0){
-            string cmd = "/opt/sms/bin/iptv2rtsp-proxy -s " + nic_ip;
+            string cmd = "/opt/sms/bin/iptv2rtsp-proxy -l 10016 -s " + nic_ip;
             Util::system(cmd);
         }else{
             LOG(error) << "Main NIC IP not found";

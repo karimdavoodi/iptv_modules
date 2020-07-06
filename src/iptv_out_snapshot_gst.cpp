@@ -41,8 +41,8 @@ void uridecodebin_pad_added(GstElement* object, GstPad* pad, gpointer data)
 bool gst_task(string in_multicast, int port, const string pic_path)
 {
     Gst::Data d;
-    d.loop = g_main_loop_new(NULL, false);
-    d.pipeline = GST_PIPELINE(gst_element_factory_make("pipeline", NULL));
+    d.loop = g_main_loop_new(nullptr, false);
+    d.pipeline = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
     string uri = "udp://" + in_multicast + ":" + to_string(port);
     LOG(info) << "Start " << uri << " --> " << pic_path;
 
@@ -53,13 +53,13 @@ bool gst_task(string in_multicast, int port, const string pic_path)
              jpegenc        = Gst::add_element(d.pipeline, "jpegenc"),
              filesink       = Gst::add_element(d.pipeline, "filesink");
         
-        gst_element_link_many(capsfilter, jpegenc, filesink, NULL);
+        gst_element_link_many(capsfilter, jpegenc, filesink, nullptr);
         
-        g_object_set(uridecodebin, "uri", uri.c_str(), NULL);
-        //g_object_set(jpegenc, "snapshot", true, NULL);
-        g_object_set(filesink, "location", pic_path.c_str(), NULL);
+        g_object_set(uridecodebin, "uri", uri.c_str(), nullptr);
+        //g_object_set(jpegenc, "snapshot", true, nullptr);
+        g_object_set(filesink, "location", pic_path.c_str(), nullptr);
         auto caps = gst_caps_from_string("video/x-raw");
-        g_object_set(capsfilter, "caps", caps, NULL);
+        g_object_set(capsfilter, "caps", caps, nullptr);
         gst_caps_unref(caps);
 
         g_signal_connect(uridecodebin, "pad-added",G_CALLBACK(uridecodebin_pad_added),
@@ -69,7 +69,7 @@ bool gst_task(string in_multicast, int port, const string pic_path)
         ProbData pd { 0, d.bus, uridecodebin  };
         auto filesink_pad = gst_element_get_static_pad(filesink, "sink");
         gst_pad_add_probe(filesink_pad, GST_PAD_PROBE_TYPE_BUFFER, 
-                GstPadProbeCallback(filesink_get_buffer), &pd, NULL);
+                GstPadProbeCallback(filesink_get_buffer), &pd, nullptr);
         
         LOG(debug) << "Wait to snapshot:" << SNAPSHOT_TIMEOUT; 
         bool thread_running = true;

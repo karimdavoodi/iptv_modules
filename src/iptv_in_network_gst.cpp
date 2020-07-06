@@ -20,25 +20,24 @@ void urisourcebin_pad_added(GstElement* urisourcebin, GstPad* pad, gpointer data
 void demux_padd_added(GstElement* object, GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
-    auto caps_filter = gst_caps_new_any();
-    auto caps = gst_pad_query_caps(pad, caps_filter);
+    auto caps = gst_pad_query_caps(pad, nullptr);
     auto caps_struct = gst_caps_get_structure(caps, 0);
-    auto caps_string = string(gst_caps_to_string(caps));
     auto pad_type = string(gst_structure_get_name(caps_struct));
 
-    LOG(debug) << gst_pad_get_name(pad) << " Caps:" << caps_string;
-    GstElement* videoparse = NULL;
-    GstElement* audioparse = NULL;
+    LOG(debug) << Gst::pad_name(pad) << " Caps:" << Gst::caps_string(caps);
+
+    GstElement* videoparse = nullptr;
+    GstElement* audioparse = nullptr;
     if(pad_type.find("video/x-h264") != string::npos){
         videoparse = Gst::add_element(d->pipeline, "h264parse", "", true);
-        g_object_set(videoparse, "config-interval", 1, NULL);
+        g_object_set(videoparse, "config-interval", 1, nullptr);
     }else if(pad_type.find("video/mpeg") != string::npos){
         int m_version = 1;
         gst_structure_get_int(caps_struct, "mpegversion", &m_version);
         LOG(debug) << "Mpeg version type:" <<  m_version;
         if(m_version == 4){
             videoparse = Gst::add_element(d->pipeline, "mpeg4videoparse", "", true);
-            g_object_set(videoparse, "config-interval", 1, NULL);
+            g_object_set(videoparse, "config-interval", 1, nullptr);
         }else{
             videoparse = Gst::add_element(d->pipeline, "mpegvideoparse", "", true);
         }
@@ -57,13 +56,12 @@ void demux_padd_added(GstElement* object, GstPad* pad, gpointer data)
     }else{
         LOG(warning) << "Not support:" << pad_type;
     }
-    gst_caps_unref(caps_filter);
     gst_caps_unref(caps);
     // link typefind ---> parse --- > queue
-    auto parse = (videoparse != NULL) ? videoparse : audioparse;
-    auto parse_name = string(gst_element_get_name(parse));
-    if(parse != NULL){
-        g_object_set(parse, "disable-passthrough", true, NULL);
+    auto parse = (videoparse != nullptr) ? videoparse : audioparse;
+    auto parse_name = Gst::element_name(parse);
+    if(parse != nullptr){
+        g_object_set(parse, "disable-passthrough", true, nullptr);
         auto queue = Gst::add_element(d->pipeline, "queue", "", true);
         Gst::zero_queue_buffer(queue);
         if(!Gst::pad_link_element_static(pad, queue, "sink")){
@@ -88,8 +86,11 @@ void typefind_have_type(GstElement* typefind,
     auto d = (Gst::Data*) user_data;
     auto caps_struct = gst_caps_get_structure(caps, 0);
     string pad_type = string(gst_structure_get_name(caps_struct));
-    LOG(debug) << "Typefind:" << gst_structure_to_string(caps_struct);
-    GstElement* demux = NULL;
+    auto struct_str = gst_structure_to_string(caps_struct);
+    LOG(debug) << "Typefind:" << struct_str;
+    g_free(struct_str);
+
+    GstElement* demux = nullptr;
     bool is_mp3 = false;
     if(pad_type.find("video/mpegts") != string::npos){
         demux = Gst::add_element(d->pipeline, "tsdemux", "", true);
@@ -103,7 +104,7 @@ void typefind_have_type(GstElement* typefind,
         is_mp3 = true;
     }else if(pad_type.find("application/x-rtp") != string::npos){
         const char* encodin_name = gst_structure_get_string(caps_struct, "encoding-name");
-        if(encodin_name == NULL){
+        if(encodin_name == nullptr){
             LOG(error)<< "RTP dose not have encodin_name!";
             g_main_loop_quit(d->loop);
             return;
@@ -111,7 +112,7 @@ void typefind_have_type(GstElement* typefind,
         if(!strncmp(encodin_name, "MP2T", 4)){
             auto rtpmp2tdepay = Gst::add_element(d->pipeline, "rtpmp2tdepay", "", true);
             demux = Gst::add_element(d->pipeline, "tsdemux", "", true);
-            gst_element_link_many(typefind, rtpmp2tdepay, demux, NULL);
+            gst_element_link_many(typefind, rtpmp2tdepay, demux, nullptr);
             g_signal_connect(demux, "pad-added", G_CALLBACK(demux_padd_added), d);
             return;
         }else{
@@ -126,12 +127,12 @@ void typefind_have_type(GstElement* typefind,
         g_main_loop_quit(d->loop);
         return;
     }
-    if(demux != NULL){
+    if(demux != nullptr){
         gst_element_link(typefind, demux);
         if(is_mp3){
             auto audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", "", true);
             auto queue = Gst::add_element(d->pipeline, "queue", "queue_mp3", true);
-            if(!gst_element_link_many(demux, audioparse, queue, NULL)){
+            if(!gst_element_link_many(demux, audioparse, queue, nullptr)){
                 LOG(error) << "Can't link demux-->audioparse-->queue";
                 g_main_loop_quit(d->loop);
             }
@@ -149,8 +150,8 @@ void gst_task(string url, string multicast_addr, int port)
         << "Start " << url 
         << " --> udp://" << multicast_addr << ":" << port;
     Gst::Data d;
-    d.loop      = g_main_loop_new(NULL, false);
-    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", NULL));
+    d.loop      = g_main_loop_new(nullptr, false);
+    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
 
     try{
         auto urisourcebin = Gst::add_element(d.pipeline, "urisourcebin"),
@@ -161,19 +162,19 @@ void gst_task(string url, string multicast_addr, int port)
              queue      = Gst::add_element(d.pipeline, "queue","queue_sink"),
              udpsink    = Gst::add_element(d.pipeline, "udpsink", "udpsink");
 
-        gst_element_link_many(queue_src, typefind, NULL);
-        gst_element_link_many(mpegtsmux, queue, tsparse, udpsink, NULL);
+        gst_element_link_many(queue_src, typefind, nullptr);
+        gst_element_link_many(mpegtsmux, queue, tsparse, udpsink, nullptr);
 
         g_signal_connect(urisourcebin, "pad-added", G_CALLBACK(urisourcebin_pad_added), &d);
         g_signal_connect(typefind, "have-type", G_CALLBACK(typefind_have_type), &d);
-        g_object_set(urisourcebin, "uri", url.c_str(), NULL);
+        g_object_set(urisourcebin, "uri", url.c_str(), nullptr);
         g_object_set(udpsink, 
                 "multicast_iface", "lo", 
                 "host", multicast_addr.c_str() ,
                 "port", port,
-                NULL);
-        g_object_set(mpegtsmux, "alignment", 7, NULL);
-        g_object_set(tsparse, "set-timestamps", true, NULL);
+                nullptr);
+        g_object_set(mpegtsmux, "alignment", 7, nullptr);
+        g_object_set(tsparse, "set-timestamps", true, nullptr);
 
         //Gst::dot_file(d.pipeline, "iptv_network", 5);
         Gst::add_bus_watch(d);
