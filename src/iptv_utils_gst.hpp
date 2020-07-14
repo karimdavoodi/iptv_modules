@@ -22,7 +22,7 @@ class SysUsage {
     public:
         SysUsage() { calcCurrentUsage(); };
         void calcCurrentUsage();
-        const std::string getUsageJson();
+        const std::string getUsageJson(int systemId);
     private:
         void calcCurrentPartitions();
         void calcCurrentInterfaces();

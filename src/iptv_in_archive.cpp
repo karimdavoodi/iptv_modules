@@ -65,10 +65,6 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
 {
     Mongo db;
     LOG(info) << "Start Channel: " << channel["name"];
-    if(!channel["active"]){
-        LOG(info) << channel["name"] << " is not Active. Exit!";
-        return;
-    }
     auto multicast = Util::get_multicast(live_config, channel["_id"]);
     bool schedule = channel["manualSchedule"];
     try{

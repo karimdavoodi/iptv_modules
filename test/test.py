@@ -135,16 +135,26 @@ def make_channel_config(chan_type, number):
             name = "mixed"+str(i)
             mdb.insert_or_replace_id("live_inputs_mixed", i,{  
                 "_id": i,
-                "active": True,
-                "input1": i, 
-                "input2": i, 
-                "inputType1": 2,    # from live/inputs/types 
-                "inputType2": 3,    # from live/inputs/types 
-                "input2mix": 'cover',  # from 'multiple','cover'
-                "input2x": 1, 
-                "input2y": 1, 
-                "input2width": 100, 
-                "input2height": 100 
+                "active": boolean,
+                "input1": {
+                    "input": i,           # from live/inputs
+                    "inputType": 2,       # from live/inputs/types 
+                    "useVideo": True,
+                    "useAudio": True,
+                    "audioNumber": 1
+                    },
+                "input2": {
+                    "input": i,           # from live/inputs
+                    "inputType": 2,       # from live/inputs/types 
+                    "useVideo": True,
+                    "useAudio": True,
+                    "audioNumber": 1,
+                    "whiteTransparent": True,
+                    "posX": 0,
+                    "posY": 0,
+                    "width": 1280,
+                    "height": 720
+                    }
                 })
         silver_id =  channel_type*100+i
         mdb.insert_or_replace_id("live_output_silver", silver_id, {
@@ -203,17 +213,17 @@ def add_audio(path):
             fmt_name = ""
             if ".mp3" in name: 
                 fmt = 4
-                fmt_name = ".mp3"
+                fmt_name = "mp3"
 
             if fmt == 0: continue
             _id += 1
-            os.system("cp " + file_path + " " + root_path + str(_id) + fmt_name )        
+            os.system("cp " + file_path + " " + root_path + str(_id) + "." + fmt_name )        
             chname = name[:-4] + " MP3" 
             print(("add " + file_path))
             mdb.insert_or_replace_id("storage_contents_info", _id, {
                     "_id": _id,
                     "type":4,
-                    "format": fmt,
+                    "format": fmt_name,
                     "category":[  1 ],
                     "name": chname,
                     "permission": [],
@@ -251,22 +261,22 @@ def add_video(path):
             fmt_name = ""
             if ".ts" in name: 
                 fmt = 1
-                fmt_name = ".ts"
+                fmt_name = "ts"
             elif ".mp4" in name: 
                 fmt =  2
-                fmt_name = ".mp4"
+                fmt_name = "mp4"
             elif ".mkv" in name: 
                 fmt =  3
-                fmt_name = ".mkv"
+                fmt_name = "mkv"
             if fmt == 0: continue
             _id += 1
-            os.system("cp " + file_path + " " + root_path + str(_id) + fmt_name )        
+            os.system("cp " + file_path + " " + root_path + str(_id) + "." + fmt_name )        
             chname = name[:-4] 
             print(("add " + file_path))
             mdb.insert_or_replace_id("storage_contents_info", _id, {
                     "_id": _id,
                     "type":3,
-                    "format": fmt,
+                    "format": fmt_name,
                     "category":[ _id % 3 + 1 ],
                     "name": chname,
                     "permission": [],
@@ -304,23 +314,23 @@ def add_picture(path):
             fmt_name = ""
             if ".png" in name: 
                 fmt = 8
-                fmt_name = ".png"
+                fmt_name = "png"
             elif ".gif" in name: 
                 fmt =  9
-                fmt_name = ".gif"
+                fmt_name = "gif"
             elif ".jpg" in name: 
                 fmt =  10
-                fmt_name = ".jpg"
+                fmt_name = "jpg"
             if fmt == 0: continue
             _id += 1
-            os.system("cp " + file_path + " " + root_path + str(_id) + fmt_name )        
+            os.system("cp " + file_path + " " + root_path + str(_id) + "." + fmt_name )        
             os.system("convert " + file_path + " resize 240x240 " 
                     + poster_path + str(_id) + ".jpg" )        
             chname = name[:-4] 
             mdb.insert_or_replace_id("storage_contents_info", _id, {
                     "_id": _id,
                     "type":5,
-                    "format": fmt,
+                    "format": fmt_name,
                     "category":[ _id % 3 + 1 ],
                     "name": chname,
                     "permission": [],
@@ -425,15 +435,11 @@ def add_menu():
             "defaultChannel": 1 
             })
 add_audio("/home/karim/Music/mp3")
-
-#add_video("/home/karim/Music/Video_Music")
-"""
-add_menu()
 add_video("/home/karim/Music/Video_Music")
+add_menu()
 add_picture("/home/karim/Pictures/mypic/990220")
 init_db()
 for ch_type in ["dvb", "archive", "network", "web", "virtual_dvb", "virtual_net",
         "transcode", "scramble", "unscramble", "mixed"]:
     make_channel_config(ch_type, 10)
 
-"""

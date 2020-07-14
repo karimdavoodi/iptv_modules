@@ -238,14 +238,12 @@ namespace Util {
             }
             json content_type = json::parse(db.find_id("storage_contents_types",
                         content_info["type"]));
-            json content_format = json::parse(db.find_id("storage_contents_formats",
-                        content_info["format"]));
             string path = string(MEDIA_ROOT);
             path += content_type["name"];
             path +=  "/";
             path += to_string(id);
             path += ".";
-            path += content_format["name"];
+            path += content_info["format"].is_null() ? "" : content_info["format"];
             LOG(trace) << "Media Path:" << path;
             return path;
         }catch(std::exception& e){

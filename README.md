@@ -1,18 +1,3 @@
 # iptv_modules
-## include:
-- iptv_in_archive
-- iptv_in_dvb
-- iptv_in_network
-- iptv_in_scramble
-- iptv_in_transcoder
-- iptv_in_unscramble
-- iptv_in_web
-- iptv_out_dlna
-- iptv_out_epg
-- iptv_out_gold
-- iptv_out_hls
-- iptv_out_http
-- iptv_out_multicast
-- iptv_out_record
-- iptv_out_rf
-- iptv_out_rtsp
+
+Implements of iptv modules by Gstreamer

@@ -19,7 +19,7 @@ void SysUsage::calcCurrentUsage()
     calcCurrentLoad();
     calcCurrentContents();
 }
-const string SysUsage::getUsageJson()
+const string SysUsage::getUsageJson(int systemId)
 {
     Data delta;
     priviuse = current;
@@ -60,6 +60,7 @@ const string SysUsage::getUsageJson()
         now.time_since_epoch().count();
         usage["_id"] = now.time_since_epoch().count();
         usage["time"] = now.time_since_epoch().count()/1000000000;
+        usage["systemId"] = systemId;
         usage["sysLoad"] = current.sysLoad;
         usage["cpuUsage"] = delta.cpuUsage;
         usage["memUsage"] = (current.memTotal - current.memAvailable) / current.memTotal;
