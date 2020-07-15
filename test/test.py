@@ -116,6 +116,7 @@ def make_channel_config(chan_type, number):
             mdb.insert_or_replace_id("live_inputs_unscramble", i,{  
                 "_id": i,
                 "active": True,
+                "name": name, 
                 "input": i, 
                 "inputType": 2,
                 "bssKey": "",
@@ -126,6 +127,7 @@ def make_channel_config(chan_type, number):
             mdb.insert_or_replace_id("live_inputs_scramble", i,{  
                 "_id": i,
                 "active": True,
+                "name": name, 
                 "input": i, 
                 "inputType": 2,
                 "crypto": "AES",
@@ -135,7 +137,8 @@ def make_channel_config(chan_type, number):
             name = "mixed"+str(i)
             mdb.insert_or_replace_id("live_inputs_mixed", i,{  
                 "_id": i,
-                "active": boolean,
+                "active": True,
+                "name": name, 
                 "input1": {
                     "input": i,           # from live/inputs
                     "inputType": 2,       # from live/inputs/types 
@@ -150,10 +153,10 @@ def make_channel_config(chan_type, number):
                     "useAudio": True,
                     "audioNumber": 1,
                     "whiteTransparent": True,
-                    "posX": 0,
-                    "posY": 0,
-                    "width": 1280,
-                    "height": 720
+                    "posX": 50,
+                    "posY": 50,
+                    "width": 600,
+                    "height": 400
                     }
                 })
         silver_id =  channel_type*100+i
@@ -434,11 +437,13 @@ def add_menu():
             "clientHotspot": "",
             "defaultChannel": 1 
             })
+"""
 add_audio("/home/karim/Music/mp3")
 add_video("/home/karim/Music/Video_Music")
 add_menu()
 add_picture("/home/karim/Pictures/mypic/990220")
 init_db()
+"""
 for ch_type in ["dvb", "archive", "network", "web", "virtual_dvb", "virtual_net",
         "transcode", "scramble", "unscramble", "mixed"]:
     make_channel_config(ch_type, 10)

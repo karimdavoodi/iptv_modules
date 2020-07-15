@@ -29,6 +29,7 @@ int check_license_db(Mongo& db)
     }
     return stoi(systemId);
 }
+
 int main()
 {
     Mongo db;
@@ -39,6 +40,7 @@ int main()
     Util::boost_log_init(db);
     Util::system("rm -f /run/sms/*");
     CHECK_LICENSE;
+    // Report system usage
     int systemId = check_license_db(db);
     SysUsage usage;
     while(true){
