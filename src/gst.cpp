@@ -21,7 +21,7 @@ namespace Gst {
                     if(GST_OBJECT_REFCOUNT_VALUE(element) == 0 ) return;
                     guint d;
                     g_object_get(element, attr, &d, nullptr);
-                    LOG(debug) << "Read  " << attr << ":" << d; 
+                    LOG(trace) << "Read  " << attr << ":" << d; 
                     });
             t.detach();
     }
@@ -95,7 +95,7 @@ namespace Gst {
         if(stat_playing) 
             gst_element_set_state(element, GST_STATE_PLAYING);
 
-        LOG(debug) << "Make element " << element_name(element);
+        LOG(trace) << "Make element " << element_name(element);
         
         return element;
     }
@@ -105,7 +105,7 @@ namespace Gst {
         std::thread t([&](){
                     std::this_thread::sleep_for(std::chrono::seconds(sec));
                     if(GST_OBJECT_REFCOUNT_VALUE(d.pipeline) == 0 ) return;
-                    LOG(debug) << "Pipeline timeout reached"; 
+                    LOG(trace) << "Pipeline timeout reached"; 
                     if(d.loop) g_main_loop_quit(d.loop);
                     });
         t.detach();
@@ -123,7 +123,7 @@ namespace Gst {
 
                     std::this_thread::sleep_for(std::chrono::seconds(sec));
                     if(GST_OBJECT_REFCOUNT_VALUE(pipeline) == 0 ) return;
-                    LOG(debug) << "Make DOT file " 
+                    LOG(trace) << "Make DOT file " 
                             << make_dot_file << "/" << fname << ".dot";
                     gst_debug_bin_to_dot_file(
                             GST_BIN(pipeline), 
@@ -132,7 +132,7 @@ namespace Gst {
                     });
             t.detach();
         }else{
-            LOG(debug) << "Not make DOT file";
+            LOG(trace) << "Not make DOT file";
         }
     }
         
