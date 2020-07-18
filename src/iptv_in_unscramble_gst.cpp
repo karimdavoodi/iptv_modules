@@ -138,16 +138,18 @@ void unscramble_buffer(GstBuffer* buffer, Unscramble_data* d)
 
     uint8_t* s = map.data;
     int i = 0;
-    // Find ts packet
-    for(i=0; i<map.size - 190; i++){
-        if(s[i] == 0x47 && s[i+188] == 0x47) break;
-    } 
-    if(i)
-        LOG(warning) << "currutp packet. find ts at: " << i;
+    if(false){
+        // Find ts packet
+        for(i=0; i<map.size - 190; i++){
+            if(s[i] == 0x47 && s[i+188] == 0x47) break;
+        } 
+        if(i)
+            LOG(warning) << "currutp packet. find ts at: " << i;
+    }
     int scramble =  s[i+3] >> 6;
     if(scramble){
         for (int j=i; j<map.size; j += 188) {
-            uint8_t *ts_packet = s + i;
+            uint8_t *ts_packet = s + j;
             decode_packet(d, ts_packet);
         }
     }else{

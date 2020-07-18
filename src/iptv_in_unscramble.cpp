@@ -20,7 +20,6 @@ void start_channel(json channel, live_setting live_config)
 
     string biss_key = channel["bissKey"].is_null() ? "" : 
         channel["bissKey"].get<string>();
-    biss_key = "123456123456";
     if(biss_key.size())
         gst_task(in_multicast, INPUT_PORT, out_multicast, biss_key);
     else
@@ -45,7 +44,6 @@ int main()
                         chan["input"]));
             IS_CHANNEL_VALID(unscrabmle_chan);
             pool.emplace_back(start_channel, unscrabmle_chan, live_config);
-            break;
         }
     }
     for(auto& t : pool)

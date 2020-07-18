@@ -8,12 +8,22 @@
 #include "utils.hpp"
 using namespace std;
 using nlohmann::json;
-void gst_task(string media_path, string multicast_addr, int port);
+void gst_task(string in_multicast, int port, string out_multicast, string key);
+
 void start_channel(json channel, live_setting live_config)
 {
-    LOG(info) << "Start scrabmle Channel: " << channel["name"];
-    LOG(error) << "TODO ..";
-    // TODO: ...
+    LOG(info) << "Start scramble Channel: " << channel["name"];
+
+    auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
+    live_config.type_id = channel["inputType"];
+    auto in_multicast  = Util::get_multicast(live_config, channel["input"]);
+
+    string biss_key = channel["bissKey"].is_null() ? "" : 
+        channel["bissKey"].get<string>();
+    if(biss_key.size())
+        gst_task(in_multicast, INPUT_PORT, out_multicast, biss_key);
+    else
+        LOG(warning) << "Not have BISS Key! not implement CCCAM";
 }
 int main()
 {
@@ -22,7 +32,7 @@ int main()
     live_setting live_config;
     CHECK_LICENSE;
     Util::init(db);
-    if(!Util::get_live_config(db, live_config, "scrabmle")){
+    if(!Util::get_live_config(db, live_config, "scramble")){
         LOG(info) << "Error in live config! Exit.";
         return -1;
     }
@@ -30,10 +40,10 @@ int main()
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["inputType"] == live_config.type_id){
-            json scrabmle_chan = json::parse(db.find_id("live_inputs_scrabmle", 
+            json scramble_chan = json::parse(db.find_id("live_inputs_scramble", 
                         chan["input"]));
-            IS_CHANNEL_VALID(scrabmle_chan);
-            pool.emplace_back(start_channel, scrabmle_chan, live_config);
+            IS_CHANNEL_VALID(scramble_chan);
+            pool.emplace_back(start_channel, scramble_chan, live_config);
         }
     }
     for(auto& t : pool)

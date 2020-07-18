@@ -57,8 +57,8 @@ set( project_EXES
      iptv_in_transcoder    # TODO: test it
      iptv_in_web           # TODO: test it
      iptv_in_dvb           # TODO: do by Gst
-     iptv_in_unscramble    ##TODO: ...
-     iptv_in_scramble      ##TODO: ...
+     iptv_in_unscramble    # TODO: test it. do only BISS 
+     iptv_in_scramble      # TODO: test it. do only BISS
      iptv_in_mixer         ##TODO: test it
      iptv_out_hls          # TODO: test it 
      iptv_out_epg          # TODO: test it 
