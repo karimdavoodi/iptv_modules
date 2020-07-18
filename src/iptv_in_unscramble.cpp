@@ -8,12 +8,23 @@
 #include "utils.hpp"
 using namespace std;
 using nlohmann::json;
-void gst_task(string media_path, string multicast_addr, int port);
+void gst_task(string in_multicast, int port, string out_multicast, string key);
+
 void start_channel(json channel, live_setting live_config)
 {
     LOG(info) << "Start unscramble Channel: " << channel["name"];
-    LOG(error) << "TODO ..";
-    // TODO: ...
+
+    auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
+    live_config.type_id = channel["inputType"];
+    auto in_multicast  = Util::get_multicast(live_config, channel["input"]);
+
+    string biss_key = channel["bissKey"].is_null() ? "" : 
+        channel["bissKey"].get<string>();
+    biss_key = "123456123456";
+    if(biss_key.size())
+        gst_task(in_multicast, INPUT_PORT, out_multicast, biss_key);
+    else
+        LOG(warning) << "Not have BISS Key! not implement CCCAM";
 }
 int main()
 {
@@ -34,6 +45,7 @@ int main()
                         chan["input"]));
             IS_CHANNEL_VALID(unscrabmle_chan);
             pool.emplace_back(start_channel, unscrabmle_chan, live_config);
+            break;
         }
     }
     for(auto& t : pool)

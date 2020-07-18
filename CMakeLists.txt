@@ -38,6 +38,7 @@ set(ALL_LIBS
     ${LIBMONGOCXX_LIBRARIES} 
     ${GSTMM_LIBRARIES} 
     /opt/sms/src/lock/licpp.a 
+    -lcrypto -lpthread -lcrypt -lrt -ldvbcsa
     )
 set(ALL_INCS  ${LIBMONGOCXX_INCLUDE_DIRS} ${GSTMM_INCLUDE_DIRS})
 set(MYLIBS    src/mongo_driver.cpp src/utils.cpp src/gst.cpp)
@@ -58,7 +59,7 @@ set( project_EXES
      iptv_in_dvb           # TODO: do by Gst
      iptv_in_unscramble    ##TODO: ...
      iptv_in_scramble      ##TODO: ...
-     iptv_in_mixer         ##TODO: ...
+     iptv_in_mixer         ##TODO: test it
      iptv_out_hls          # TODO: test it 
      iptv_out_epg          # TODO: test it 
      iptv_out_multicast    # TODO: test it
