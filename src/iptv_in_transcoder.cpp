@@ -24,7 +24,7 @@ void start_channel(json channel, live_setting live_config)
     }
     json profile = json::parse(db.find_id("live_transcode_profile",channel["profile"])); 
     if(profile["_id"].is_null()){
-        LOG(error) << "transcode profile id is in invalid:" 
+        LOG(error) << "transcode profile id is not valid:" 
                                  << channel["profile"];
         return;
     }

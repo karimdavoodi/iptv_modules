@@ -143,16 +143,11 @@ void unscramble_buffer(GstBuffer* buffer, Unscramble_data* d)
         if(i)
             LOG(warning) << "currutp packet. find ts at: " << i;
     }
-    int scramble =  s[i+3] >> 6;
-    if(scramble){
-        bool even = true;
-        for (int j=i; j<map.size; j += 188) {
-            uint8_t *ts_packet = s + j;
-            encode_packet(d, ts_packet, even ? 0 : 1);
-            even = !even;
-        }
-    }else{
-        LOG(warning) << "Packet is not scramble";
+    bool even = true;
+    for (int j=i; j<map.size; j += 188) {
+        uint8_t *ts_packet = s + j;
+        encode_packet(d, ts_packet, even ? 0 : 1);
+        even = !even;
     }
 
     gst_buffer_unmap(buffer, &map);

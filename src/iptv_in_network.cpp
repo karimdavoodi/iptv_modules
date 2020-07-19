@@ -38,7 +38,7 @@ void start_channel(string channel_str, live_setting live_config)
         //url = "http://192.168.56.12/HLS/HLS/hdd11/p.m3u8";
         gst_task(url, out_multicast, INPUT_PORT);
 #endif
-        Util::wait(3000);
+        Util::wait(5000);
     }
 }
 int main()

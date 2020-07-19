@@ -20,10 +20,12 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
     auto caps = gst_pad_query_caps(pad, caps_filter);
     auto caps_struct = gst_caps_get_structure(caps, 0);
     auto pad_type = string(gst_structure_get_name(caps_struct));
+    auto caps_str = Gst::caps_string(caps);
 
-    LOG(debug) << Gst::pad_name(pad) << " Caps:" << Gst::caps_string(caps);
+    LOG(debug) << Gst::pad_name(pad) << " Caps:" << caps_str;
     GstElement* videoparse = nullptr;
     GstElement* audioparse = nullptr;
+    GstElement* audiodecoder = nullptr;
     if(pad_type.find("video/x-h264") != string::npos){
         videoparse = Gst::add_element(d->pipeline, "h264parse", "", true);
         g_object_set(videoparse, "config-interval", 1, nullptr);
@@ -43,8 +45,22 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
         LOG(debug) << "Mpeg version type:" <<  m_version;
         if(m_version == 1){
             audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", "", true);
-        }else{
-            audioparse = Gst::add_element(d->pipeline, "aacparse", "", true);
+        }else if(m_version > 1){
+            if(caps_str.find("loas") != string::npos){
+                // TODO: decode and encode 
+                audiodecoder = Gst::add_element(d->pipeline, "aacparse", "", true);
+                auto decoder = Gst::add_element(d->pipeline, "avdec_aac_latm", 
+                        "", true);
+                auto audioconvert = Gst::add_element(d->pipeline, "audioconvert", "", true);
+                auto queue = Gst::add_element(d->pipeline, "queue", "", true);
+                auto lamemp3enc = Gst::add_element(d->pipeline, "lamemp3enc", "", true);
+                audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", 
+                        "", true);
+                gst_element_link_many(audiodecoder, decoder, audioconvert, queue, 
+                                lamemp3enc, audioparse, nullptr);
+            }else{
+                audioparse = Gst::add_element(d->pipeline, "aacparse", "", true);
+            }
         }
     }else if(pad_type.find("audio/x-ac3") != string::npos ||
              pad_type.find("audio/ac3") != string::npos){
@@ -66,9 +82,10 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
             g_main_loop_quit(d->loop); return; 
         }
 
-        if(!gst_element_link(queue, parse)){
-            LOG(error) << "Can't link  queue to " << parse_name; 
-            g_main_loop_quit(d->loop); return;
+        if(audiodecoder){
+            gst_element_link(queue, audiodecoder);
+        }else{
+            gst_element_link(queue, parse);
         }
         auto qtmux = gst_bin_get_by_name(GST_BIN(d->pipeline), "qtmux");
         string sink_name = (videoparse != nullptr) ? "video_%u" : "audio_%u";

@@ -28,31 +28,13 @@ struct transcoder_data {
     transcoder_data():video_process{false},audio_process{false},
         mqueue_src_pads{},tsdemux_src_pads_num{0},tsdemux_no_more_pad{false}{}
 };
-const pair<int,int> profile_resolution_pair(const string p_vsize)
-{
-    if(p_vsize.find("SD") != string::npos)        return make_pair(720, 576);
-    else if(p_vsize.find("FHD") != string::npos)  return make_pair(1920, 1080);
-    else if(p_vsize.find("4K") != string::npos)   return make_pair(4096,2048);
-    else if(p_vsize.find("HD") != string::npos)   return make_pair(1280, 720);
-    else if(p_vsize.find("CD") != string::npos)   return make_pair(320, 240);
-    return make_pair(0, 0);
-}
-const string profile_resolution(const string p_vsize)
-{
-    if(p_vsize.find("SD") != string::npos)        return "720x576";
-    else if(p_vsize.find("FHD") != string::npos)  return "1920x1080";
-    else if(p_vsize.find("4K") != string::npos)   return "4096x2048";
-    else if(p_vsize.find("HD") != string::npos)   return "1280x720";
-    else if(p_vsize.find("CD") != string::npos)   return "320x240";
-    return "";
-}
 void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data)
 {
     if(GST_PAD_IS_SRC(pad)){
         LOG(debug) << "Got src pad in multiqueue:" << Gst::pad_name(pad);
         auto tdata = (transcoder_data *) data;
-
         std::unique_lock<mutex> lock(tdata->mqueue_src_pads_mutex);
+        
         tdata->mqueue_src_pads.push_back(pad);
 
         if(tdata->tsdemux_no_more_pad &&
@@ -61,11 +43,11 @@ void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data)
             LOG(debug) << "Try to link all pads to mpegtsmux";
             for(auto p : tdata->mqueue_src_pads){
                 if(!Gst::pad_link_element_request(p, mpegtsmux, "sink_%d")){
-                    LOG(error) << "Can't link  " << Gst::pad_name(pad) << " to mpegtsmux_sink";
+                    LOG(error) << "Can't link  " << Gst::pad_name(p) << " to mpegtsmux_sink";
                     g_main_loop_quit(tdata->d.loop);
                     return;
                 }else{
-                    LOG(debug) << "Link multiqueue"<< Gst::pad_name(pad) << " to mpegtsmux";
+                    LOG(debug) << "Link multiqueue"<< Gst::pad_name(p) << " to mpegtsmux";
                 } 
             }
             gst_object_unref(mpegtsmux);
@@ -118,7 +100,7 @@ void video_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
     //   queue_raw -> videorate  -> video/x-raw, framerate=n/1 ->
     //                videoscale -> video/x-raw, width=x, heigth=y -> queue_resized 
     LOG(debug) << "Fps: " << tdata->target.videoFps << " Size:" << tdata->target.videoSize;
-    auto [width, height] = profile_resolution_pair(tdata->target.videoSize);
+    auto [width, height] = Util::profile_resolution_pair(tdata->target.videoSize);
     auto caps_resize = Gst::add_element(tdata->d.pipeline, "capsfilter", "", true);
     auto caps_rate   = Gst::add_element(tdata->d.pipeline, "capsfilter", "", true);
     auto videoconvert1= Gst::add_element(tdata->d.pipeline, "videoconvert", "", true);
@@ -271,6 +253,7 @@ void process_audio_pad(GstPad* pad, transcoder_data* tdata)
     LOG(debug) << "audio pad: " << Gst::pad_name(pad) 
         << " caps:" << Gst::pad_caps_string(pad);
     auto caps = gst_pad_query_caps(pad, nullptr);
+    auto caps_str = Gst::pad_caps_string(pad);
     auto caps_struct = gst_caps_get_structure(caps, 0);
 
     int mpegversion = 0;
@@ -281,6 +264,7 @@ void process_audio_pad(GstPad* pad, transcoder_data* tdata)
      *           mp3:     mpegversion: 1  layer: 3
      *           mp2:     mpegversion: 1  layer: 2
      *           aac:     mpegversion: 4  
+     *           aac_loas:mpegversion: 4  string-format: loas 
      * */
     //transcode if codec name is diffirent
     bool transcode_audio = false;
@@ -295,6 +279,9 @@ void process_audio_pad(GstPad* pad, transcoder_data* tdata)
         transcode_audio = true;
     }
     if(mpegversion != 4 && mpegversion != 1){
+        transcode_audio = true;
+    }
+    if(mpegversion == 4 && caps_str.find("loas") != string::npos){
         transcode_audio = true;
     }
     if(transcode_audio && tdata->target.audioCodec.size()){
@@ -345,7 +332,7 @@ GstPadProbeReturn parser_caps_probe(
             transcode_video = true;
         }         
         //transcode if frame dimension is diffirent
-        auto dst_resulotion   = profile_resolution(tdata->target.videoSize);
+        auto dst_resulotion   = Util::profile_resolution(tdata->target.videoSize);
         string src_resolution = to_string(width) + "x" + to_string(height);
         if(dst_resulotion.size() &&  src_resolution != dst_resulotion){
             LOG(warning) << "Transcode Video due to frame size:" << dst_resulotion;

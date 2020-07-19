@@ -1,10 +1,11 @@
 #include <boost/log/trivial.hpp>
 #include "gst.hpp"
 #include <thread>
+#include <mutex>
 #include <iostream>
 #include "../third_party/json.hpp"
-
 #define WAIT_MILISECOND(x) std::this_thread::sleep_for(std::chrono::milliseconds(x))
+#define USE_INPUT1_DIMENSION 0
 
 using namespace std;
 using nlohmann::json;
@@ -12,12 +13,18 @@ using nlohmann::json;
 struct Mix_data {
     Gst::Data d;
     json config;
-    bool video_pass;
     int video1_width;
     int video1_height;
-    vector<GstPad*> audio_pads;
-    Mix_data():d{},config{},video_pass{false},
-            video1_width{0},video1_height{0},audio_pads{}{}
+    bool video1, video2;
+    vector<GstPad*> mqueue_src_pads;
+    atomic_int tsdemux_src_pads_num;
+    atomic_int tsdemux_no_more_pad;
+    mutex mqueue_src_pads_mutex;
+
+    Mix_data():d{},config{},
+            video1_width{0},video1_height{0},
+            video1{false},video2{false},mqueue_src_pads{},
+            tsdemux_src_pads_num{0},tsdemux_no_more_pad{0}{}
 };
 GstElement* insert_parser(GstPad* pad, Mix_data* tdata)
 {
@@ -67,6 +74,7 @@ void connect_to_tsmux_mqueue(Mix_data* d, GstPad* pad)
     Gst::element_link_request(parser, "src", mqueue, "sink_%u");
     gst_object_unref(mqueue);
 }
+#if USE_INPUT1_DIMENSION
 GstPadProbeReturn parser_caps_probe(
         GstPad * pad, 
         GstPadProbeInfo * info, 
@@ -111,6 +119,7 @@ GstPadProbeReturn parser_caps_probe(
     }
     return GST_PAD_PROBE_OK;
 }
+#endif
 GstElement* connect_to_parser_decoder_queue(Mix_data* d, GstPad* pad, string pad_type,
         bool detect_dimension = false)
 {
@@ -120,13 +129,14 @@ GstElement* connect_to_parser_decoder_queue(Mix_data* d, GstPad* pad, string pad
 
     auto parser = insert_parser(pad, d);
     Gst::pad_link_element_static(pad, parser, "sink");
-
+#if USE_INPUT1_DIMENSION
     if(detect_dimension){
         auto parse_src = gst_element_get_static_pad(parser, "src");
         gst_pad_add_probe(parse_src, GST_PAD_PROBE_TYPE_EVENT_BOTH,
                 GstPadProbeCallback(parser_caps_probe), d, nullptr);
 
     }
+#endif
 
     if(pad_type.find("video/x-h264") != string::npos){
         decoder_name = "avdec_h264";
@@ -177,20 +187,17 @@ void tsdemux1_pad_added(GstElement* object, GstPad* pad, gpointer data)
         }
         // TODO: check audioNumber
         // TODO: do for pure audio stream
-        if(d->video_pass){
-            LOG(debug) << "Connect Audio1 pad to muxer";
-            connect_to_tsmux_mqueue(d, pad);
-        }else{
-            d->audio_pads.push_back(pad);
-            LOG(debug) << "Save Audio1 pad to connect later to muxer";
-        } 
-        
+        LOG(debug) << "Connect Audio1 pad to muxer";
+        connect_to_tsmux_mqueue(d, pad);
+        d->tsdemux_src_pads_num++; 
+
     }else if(pad_type.find("video") != string::npos){
-        if(d->config["input1"]["useVideo"] == false ){
+        if(d->video1 == false ){
             LOG(debug) << "Ignore Video1";
             return ignore_pad(d, pad);
         }
-        if(d->config["input2"]["useVideo"] == false ){
+        d->tsdemux_src_pads_num++; 
+        if(d->video2 == false ){
             LOG(debug) << "it's only video1 stream, connect pad to tsmux_mqueue";
             connect_to_tsmux_mqueue(d, pad);
         }else{
@@ -218,20 +225,16 @@ void tsdemux2_pad_added(GstElement* object, GstPad* pad, gpointer data)
             return ignore_pad(d, pad);
         }
         // TODO: check audioNumber
-        if(d->video_pass){
-            LOG(debug) << "Connect Audio2 pad to muxer";
-            connect_to_tsmux_mqueue(d, pad);
-        }else{
-            d->audio_pads.push_back(pad);
-            LOG(debug) << "Save Audio2 pad to connect later to muxer";
-        } 
-        
+        connect_to_tsmux_mqueue(d, pad);
+        d->tsdemux_src_pads_num++; 
+
     }else if(pad_type.find("video") != string::npos){
-        if(d->config["input2"]["useVideo"] == false ){
+        if(d->video2 == false ){
             LOG(debug) << "Ignore Video2";
             return ignore_pad(d, pad);
         }
-        if(d->config["input1"]["useVideo"] == false ){
+        d->tsdemux_src_pads_num++; 
+        if(d->video1 == false ){
             LOG(debug) << "it's only video2 stream, connect pad to tsmux_mqueue";
             connect_to_tsmux_mqueue(d, pad);
         }else{
@@ -278,31 +281,60 @@ void tsdemux2_pad_added(GstElement* object, GstPad* pad, gpointer data)
         }
     }
 }
+void add_all_pads_to_mpegtsmux(Mix_data* tdata)
+{
+    std::unique_lock<mutex> lock(tdata->mqueue_src_pads_mutex);
+    LOG(debug) << "NO MORE:" << tdata->tsdemux_no_more_pad << 
+                " pad_num:" << tdata->tsdemux_src_pads_num
+                << " vector size:" << tdata->mqueue_src_pads.size(); 
+
+    int src_pads = tdata->tsdemux_src_pads_num;
+    if(tdata->video1 && tdata->video2) 
+        src_pads--;
+
+    if(tdata->tsdemux_no_more_pad == 2 &&
+            tdata->mqueue_src_pads.size() == src_pads){
+        auto mpegtsmux = gst_bin_get_by_name(GST_BIN(tdata->d.pipeline), "mpegtsmux");
+        LOG(debug) << "Try to link all pads to mpegtsmux";
+        for(auto p : tdata->mqueue_src_pads){
+            if(!Gst::pad_link_element_request(p, mpegtsmux, "sink_%d")){
+                LOG(error) << "Can't link  " << Gst::pad_name(p) << " to mpegtsmux_sink";
+                g_main_loop_quit(tdata->d.loop);
+                return;
+            }else{
+                LOG(debug) << "Link multiqueue"<< Gst::pad_name(p) << " to mpegtsmux";
+            } 
+        }
+        gst_object_unref(mpegtsmux);
+        tdata->mqueue_src_pads.clear();
+    }
+
+}
 void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data)
 {
     if(GST_PAD_IS_SRC(pad)){
-        auto d = (Mix_data *) data;
-        d->video_pass = true;
         LOG(debug) << "Got src pad in multiqueue:" << Gst::pad_name(pad);
-        auto mpegtsmux = gst_bin_get_by_name(GST_BIN(d->d.pipeline), "mpegtsmux");
-        if(!Gst::pad_link_element_request(pad, mpegtsmux, "sink_%d")){
-            LOG(error) << "Can't link  " << Gst::pad_name(pad) << " to mpegtsmux_sink";
-            g_main_loop_quit(d->d.loop);
-            return;
-        }else LOG(debug) << "Link multiqueue:"<< Gst::pad_name(pad) << " to mpegtsmux";
-        gst_object_unref(mpegtsmux);
-        // Process Audio pads
-        auto pad_name = Gst::pad_name(pad);
-        if(pad_name == "src_0"){
-            if(d->audio_pads.size()){
-                LOG(debug) << "Connect Audio pads after Video pads num:" << d->audio_pads.size();
-                for(auto pad : d->audio_pads){
-                    connect_to_tsmux_mqueue(d, pad);
-                }
-                d->audio_pads.clear();
-            }
+        auto tdata = (Mix_data *) data;
+        {
+            std::unique_lock<mutex> lock(tdata->mqueue_src_pads_mutex);
+            tdata->mqueue_src_pads.push_back(pad);
         }
+        add_all_pads_to_mpegtsmux(tdata);
     }
+}
+void tsdemux_no_more_pad1(GstElement* object, gpointer data)
+{
+    auto tdata = (Mix_data *) data;
+    tdata->tsdemux_no_more_pad += 1;
+    LOG(debug) << "no more pad";
+    add_all_pads_to_mpegtsmux(tdata);
+}
+void tsdemux_no_more_pad2(GstElement* object, gpointer data)
+{
+    auto tdata = (Mix_data *) data;
+    tdata->tsdemux_no_more_pad += 1;
+    LOG(debug) << "no more pad";
+    add_all_pads_to_mpegtsmux(tdata);
 }
 /*
    Example config:
@@ -331,31 +363,27 @@ void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data)
    }
    }
 
-*  PIPELINE:
-*
-*
-*   tsdemux1 -->   video -- if single use-----------------------> tsmux_mqueue
-*                           if both   use--> dec -> queue_v1 -> MIX 
-*                  audio -- if use -----------------------------> tsmux_mqueue
-*
-*   tsdemux2 -->   video -- if single use-----------------------> tsmux_mqueue
-*                           if both   use--> dec -> queue_v2 -> MIX
-*                  audio -- if use -----------------------------> tsmux_mqueue
-*                              
-*   MIX: queue_v1 ---------------------------> compositor   
-*        queue_v2 --if transparent--> alpha -> compositor(pos,size)
-*               --else -------------------->
-*               queue -> enc -> tsmux_mqueue
-* */
+ *  PIPELINE:
+ *
+ *
+ *   tsdemux1 -->   video -- if single use-----------------------> tsmux_mqueue
+ *                           if both   use--> dec -> queue_v1 -> MIX 
+ *                  audio -- if use -----------------------------> tsmux_mqueue
+ *
+ *   tsdemux2 -->   video -- if single use-----------------------> tsmux_mqueue
+ *                           if both   use--> dec -> queue_v2 -> MIX
+ *                  audio -- if use -----------------------------> tsmux_mqueue
+ *                              
+ *   MIX: queue_v1 ---------------------------> compositor   
+ *        queue_v2 --if transparent--> alpha -> compositor(pos,size)
+ *               --else -------------------->
+ *               queue -> enc -> tsmux_mqueue
+ * */
 void gst_task(json config, string in_multicast1, string in_multicast2, string out_multicast, int port)
 {
     in_multicast1 = "udp://" + in_multicast1 + ":" + to_string(port);
     in_multicast2 = "udp://" + in_multicast2 + ":" + to_string(port);
 
-    if(!config["input1"]["useVideo"]  && !config["input2"]["useVideo"] ){
-        LOG(error) << "You don't select Video stream! Exit.";
-        return;
-    }
     LOG(info) 
         << "Start " << in_multicast1 << " + " <<  in_multicast2 
         << " --> udp://" << out_multicast << ":" << port;
@@ -365,6 +393,7 @@ void gst_task(json config, string in_multicast1, string in_multicast2, string ou
     mdata.d.loop      = g_main_loop_new(nullptr, false);
     mdata.d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
     try{
+        
         auto udpsrc1       = Gst::add_element(mdata.d.pipeline, "udpsrc", "udpsrc1"),
              queue_src1    = Gst::add_element(mdata.d.pipeline, "queue", "queue_src1"),
              tsdemux1      = Gst::add_element(mdata.d.pipeline, "tsdemux", "tsdemux1"),
@@ -381,8 +410,12 @@ void gst_task(json config, string in_multicast1, string in_multicast2, string ou
         g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_pad_added), &mdata);
         g_signal_connect(tsdemux1,   "pad-added", G_CALLBACK(tsdemux1_pad_added), &mdata);
         g_signal_connect(tsdemux2,   "pad-added", G_CALLBACK(tsdemux2_pad_added), &mdata);
+        g_signal_connect(tsdemux1, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad1), &mdata);
+        g_signal_connect(tsdemux2, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad2), &mdata);
 
-        if(config["input1"]["useVideo"]  && config["input2"]["useVideo"] ){
+        mdata.video1 = config["input1"]["useVideo"];
+        mdata.video2 = config["input2"]["useVideo"];
+        if(mdata.video1 && mdata.video2 ){
             auto compositor   = Gst::add_element(mdata.d.pipeline, "compositor", "compositor"),
                  queue0       = Gst::add_element(mdata.d.pipeline, "queue"),
                  videoconvert = Gst::add_element(mdata.d.pipeline, "videoconvert"),
@@ -398,11 +431,14 @@ void gst_task(json config, string in_multicast1, string in_multicast2, string ou
             g_object_set (x264enc, "speed-preset", 1, nullptr);
             g_object_set(h264parse, "disable-passthrough", true, nullptr);
 
-            auto resize_caps = gst_caps_from_string(
-                    "video/x-raw, width=(int)720 , height=(int)576");
+            string resize_caps_str = 
+                    "video/x-raw, width=(int)" + 
+                    to_string(config["out_width"]) +
+                    " , height=(int)"+
+                    to_string(config["out_height"]) ;
+            auto resize_caps = gst_caps_from_string(resize_caps_str.c_str());
             g_object_set(capsfilter, "caps", resize_caps, nullptr);
             gst_caps_unref(resize_caps);
-            mdata.video_pass = true;
         } 
         gst_element_link_many(udpsrc1, queue_src1, tsdemux1, nullptr); 
         gst_element_link_many(udpsrc2, queue_src2, tsdemux2, nullptr); 

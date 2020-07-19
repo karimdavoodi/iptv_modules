@@ -56,4 +56,6 @@ namespace Util {
     void init(Mongo& db);
     void check_path(const std::string path);
     const std::string get_file_content(const std::string name);
+    const std::pair<int,int> profile_resolution_pair(const std::string p_vsize);
+    const std::string profile_resolution(const std::string p_vsize);
 }

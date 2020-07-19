@@ -285,4 +285,22 @@ namespace Util {
         LOG(warning)  <<  "file not exists: " << name;
         return "";
     }
+    const pair<int,int> profile_resolution_pair(const string p_vsize)
+    {
+        if(p_vsize.find("SD") != string::npos)        return make_pair(720, 576);
+        else if(p_vsize.find("FHD") != string::npos)  return make_pair(1920, 1080);
+        else if(p_vsize.find("4K") != string::npos)   return make_pair(4096,2048);
+        else if(p_vsize.find("HD") != string::npos)   return make_pair(1280, 720);
+        else if(p_vsize.find("CD") != string::npos)   return make_pair(320, 240);
+        return make_pair(0, 0);
+    }
+    const string profile_resolution(const string p_vsize)
+    {
+        if(p_vsize.find("SD") != string::npos)        return "720x576";
+        else if(p_vsize.find("FHD") != string::npos)  return "1920x1080";
+        else if(p_vsize.find("4K") != string::npos)   return "4096x2048";
+        else if(p_vsize.find("HD") != string::npos)   return "1280x720";
+        else if(p_vsize.find("CD") != string::npos)   return "320x240";
+        return "";
+    }
 }

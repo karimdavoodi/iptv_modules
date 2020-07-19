@@ -222,13 +222,15 @@ namespace Gst {
                         g_free (debug);
                         char* path = getenv("GST_DEBUG_DUMP_DOT_DIR");
                         if(path != nullptr){
-                            auto fname = "error_dot_file";
+                            stringstream f_name;
+                            f_name << "error_" << std::this_thread::get_id();
+                            string fname = f_name.str();
                             LOG(info) << "Make DOT file in " << path 
                                 << "/" << fname << ".dot";
                             gst_debug_bin_to_dot_file(
                                     GST_BIN(d->pipeline), 
                                     GST_DEBUG_GRAPH_SHOW_ALL, 
-                                    fname );
+                                    fname.c_str() );
                         }
                         if(d->loop) g_main_loop_quit (d->loop);
                         break;

@@ -52,18 +52,20 @@ set_target_properties(utils PROPERTIES
 
 set( project_EXES
      # TODO: test memory leak
+     # TODO: test for aac_latm that not accepted by mpegtsmux
+
      iptv_in_archive       # TODO: fix ts file timestamp
      iptv_in_network       # TODO: test it
-     iptv_in_transcoder    # TODO: test it, memory leak
+     iptv_in_transcoder    # TODO:l test it, memory leak
      iptv_in_web           # TODO: test it
      iptv_in_dvb           # TODO: do by Gst
      iptv_in_unscramble    # TODO: test it. do only BISS 
      iptv_in_scramble      # TODO: test it. do only BISS
      iptv_in_mixer         ##TODO: test it
-     iptv_out_hls          # TODO: test it 
+     iptv_out_hls          # TODO:l test it 
      iptv_out_epg          # TODO: test it 
      iptv_out_multicast    # TODO: test it
-     iptv_out_record       # TODO: add moov table in mp4 when kill 
+     iptv_out_record       # TODO:l add moov table in mp4 when kill 
      iptv_out_rtsp         # TODO: do by Gst-rtsp-server library
      iptv_out_rf           # TODO: do by Gst
      iptv_out_http         # TODO: work by keyframe 

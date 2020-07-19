@@ -9,6 +9,8 @@
 #define INPUT_MULTICAST  229
 #define EPG_UPDATE_TIME  15*60        // every 15 minute
 #define SNAPSHOT_TIMEOUT 30           // 30 seconds
+#define DEFAULT_WIDTH    1280
+#define DEFAULT_HEIGHT   720 
 
 #define MEDIA_ROOT  "/opt/sms/www/iptv/media/"
 #define HLS_ROOT    "/opt/sms/tmp/HLS/"

@@ -47,6 +47,8 @@ void start_channel(json channel, int maxPerChannel, live_setting live_config)
     Mongo db;
     live_config.type_id = channel["inputType"];
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
+    
+    //in_multicast = "229.2.68.223";
     while(true){
         try{
             string ch_name = channel["name"];
@@ -65,7 +67,7 @@ void start_channel(json channel, int maxPerChannel, live_setting live_config)
             int duration = (60 - tm->tm_min)*60;
             bool recorded = true;
 #if BY_FFMPEG
-#define FFMPEG_REC_OPTS  " -bsf:a aac_adtstoasc -movflags empty_moov -y -f mp4 "
+            #define FFMPEG_REC_OPTS  " -bsf:a aac_adtstoasc -movflags empty_moov -y -f mp4 "
             auto cmd = boost::format("%s -i udp://%s:%d -t %d -codec copy %s '%s'")
                 % FFMPEG % in_multicast % INPUT_PORT % duration % FFMPEG_REC_OPTS % file_path;
             Util::system(cmd.str());
