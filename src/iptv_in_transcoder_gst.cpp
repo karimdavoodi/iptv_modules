@@ -20,7 +20,13 @@ struct transcoder_data {
     struct profile target;
     bool video_process;
     bool audio_process;
-    vector<GstPad*> audio_pads;
+    vector<GstPad*> mqueue_src_pads;
+    atomic_int tsdemux_src_pads_num;
+    bool tsdemux_no_more_pad;
+    mutex mqueue_src_pads_mutex;
+
+    transcoder_data():video_process{false},audio_process{false},
+        mqueue_src_pads{},tsdemux_src_pads_num{0},tsdemux_no_more_pad{false}{}
 };
 const pair<int,int> profile_resolution_pair(const string p_vsize)
 {
@@ -45,13 +51,26 @@ void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data)
     if(GST_PAD_IS_SRC(pad)){
         LOG(debug) << "Got src pad in multiqueue:" << Gst::pad_name(pad);
         auto tdata = (transcoder_data *) data;
-        auto mpegtsmux = gst_bin_get_by_name(GST_BIN(tdata->d.pipeline), "mpegtsmux");
-        if(!Gst::pad_link_element_request(pad, mpegtsmux, "sink_%d")){
-            LOG(error) << "Can't link  " << Gst::pad_name(pad) << " to mpegtsmux_sink";
-            g_main_loop_quit(tdata->d.loop);
-            return;
-        }else LOG(debug) << "Link multiqueue"<< Gst::pad_name(pad) << " to mpegtsmux";
-        gst_object_unref(mpegtsmux);
+
+        std::unique_lock<mutex> lock(tdata->mqueue_src_pads_mutex);
+        tdata->mqueue_src_pads.push_back(pad);
+
+        if(tdata->tsdemux_no_more_pad &&
+           tdata->mqueue_src_pads.size() == tdata->tsdemux_src_pads_num){
+            auto mpegtsmux = gst_bin_get_by_name(GST_BIN(tdata->d.pipeline), "mpegtsmux");
+            LOG(debug) << "Try to link all pads to mpegtsmux";
+            for(auto p : tdata->mqueue_src_pads){
+                if(!Gst::pad_link_element_request(p, mpegtsmux, "sink_%d")){
+                    LOG(error) << "Can't link  " << Gst::pad_name(pad) << " to mpegtsmux_sink";
+                    g_main_loop_quit(tdata->d.loop);
+                    return;
+                }else{
+                    LOG(debug) << "Link multiqueue"<< Gst::pad_name(pad) << " to mpegtsmux";
+                } 
+            }
+            gst_object_unref(mpegtsmux);
+            tdata->mqueue_src_pads.clear();
+        }
     }
 }
 void to_multiqueue(GstPad* src_pad, transcoder_data* tdata)
@@ -339,9 +358,6 @@ GstPadProbeReturn parser_caps_probe(
             LOG(warning) << "Passthrough Video due to same name and frame size";
             stream_passthrough(pad, tdata);
         }
-        for(auto pad : tdata->audio_pads){
-            process_audio_pad(pad, tdata);
-        }
         return GST_PAD_PROBE_OK;
     }
     if(name.find("audio/mpeg") != string::npos && !tdata->audio_process){
@@ -355,12 +371,7 @@ GstPadProbeReturn parser_caps_probe(
         }
         // TODO: Multi Audio 
         tdata->audio_process = true;
-        if(tdata->video_process){
-            process_audio_pad(pad, tdata);
-        }else{
-            LOG(debug) << "Add audio pad to vector";
-            tdata->audio_pads.push_back(pad);
-        }
+        process_audio_pad(pad, tdata);
         return GST_PAD_PROBE_OK;
     }
     return GST_PAD_PROBE_OK;
@@ -401,6 +412,11 @@ GstElement* insert_parser(const string pad_type, GstStructure* caps_struct, tran
     }
     return element;
 }
+void tsdemux_no_more_pad(GstElement* object, gpointer data)
+{
+    auto tdata = (transcoder_data *) data;
+    tdata->tsdemux_no_more_pad = true;
+}
 void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
 {
     auto tdata = (transcoder_data *) data;
@@ -423,6 +439,7 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
         auto parse_src = gst_element_get_static_pad(parse, "src");
         gst_pad_add_probe(parse_src, GST_PAD_PROBE_TYPE_EVENT_BOTH,
                 GstPadProbeCallback(parser_caps_probe), data, nullptr);
+        tdata->tsdemux_src_pads_num++;
     }
 }
 void gst_task(string in_multicast, int port, string out_multicast, json& profile)
@@ -467,6 +484,7 @@ void gst_task(string in_multicast, int port, string out_multicast, json& profile
         gst_element_link_many(mpegtsmux, queue_sink, udpsink, nullptr);
 
         g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added), &tdata);
+        g_signal_connect(tsdemux, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad), &tdata);
         g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_pad_added), &tdata);
         g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
         g_object_set(queue_sink,

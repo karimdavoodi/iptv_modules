@@ -113,7 +113,6 @@ int main()
                         chan["input"]));
             IS_CHANNEL_VALID(transcode);
             pool.emplace_back(start_channel, transcode, live_config);
-            break;  // for test
         }
     }
     for(auto& t : pool)
