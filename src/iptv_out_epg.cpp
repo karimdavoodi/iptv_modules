@@ -15,7 +15,7 @@ void start_channel(json channel, live_setting live_config)
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
     while(true){
         gst_task(db, in_multicast, INPUT_PORT, channel["_id"]); 
-        Util::wait(3000);
+        Util::wait(5000);
     }
 }
 int main()

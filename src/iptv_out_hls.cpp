@@ -23,7 +23,10 @@ void start_channel(json channel, live_setting live_config)
         % FFMPEG % in_multicast % INPUT_PORT % hls_root;
     Util::exec_shell_loop(cmd.str());
 #else
-    gst_task(in_multicast, INPUT_PORT, hls_root); 
+    while(true){
+        gst_task(in_multicast, INPUT_PORT, hls_root); 
+        Util::wait(5000);
+    }
 #endif
 }
 int main()

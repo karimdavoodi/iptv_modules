@@ -88,6 +88,7 @@ namespace Gst {
         GstElement* element = nullptr;
         if(name == "") element = gst_element_factory_make(plugin.c_str(), nullptr);
         else           element = gst_element_factory_make(plugin.c_str(), name.c_str());
+        if(!element) LOG(error) << "Element not found:" << plugin;
         CHECK_NULL_RET(element, "Can't make element", nullptr);
 
         gst_bin_add(GST_BIN(pipeline), element);

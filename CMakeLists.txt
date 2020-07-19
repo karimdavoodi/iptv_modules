@@ -11,7 +11,7 @@ add_definitions(
     -fdiagnostics-generate-patch 
     -DBOOST_LOG_DYN_LINK=1
     -DGST_USE_UNSTABLE_API=1
-    -g
+    #-g
     )
 
 #BOOST
@@ -37,8 +37,8 @@ set(ALL_LIBS
     ${Boost_LIBRARIES} 
     ${LIBMONGOCXX_LIBRARIES} 
     ${GSTMM_LIBRARIES} 
+    -ldvbcsa                    # for iptv_in_scramble
     /opt/sms/src/lock/licpp.a 
-    -lcrypto -lpthread -lcrypt -lrt -ldvbcsa
     )
 set(ALL_INCS  ${LIBMONGOCXX_INCLUDE_DIRS} ${GSTMM_INCLUDE_DIRS})
 set(MYLIBS    src/mongo_driver.cpp src/utils.cpp src/gst.cpp)
@@ -54,7 +54,7 @@ set( project_EXES
      # TODO: test memory leak
      iptv_in_archive       # TODO: fix ts file timestamp
      iptv_in_network       # TODO: test it
-     iptv_in_transcoder    # TODO: test it
+     iptv_in_transcoder    # TODO: test it, memory leak
      iptv_in_web           # TODO: test it
      iptv_in_dvb           # TODO: do by Gst
      iptv_in_unscramble    # TODO: test it. do only BISS 
@@ -67,7 +67,7 @@ set( project_EXES
      iptv_out_rtsp         # TODO: do by Gst-rtsp-server library
      iptv_out_rf           # TODO: do by Gst
      iptv_out_http         # TODO: work by keyframe 
-     iptv_out_gold         # TODO: do
+     iptv_out_gold         # TODO: ...
      iptv_out_dlna         # TODO: disabled. do by Rygel library
      iptv_out_snapshot     # TODO: test it 
      iptv_utils            # TODO: test it   

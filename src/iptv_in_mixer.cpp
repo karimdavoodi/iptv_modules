@@ -16,7 +16,7 @@ void start_channel(json channel, live_setting live_config)
 {
     LOG(info) << "Start mixed Channel: " << channel["name"];
     auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
-#if 1 // TEST
+#if 0 // TEST
     channel["input1"]["input"] = 1000671;
     channel["input1"]["inputType"] = 2;
     channel["input1"]["useVideo"] = true;
@@ -39,9 +39,8 @@ void start_channel(json channel, live_setting live_config)
     auto in_multicast1  = Util::get_multicast(live_config, channel["input1"]["input"]);
     live_config.type_id = channel["input2"]["inputType"];
     auto in_multicast2  = Util::get_multicast(live_config, channel["input2"]["input"]);
-    if(true){
+    while(true){
         gst_task(channel, in_multicast1, in_multicast2, out_multicast, INPUT_PORT);
-        exit(0);
         Util::wait(1000);
     }
 }
@@ -57,17 +56,13 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    int i = 0;
     json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
     for(auto& chan : silver_channels ){
         IS_CHANNEL_VALID(chan);
         if(chan["inputType"] == live_config.type_id){
             json mixed_chan = json::parse(db.find_id("live_inputs_mixed", chan["input"]));
             IS_CHANNEL_VALID(mixed_chan);
-            if(i++ == 0){
-                pool.emplace_back(start_channel, mixed_chan, live_config);
-                break;
-            }
+            pool.emplace_back(start_channel, mixed_chan, live_config);
         }
     }
     for(auto& t : pool)

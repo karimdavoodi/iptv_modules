@@ -109,7 +109,7 @@ namespace Util {
         try{
             boost_log_init(db);
             gst_init(nullptr, nullptr);
-            char* d_level = getenv("GST_DEBUG_LEVEL");
+            char* d_level = getenv("GST_DEBUG");
             string debug_level = (d_level != nullptr) ? d_level : "";
             if(debug_level  == "WARNING"){
                 gst_debug_set_default_threshold(GST_LEVEL_WARNING);

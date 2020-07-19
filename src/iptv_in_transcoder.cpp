@@ -7,7 +7,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
-#define TEST_BY_FFMPEG 1
+#define TEST_BY_FFMPEG 0
 
 using namespace std;
 
@@ -47,7 +47,7 @@ void start_channel(json channel, live_setting live_config)
                 "extra": string 
     */
     LOG(trace) << profile.dump(2);
-#if BY_FFMPEG 
+#if TEST_BY_FFMPEG 
     // TODO: apply  videoProfile and extra
     string vcodec = "copy" ,acodec = "copy", vsize = "720x576";
     string p_vcodec = profile["videoCodec"].get<string>();
@@ -87,7 +87,10 @@ void start_channel(json channel, live_setting live_config)
     
     Util::exec_shell_loop(cmd.str());
 #else
-    gst_task(in_multicast, INPUT_PORT, out_multicast, profile);
+    while(true){
+        gst_task(in_multicast, INPUT_PORT, out_multicast, profile);
+        Util::wait(5000);
+    }
 #endif
     
 }
@@ -110,7 +113,7 @@ int main()
                         chan["input"]));
             IS_CHANNEL_VALID(transcode);
             pool.emplace_back(start_channel, transcode, live_config);
-            //break;  // for test
+            break;  // for test
         }
     }
     for(auto& t : pool)

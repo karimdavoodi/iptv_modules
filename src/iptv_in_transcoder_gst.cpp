@@ -180,16 +180,21 @@ void audio_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
     gst_structure_get_int(caps_struct, "mpegversion", &mpegversion);
     gst_structure_get_int(caps_struct, "layer", &layer);
     string type = gst_structure_get_name(caps_struct);
+    string caps_str = gst_structure_to_string(caps_struct);
     string decoder_name = "";
+    
 
     if(mpegversion == 1 && layer == 2){
         decoder_name = "avdec_mp2float";
     }else if(mpegversion == 1 && layer == 3){
         decoder_name = "avdec_mp3";
     }else if(mpegversion == 4  || mpegversion == 2){
-        decoder_name = "avdec_aac";
+        if(caps_str.find("loas") != string::npos)
+            decoder_name = "avdec_aac_latm";
+        else
+            decoder_name = "avdec_aac";
     }else if(type.find("video/x-ac3")){
-        decoder_name = "avdec_aac";
+        decoder_name = "avdec_ac3";
     }
     if(decoder_name == ""){
         LOG(error) << "Decoder not find for " << type;
@@ -328,7 +333,6 @@ GstPadProbeReturn parser_caps_probe(
             transcode_video = true;
         }
         // TODO: check other parameters 
-
         if(tdata->target.videoCodec.size() && transcode_video){
             video_transcode(pad, caps_struct, tdata);
         }else{

@@ -446,5 +446,5 @@ init_db()
 """
 for ch_type in ["dvb", "archive", "network", "web", "virtual_dvb", "virtual_net",
         "transcode", "scramble", "unscramble", "mixed"]:
-    make_channel_config(ch_type, 10)
+    make_channel_config(ch_type, 2)
 

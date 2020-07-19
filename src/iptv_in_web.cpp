@@ -18,7 +18,10 @@ void start_channel(json channel, live_setting live_config)
     LOG(info) << "Start web Channel: " << channel["name"];
     string url = channel["url"];
     auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
-    gst_task(url, out_multicast, INPUT_PORT);
+    while(true){
+        gst_task(url, out_multicast, INPUT_PORT);
+        Util::wait(5000);
+    }
 }
 int main(int argc, char** argv)
 {

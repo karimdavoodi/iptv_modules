@@ -9,8 +9,10 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
     auto caps = gst_pad_query_caps(pad, nullptr);
     auto caps_struct = gst_caps_get_structure(caps, 0);
     auto pad_type = string(gst_structure_get_name(caps_struct));
+    string caps_str = Gst::caps_string(caps);
 
-    LOG(debug) << Gst::pad_name(pad) << " Caps:" << Gst::caps_string(caps);
+    GstElement* audiodecoder = nullptr;
+    LOG(debug) << Gst::pad_name(pad) << " Caps:" << caps_str;
     GstElement* videoparse = nullptr;
     GstElement* audioparse = nullptr;
     if(pad_type.find("video/x-h264") != string::npos){
@@ -33,11 +35,26 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
         if(m_version == 1){
             audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", "", true);
         }else{
-            audioparse = Gst::add_element(d->pipeline, "aacparse", "", true);
+            if(caps_str.find("loas") != string::npos){
+                // convert audio codec, becuase hlssink not accept aac/loas format
+                audiodecoder = Gst::add_element(d->pipeline, "aacparse", "", true);
+                auto decoder = Gst::add_element(d->pipeline, "avdec_aac_latm", 
+                        "", true);
+                auto audioconvert = Gst::add_element(d->pipeline, "audioconvert", "", true);
+                auto queue = Gst::add_element(d->pipeline, "queue", "", true);
+                auto lamemp3enc = Gst::add_element(d->pipeline, "lamemp3enc", "", true);
+                audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", 
+                        "", true);
+                gst_element_link_many(audiodecoder, decoder, audioconvert, queue, 
+                                lamemp3enc, audioparse, nullptr);
+                
+            }else{
+                audioparse = Gst::add_element(d->pipeline, "aacparse", "", true);
+            }
         }
     }else if(pad_type.find("audio/x-ac3") != string::npos ||
-             pad_type.find("audio/ac3") != string::npos){
-            audioparse = Gst::add_element(d->pipeline, "ac3parse", "", true);
+            pad_type.find("audio/ac3") != string::npos){
+        audioparse = Gst::add_element(d->pipeline, "ac3parse", "", true);
     }else{
         LOG(warning) << "Not support:" << pad_type;
     }
@@ -54,27 +71,21 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
             g_main_loop_quit(d->loop); return; 
         }
 
-        if(!gst_element_link(queue, parse)){
-            LOG(error) << "Can't link  queue to " << parse_name; 
-            g_main_loop_quit(d->loop); return;
+        if(audiodecoder){
+            gst_element_link(queue, audiodecoder);
+        }else{
+            gst_element_link(queue, parse);
         }
         auto hlssink = gst_bin_get_by_name(GST_BIN(d->pipeline), "hlssink");
         string type = videoparse ? "video" : "audio";
-        auto hls_pad = gst_element_get_request_pad(hlssink, type.c_str());
-        if(hls_pad){
-            auto parse_pad = gst_element_get_static_pad(parse, "src");
-            if(gst_pad_link(parse_pad, hls_pad) != GST_PAD_LINK_OK){
-                LOG(error) << "Can't link parse to hlssink";
-            }
-            gst_object_unref(hls_pad);
-            gst_object_unref(parse_pad);
-        }
+        Gst::element_link_request(parse, "src", hlssink, type.c_str());
         gst_object_unref(hlssink);
     }
 }
 
 void gst_task(string in_multicast, int port, string hls_root)
 {
+
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);
     LOG(info) << "Start " << in_multicast << " -> " << hls_root;
 

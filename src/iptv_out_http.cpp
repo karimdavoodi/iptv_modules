@@ -20,7 +20,7 @@ void start_channel(json channel, live_setting live_config)
         while(true){
             gst_task(in_multicast, INPUT_PORT, tcpserver_port, 
                     channel["name"].get<string>()); 
-            Util::wait(1000);
+            Util::wait(5000);
         }
 
     }catch(std::exception& e){
