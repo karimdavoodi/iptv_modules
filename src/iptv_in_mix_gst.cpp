@@ -181,7 +181,7 @@ void tsdemux1_pad_added(GstElement* object, GstPad* pad, gpointer data)
     LOG(debug) << "Elm:" << element_name << " type:" << pad_type;
     
     if(pad_type.find("audio") != string::npos){
-        if(d->config["input1"]["useAudio"] == false ){
+        if(d->config["_profile"]["input1"]["useAudio"] == false ){
             LOG(debug) << "Ignore Audio1";
             return ignore_pad(d, pad);
         }
@@ -220,7 +220,7 @@ void tsdemux2_pad_added(GstElement* object, GstPad* pad, gpointer data)
     LOG(debug) << "Elm:" << element_name << " type:" << pad_type;
     
     if(pad_type.find("audio") != string::npos){
-        if(d->config["input2"]["useAudio"] == false ){
+        if(d->config["_profile"]["input2"]["useAudio"] == false ){
             LOG(debug) << "Ignore Audio2";
             return ignore_pad(d, pad);
         }
@@ -245,12 +245,12 @@ void tsdemux2_pad_added(GstElement* object, GstPad* pad, gpointer data)
                 auto compositor_sink = gst_element_get_request_pad(compositor, "sink_%u");
                 g_object_set(compositor_sink,
                         "zorder", 10,
-                        "xpos",  d->config["input2"]["posX"].get<int>(),
-                        "ypos",  d->config["input2"]["posY"].get<int>(),
-                        "width", d->config["input2"]["width"].get<int>(),
-                        "height",d->config["input2"]["height"].get<int>(),
+                        "xpos",  d->config["_profile"]["input2"]["posX"].get<int>(),
+                        "ypos",  d->config["_profile"]["input2"]["posY"].get<int>(),
+                        "width", d->config["_profile"]["input2"]["width"].get<int>(),
+                        "height",d->config["_profile"]["input2"]["height"].get<int>(),
                         nullptr);
-                if(d->config["input2"]["whiteTransparent"]){
+                if(d->config["_profile"]["input2"]["whiteTransparent"]){
                     // Add alpha
                     auto alpha = Gst::add_element(d->d.pipeline, "alpha", "", true);
                     g_object_set(alpha,
@@ -337,32 +337,6 @@ void tsdemux_no_more_pad2(GstElement* object, gpointer data)
     add_all_pads_to_mpegtsmux(tdata);
 }
 /*
-   Example config:
-   {
-   "_id": 1000671,
-   "active": true,
-   "name": "mixed1000671"
-   "input1": {
-   "input": 1000672,
-   "inputType": 2,
-   "useAudio": false,
-   "useVideo": true,
-   "audioNumber": 1
-   },
-   "input2": {
-   "input": 1000671,
-   "inputType": 2,
-   "useAudio": true,
-   "useVideo": true,
-   "audioNumber": 1,
-   "whiteTransparent": false,
-   "posX": 0,
-   "posY": 0,
-   "height": 300,
-   "width": 300
-   }
-   }
-
  *  PIPELINE:
  *
  *
@@ -413,8 +387,8 @@ void gst_task(json config, string in_multicast1, string in_multicast2, string ou
         g_signal_connect(tsdemux1, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad1), &mdata);
         g_signal_connect(tsdemux2, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad2), &mdata);
 
-        mdata.video1 = config["input1"]["useVideo"];
-        mdata.video2 = config["input2"]["useVideo"];
+        mdata.video1 = config["_profile"]["input1"]["useVideo"];
+        mdata.video2 = config["_profile"]["input2"]["useVideo"];
         if(mdata.video1 && mdata.video2 ){
             auto compositor   = Gst::add_element(mdata.d.pipeline, "compositor", "compositor"),
                  queue0       = Gst::add_element(mdata.d.pipeline, "queue"),
@@ -433,9 +407,9 @@ void gst_task(json config, string in_multicast1, string in_multicast2, string ou
 
             string resize_caps_str = 
                     "video/x-raw, width=(int)" + 
-                    to_string(config["out_width"]) +
+                    to_string(config["_profile"]["output"]["width"]) +
                     " , height=(int)"+
-                    to_string(config["out_height"]) ;
+                    to_string(config["_profile"]["output"]["height"]) ;
             auto resize_caps = gst_caps_from_string(resize_caps_str.c_str());
             g_object_set(capsfilter, "caps", resize_caps, nullptr);
             gst_caps_unref(resize_caps);
@@ -457,7 +431,7 @@ void gst_task(json config, string in_multicast1, string in_multicast2, string ou
                 "sync", true, 
                 nullptr);
         Gst::add_bus_watch(mdata.d);
-        Gst::dot_file(mdata.d.pipeline, "iptv_archive", 7);
+        Gst::dot_file(mdata.d.pipeline, "iptv_in_mix", 7);
         gst_element_set_state(GST_ELEMENT(mdata.d.pipeline), GST_STATE_PLAYING);
         g_main_loop_run(mdata.d.loop);
 

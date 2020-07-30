@@ -119,7 +119,7 @@ void SysUsage::calcCurrentInterfaces()
         if(read.size()){
             current.interfaces[name].read = stof(read);
         }
-        auto write = Util::get_file_content(rx_file);
+        auto write = Util::get_file_content(tx_file);
         if(write.size()){
             current.interfaces[name].write = stof(write);
         }

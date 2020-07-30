@@ -7,9 +7,65 @@ import imp
 mongo = imp.load_source('mongo', '/s/uicontrol/mongo.py')
 
 
+def make_input_channels_profile():
+    mdb = mongo.Mongo()
+    mdb.insert_or_replace_id("live_profiles_scramble", 1,{  \
+                "_id": 1,
+                "active": True,
+                "name": "sc1",
+                "offline":{
+                    "algorithm": "BISS",   # from 'BISS', 'AES128', 'AES256' 
+                    "key": "123456123456" 
+                },
+                "online":{
+                    "protocol": "",  # from "cccam","camd35","cs378x","gbox","newcamd"
+                    "server": "", 
+                    "user": "", 
+                    "pass": "" 
+                }
+            })
+    mdb.insert_or_replace_id("live_profiles_transcode", 1,{  \
+                "_id": 1,
+                "active": True,
+                "name": "trans_sd1", 
+                "preset": "ultrafast", 
+                "videoCodec": "h264",   # from  '','h265','h264','mpeg2' 
+                "videoSize": "SD",    # from  '','4K', 'FHD', 'HD', 'SD', 'CD' 
+                "videoRate": 3000000,       # from 1 .. 100000000  (in bps) 
+                "videoFps": 25,        # from 1 .. 60
+                "videoProfile": "", # from  '','Baseline', 'Main', 'High'
+                "audioCodec": "mp3",   # from  '','aac','mp3','mp2' 
+                "audioRate": 128000,       # from 1 to 1000000 (in bps)
+                "extra": "" 
+        })
+    mdb.insert_or_replace_id("live_profiles_mix", 1,{  
+                "_id": 1,
+                "active": True,
+                "name": "mix1", 
+                "input1": {
+                    "useVideo": True,
+                    "useAudio": True,
+                    "audioNumber": 1
+                    },
+                "input2": {
+                    "useVideo": True,
+                    "useAudio": True,
+                    "audioNumber": 1,
+                    "whiteTransparent": True,
+                    "posX": 1,
+                    "posY": 1,
+                    "width": 1000,
+                    "height": 400
+                    },
+                "output":{          # use if we mix two video
+                    "width": 1280,
+                    "height": 720,
+                    "bitrate": 4000000
+                    }
+        })
+
 def make_channel_config(chan_type, number):
     print(("Insert channel type:" + chan_type))
-
     mdb = mongo.Mongo()
     live_inputs_types = mdb.find_one("live_inputs_types",{"name":chan_type})
     if live_inputs_types == None:
@@ -19,47 +75,50 @@ def make_channel_config(chan_type, number):
     for ii in range(number):
         i = ii + 1000671
         if chan_type == "dvb":
+            mdb.insert_or_replace_id("live_tuners_info", 1,{  
+                       "_id": 1,
+                       "active": True,
+                       "name": "dvb1", 
+                       "description": "",
+                       "dvbt": True,
+                       "systemId": 0,          # from tuners/system
+                       "frequencyId": 1,       # from satellites/frequencies
+                       "diSEqC": 1,            # from 1 .. 4
+                       "virtual": False
+                })
             name = "IRIB TV"+str(i)
             mdb.insert_or_replace_id("live_inputs_dvb", i,{  
                 "_id": i,
                 "active": True,
                 "name": name, 
-                "dvb_id": 1, 
-                "is_dvbt": True, 
-                "sid": 100+i, 
-                "aid": 1010+i, 
-                "vid": 100+i,
-                "freq": 602000, 
-                "pol": 1, 
-                "scramble": False, 
-                "symb": 1
-                })
-            mdb.insert_or_replace_id("live_tuners_input", 1,{  
-                "_id": 1,
-                "name": "t1", 
-                "active": True,
-                "is_dvbt": True, 
-                "freq": 650000,        # from 10000 .. 1000000
-                "errrate": "",  # from 'AUTO', '1/2', '1/3', '3/4', '5/6', '7/8'
-                "pol": "",      # from 'H', 'V'
-                "symrate": 0,     # from 1 .. 50000
-                "switch": 0       # from 1 .. 4
+                "logo": 1, 
+                "dvbId": 1,           # from tuners/info
+                "channelId": 1,       # from satellite/channels
+                "tv": True 
                 })
         if chan_type == "archive":
             name = "hdd "+str(i)
             mdb.insert_or_replace_id("live_inputs_archive", i,{  
                 "_id": i,
-                "name": name,
                 "active": True,
-                "isTV": True, 
-                "manualSchedule": False,
-                "contents": [ 
-                        {
-                        "content": 3001+ii,
-                        "weekday": 1,
-                        "time": 1,
-                        }
-                    ],
+                "name": name, 
+                "logo": 1,                    # from storage/contents/info  type 'Logo'
+                "description": "",
+                "tv": True,
+                "contents":[
+                    {
+                    "content": 3001, 
+                    "weektime": 1,           # from system/weektime
+                    "startDate": 1500000000,
+                    "endDate": 1600000000
+                    },
+                    {
+                    "content": 3002, 
+                    "weektime": 1,           # from system/weektime
+                    "startDate": 1500000000,
+                    "endDate": 1600000000
+                    }
+                    ]
                 })
         if chan_type == "network":
             name = "net"+str(i)
@@ -67,39 +126,13 @@ def make_channel_config(chan_type, number):
                 "_id": i,
                 "active": True,
                 "name": name,
-                #"url": "http://192.168.56.12:8001/34/hdd11.ts", 
+                "logo": 1,                # from storage/contents/info  type 'Logo'
+                "channelId": "",        # from live/network/channels (optional)
                 "url": "rtsp://192.168.56.12:554/iptv/239.1.1.2/3200", 
-                "static": True
-                })
-        if chan_type == "web":
-            name = "web"+str(i)
-            mdb.insert_or_replace_id("live_inputs_web", i,{  
-                "_id": i,
-                "active": True,
-                "name": name,
-                "url": "http://www.cnn.com", 
-                "static": True
-                })
-        if chan_type == "virtual_net":
-            name = "virtual_net"+str(i)
-            mdb.insert_or_replace_id("live_inputs_virtual_net", i,{  
-                "_id": i,
-                "active": True,
-                "name": name, 
-                "url": "http://virtual_net/url", 
-                "record": True,
-                "permission": 1
-                })
-        if chan_type == "virtual_dvb":
-            name = "virtual_dvb"+str(i)
-            mdb.insert_or_replace_id("live_inputs_virtual_dvb", i,{  
-                "_id": i,
-                "active": True,
-                "name": name, 
-                "freq": (602+i)*1000, 
-                "sid": 102+i, 
-                "record": True,
-                "permission": 1
+                "static": True,
+                "virtual": False,
+                "webPage": False,
+                "tv": True
                 })
         if chan_type == "transcode":
             name = "transcode"+str(i)
@@ -107,20 +140,9 @@ def make_channel_config(chan_type, number):
                 "_id": i,
                 "active": True,
                 "name": name, 
-                "input": i, 
-                "inputType": 2,
-                "profile": 100072
-                })
-        if chan_type == "unscramble":
-            name = "unscramble"+str(i)
-            mdb.insert_or_replace_id("live_inputs_unscramble", i,{  
-                "_id": i,
-                "active": True,
-                "name": name, 
-                "input": i, 
-                "inputType": 2,
-                "bssKey": "",
-                "cccam": 1
+                "input": i,        # from live/inputs
+                "inputType": 2,    # from live/inputs/types 
+                "profile": 1,      # from live/transcode_profile
                 })
         if chan_type == "scramble":
             name = "scramble"+str(i)
@@ -128,53 +150,58 @@ def make_channel_config(chan_type, number):
                 "_id": i,
                 "active": True,
                 "name": name, 
-                "input": i, 
-                "inputType": 2,
-                "crypto": "AES",
-                "key": "123" 
+                "input": i,           # from live/inputs
+                "inputType": 2,       # from live/inputs/types 
+                "decrypt": True,     # 'True' for unscrambling and 'False' for scrambling 
+                "profile": 1          # from live/scramble_profile
                 })
-        if chan_type == "mixed":
-            name = "mixed"+str(i)
-            mdb.insert_or_replace_id("live_inputs_mixed", i,{  
+        if chan_type == "mix":
+            name = "mix"+str(i)
+            mdb.insert_or_replace_id("live_inputs_mix", i,{  
                 "_id": i,
                 "active": True,
                 "name": name, 
-                "input1": {
-                    "input": i,           # from live/inputs
-                    "inputType": 2,       # from live/inputs/types 
-                    "useVideo": True,
-                    "useAudio": True,
-                    "audioNumber": 1
-                    },
-                "input2": {
-                    "input": i,           # from live/inputs
-                    "inputType": 2,       # from live/inputs/types 
-                    "useVideo": True,
-                    "useAudio": True,
-                    "audioNumber": 1,
-                    "whiteTransparent": True,
-                    "posX": 50,
-                    "posY": 50,
-                    "width": 600,
-                    "height": 400
-                    }
+                "profile": 1,          # from live/mix_profile
+                "input1": i,           # from live/inputs
+                "inputType1": 2,       # from live/inputs/types 
+                "input2": i,           # from live/inputs
+                "inputType2": 2,       # from live/inputs/types 
                 })
-        silver_id =  channel_type*100+i
-        mdb.insert_or_replace_id("live_output_silver", silver_id, {
-            "_id": silver_id,
-            "active": True,
-            "input": i,
-            "inputType": channel_type,
-            "name": name, 
-            "permission": 1,
-            "category":[channel_type],
-            "freq": 407000, 
-            "sid": silver_id, 
-            "recordTime": 1,
-            "udp": True,
-            "http": True,
-            "rtsp": True,
-            "hls": True
+        ch_id =  channel_type*100+i
+        mdb.insert_or_replace_id("live_output_network", ch_id, {
+               "_id": ch_id,
+               "active": True,
+               "name": chan_type + str(i), 
+               "input": i,    
+               "inputType": channel_type,   # from live/inputs/types 
+               "category": [i % 3],
+               "udp": True,
+               "http": True,
+               "rtsp": True,
+               "hls": True,
+            })
+        ch_id =  channel_type*100+i
+        mdb.insert_or_replace_id("live_output_dvb", ch_id, {
+                "_id": ch_id,
+                "active": True,
+                "input": i,       # from live/inputs
+                "inputType": channel_type,   # from live/inputs/types 
+                "name": chan_type + str(i), 
+                "category": [i % 2],  # from storage/contents/categories
+                "dvbId": 1, 
+                "serviceId": 101, 
+            })
+        ch_id =  channel_type*100+i
+        mdb.insert_or_replace_id("live_output_archive", ch_id, {
+               "_id": ch_id,
+               "active": True,
+               "name": chan_type + str(i), 
+               "input": i,    
+               "inputType": channel_type,   # from live/inputs/types 
+               "category": [i % 2],  # from storage/contents/categories
+               "timeShift": 1,
+               "programName": "",
+               "virtual": False,
             })
 
 
@@ -444,7 +471,7 @@ add_menu()
 add_picture("/home/karim/Pictures/mypic/990220")
 init_db()
 """
-for ch_type in ["dvb", "archive", "network", "web", "virtual_dvb", "virtual_net",
-        "transcode", "scramble", "unscramble", "mixed"]:
+make_input_channels_profile()
+for ch_type in ["dvb", "archive", "network", "transcode", "scramble", "mix"]:
     make_channel_config(ch_type, 2)
 

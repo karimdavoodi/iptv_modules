@@ -12,24 +12,20 @@
 using namespace std;
 void gst_task(string media_path, string multicast_addr, int port);
 
-bool time_to_play(bool schedule, json& media)
+bool time_to_play(Mongo& db, json& media)
 {
-    if(!schedule) return true; // play anytime in non schedule mode
-    int media_weekday = media["weekday"];
-    int media_time = media["time"];
+    int start = media["startDate"];
+    int end = media["endDate"];
     
     auto now = time(nullptr);
-    auto now_tm = localtime(&now);
-    auto now_wday = (now_tm->tm_wday + 1) % 7;
-    auto now_hhmm = now_tm->tm_hour * 100 + now_tm->tm_min;
-    LOG(debug)  << "Check media time to play: "
-        << " now_wday " << now_wday
-        << " now_hhmm " << now_hhmm
-        << " media_weekday " << media_weekday
-        << " media_time " << media_time;
-    if(now_wday != media_weekday) return false;
-    if(abs(now_hhmm - media_time) > 6) return false;
-    return true;
+    if(now > end || now < start){
+        LOG(debug) << "Content " << media["content"] << " not play, due to time period.";
+        return false;
+    } 
+
+    if(Util::check_weektime(db, media["weektime"] )) return true;
+    LOG(debug) << "Content " << media["content"] << " not play, due to weektime.";
+    return false;
 }
 int current_time()
 {
@@ -65,12 +61,12 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
 {
     Mongo db;
     LOG(info) << "Start Channel: " << channel["name"];
+    LOG(info) <<  channel.dump(2);
     auto multicast = Util::get_multicast(live_config, channel["_id"]);
-    bool schedule = channel["manualSchedule"];
     try{
        while(true){ 
            for(auto& media : channel["contents"]){
-                if(time_to_play(schedule, media)){
+                if(time_to_play(db, media)){
                     LOG(debug) << "Play media id: " << media["content"];
                     auto media_path = Util::get_content_path(db, media["content"]);
                     if(media_path.size() == 0){
@@ -101,8 +97,7 @@ void start_channel(json channel, int silver_chan_id, live_setting live_config)
                         << " due to time.";
                 }
             }
-            if(schedule) Util::wait(5*60*1000);
-            else Util::wait(5000);
+            Util::wait(5000);
         }
     }catch(std::exception& e){
         LOG(error) << "Exception:" << e.what();
@@ -121,14 +116,11 @@ int main()
         LOG(error) << "Error in live config! Exit.";
         return -1;
     }
-    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
-    for(auto& chan : silver_channels ){
+    json channels = json::parse(db.find_mony("live_inputs_archive", "{}"));
+    for(auto& chan : channels ){
         IS_CHANNEL_VALID(chan);
-        if(chan["inputType"] == live_config.type_id){
-            json archive = json::parse(db.find_id("live_inputs_archive", chan["input"]));
-            IS_CHANNEL_VALID(archive);
-            pool.emplace_back(start_channel, archive, chan["_id"], live_config);
-            //break; //for test 
+        if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
+            pool.emplace_back(start_channel, chan, chan["_id"], live_config);
         }
     }
     for(auto& t : pool)

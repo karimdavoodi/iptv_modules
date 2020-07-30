@@ -18,16 +18,13 @@ void start_channel(json channel, live_setting live_config)
 {
     Mongo db;
     LOG(info) << "Start Channel: " << channel["name"];
-    if(!channel["active"]){
-        LOG(info) << channel["name"] << " is not Active. Exit!";
+    json profile = json::parse(db.find_id("live_profiles_transcode",channel["profile"])); 
+    if(profile.is_null() || profile["_id"].is_null()){
+        LOG(error) << "Invalid transcode profile!";
+        LOG(debug) << profile.dump(2);
         return;
-    }
-    json profile = json::parse(db.find_id("live_transcode_profile",channel["profile"])); 
-    if(profile["_id"].is_null()){
-        LOG(error) << "transcode profile id is not valid:" 
-                                 << channel["profile"];
-        return;
-    }
+    } 
+
     auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
     live_config.type_id = channel["inputType"];
     auto in_multicast  = Util::get_multicast(live_config, channel["input"]);
@@ -105,14 +102,13 @@ int main()
         LOG(info) << "Error in live config! Exit.";
         return -1;
     }
-    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
-    for(auto& chan : silver_channels ){
+    json channels = json::parse(db.find_mony("live_inputs_transcode", "{}"));
+    for(auto& chan : channels ){
         IS_CHANNEL_VALID(chan);
-        if(chan["inputType"] == live_config.type_id){
-            json transcode = json::parse(db.find_id("live_inputs_transcode", 
-                        chan["input"]));
-            IS_CHANNEL_VALID(transcode);
-            pool.emplace_back(start_channel, transcode, live_config);
+        
+        if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
+            pool.emplace_back(start_channel, chan, live_config);
+            //break;
         }
     }
     for(auto& t : pool)

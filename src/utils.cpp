@@ -158,12 +158,10 @@ namespace Util {
             cfg.type_id = 0;
             json input_types = json::parse(db.find_mony("live_inputs_types", "{}"));
             for(auto& t : input_types){
-                if(t["name"] == type)
+                if(t["name"] == type){
                     cfg.type_id =  t["_id"];
-                if(t["name"] == "virtual_dvb")
-                    cfg.virtual_dvb_id =  t["_id"];
-                if(t["name"] == "virtual_net")
-                    cfg.virtual_net_id =  t["_id"];
+                    break;
+                }
             }
         }catch(std::exception& e){
             LOG(error) << "Exception " << e.what();
@@ -302,5 +300,76 @@ namespace Util {
         else if(p_vsize.find("HD") != string::npos)   return "1280x720";
         else if(p_vsize.find("CD") != string::npos)   return "320x240";
         return "";
+    }
+    bool check_weektime(Mongo& db, int weektime_id)
+    {
+        // TODO: implement
+        json weektime = json::parse(db.find_id("system_weektime", weektime_id));
+        if(weektime["active"].is_null() || weektime["active"] == false){
+            LOG(error) << "Invalid  or inactive weektime " << weektime_id;
+            return false;
+        }
+
+        time_t now = time(nullptr);
+        auto now_tm = localtime(&now);
+        auto now_wday = to_string((now_tm->tm_wday + 1) % 7);
+        auto hours = weektime["hours"][now_wday].get<vector<int>>(); 
+        for(int h : hours ){
+            if(h == now_tm->tm_hour) return true;
+        }
+        return false;
+    }
+    bool chan_in_input(Mongo &db, int chan_id, int chan_type)
+    {
+        try{
+            json filter;
+            filter["active"] = true;
+            filter["_id"] = chan_id;
+            json in_network = json::parse(db.find_mony("live_inputs_network", filter.dump()));
+            for(auto& chan : in_network){
+                if(!chan["virtual"])
+                    return true;
+            }
+            json in_dvb = json::parse(db.find_mony("live_inputs_dvb", filter.dump()));
+            if(in_dvb.size() > 0)
+                return true;
+
+            json in_hdd = json::parse(db.find_mony("live_inputs_archive", filter.dump()));
+            if(in_hdd.size() > 0)
+                return true;
+
+        }catch(std::exception const& e){
+            LOG(error)  <<  e.what();
+        }
+        LOG(info) << "Not found channel id:" << chan_id << " in outputs"; 
+        return false;
+    }
+    bool chan_in_output(Mongo &db, int chan_id, int chan_type)
+    {
+        try{
+            json filter;
+            filter["active"] = true;
+            filter["input"] = chan_id;
+            filter["inputType"] = chan_type;
+
+            json out_network = json::parse(db.find_mony("live_output_network", filter.dump()));
+            for(auto& chan : out_network){
+                if(chan["udp"] || chan["http"] || chan["rtsp"] || chan["hls"])
+                    return true;
+            }
+            json out_dvb = json::parse(db.find_mony("live_output_dvb", filter.dump()));
+            if(out_dvb.size() > 0)
+                return true;
+
+            json out_hdd = json::parse(db.find_mony("live_output_archive", filter.dump()));
+            for(auto& chan : out_hdd){
+                if(chan["timeShift"] > 0  || chan["programName"].size() > 0 )
+                    return true;
+            }
+        }catch(std::exception const& e){
+            LOG(error)  <<  e.what();
+        }
+        LOG(info) << "Not found channel id:" << chan_id << " in outputs"; 
+        return false;
     }
 }

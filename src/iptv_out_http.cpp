@@ -38,16 +38,10 @@ int main()
         LOG(info) << "Error in live config! Exit.";
         return -1;
     }
-    Util::check_path(HLS_ROOT);
-    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
-    for(auto& chan : silver_channels ){
-        IS_CHANNEL_VALID(chan);
-        if(chan["http"] == true){
-            if(chan["inputType"] != live_config.virtual_dvb_id &&
-               chan["inputType"] != live_config.virtual_net_id  ){
-                pool.emplace_back(start_channel, chan, live_config);
-                //break;
-            }
+    json channels = json::parse(db.find_mony("live_output_network", "{\"active\":true}"));
+    for(auto& chan : channels ){
+        if(chan["http"] && Util::chan_in_input(db, chan["input"], chan["inputType"])){
+            pool.emplace_back(start_channel, chan, live_config);
         }
     }
     for(auto& t : pool)

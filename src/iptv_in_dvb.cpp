@@ -1,4 +1,3 @@
-// TODO: implement save stat of players for resume in restart
 #include <chrono>
 #include <cstdlib>
 #include <ctime>

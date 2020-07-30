@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     live_setting live_config;
     CHECK_LICENSE;
     Util::init(db);
-    if(!Util::get_live_config(db, live_config, "web")){
+    if(!Util::get_live_config(db, live_config, "network")){
         LOG(info) << "Error in live config! Exit.";
         return -1;
     }
@@ -42,25 +42,28 @@ int main(int argc, char** argv)
         // it is master program. and start process for any channel
     }
 
-    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
-    for(auto& chan : silver_channels ){
+    json channels = json::parse(db.find_mony("live_inputs_network", "{}"));
+    for(auto& chan : channels ){
         IS_CHANNEL_VALID(chan);
-        if(chan["inputType"] == live_config.type_id){
-            json web_chan = json::parse(db.find_id("live_inputs_web", chan["input"]));
-            IS_CHANNEL_VALID(web_chan);
+        
+        if(chan["virtual"] || !chan["webPage"] ) 
+            continue;
+
+        if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             n++;
             if(num < 0 ){
-                LOG(info) << "Run app for Web channel " << web_chan["name"] << " by id " << n;
+                LOG(info) << "Run app for Web channel " << chan["name"] << " by id " << n;
                 string cmd = "/opt/sms/bin/iptv_in_web " + to_string(n) + " &";
                 std::system(cmd.c_str());
             }else if(n == num){
                 init_display(num);
-                pool.emplace_back(start_channel, web_chan, live_config);
+                pool.emplace_back(start_channel, chan, live_config);
                 break;
             }
             Util::wait(500);
         }
     }
+
     for(auto& t : pool)
         t.join();
     THE_END;

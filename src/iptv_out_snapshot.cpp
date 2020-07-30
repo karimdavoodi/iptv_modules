@@ -57,6 +57,7 @@ void start_snapshot(const json& channel, live_setting live_config)
     report["inputType"] = channel["inputType"];
     report["status"] = succesfull ? 100 : 0;
     db.insert("report_channels", report.dump());
+    Util::wait(1000);
 }
 int main()
 {
@@ -70,13 +71,16 @@ int main()
         return -1;
     }
     Util::check_path(string(MEDIA_ROOT) + "Snapshot");
-    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
+
+    json channels_net = json::parse(db.find_mony("live_output_network", "{\"active\":true}"));
+    json channels_dvb = json::parse(db.find_mony("live_output_dvb", "{\"active\":true}"));
     while(true){
         auto start = time(nullptr);
-        for(auto& chan : silver_channels ){
-            IS_CHANNEL_VALID(chan);
+        for(auto& chan : channels_net ){
             start_snapshot(chan, live_config);
-            Util::wait(1000);
+        }
+        for(auto& chan : channels_dvb ){
+            start_snapshot(chan, live_config);
         }
         auto duration = time(nullptr) - start;
         if(duration < SNAPSHOT_PERIOD){

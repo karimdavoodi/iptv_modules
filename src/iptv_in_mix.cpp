@@ -38,25 +38,18 @@ void start_channel(json channel, live_setting live_config)
     channel["input2"]["height"] = 400;
 #endif
     LOG(trace) << channel.dump(2);
-    json profile = json::parse(db.find_id("live_transcode_profile",
-                channel["outputProfile"])); 
-    channel["out_width"] = DEFAULT_WIDTH;
-    channel["out_height"] = DEFAULT_HEIGHT;
-    if(profile["_id"].is_null()){
-        LOG(error) << "transcode profile id is not valid, use default";
-    }else{
-        auto resolution = Util::profile_resolution_pair(profile["videoSize"]);
-        if(resolution.first > 0){
-            channel["out_width"] = resolution.first; 
-            channel["out_height"] = resolution.second;
-        }
-    }
-    LOG(debug) << "Output resolution:" << channel["out_width"] << 
-                "x" << channel["out_height"] ;
-    live_config.type_id = channel["input1"]["inputType"];
-    auto in_multicast1  = Util::get_multicast(live_config, channel["input1"]["input"]);
-    live_config.type_id = channel["input2"]["inputType"];
-    auto in_multicast2  = Util::get_multicast(live_config, channel["input2"]["input"]);
+    json profile = json::parse(db.find_id("live_profiles_mix", channel["profile"])); 
+    if(profile.is_null() || profile["_id"].is_null()){
+        LOG(error) << "Invalid mix profile!";
+        LOG(debug) << profile.dump(2);
+        return;
+    } 
+    channel["_profile"] = profile;
+
+    live_config.type_id = channel["inputType1"];
+    auto in_multicast1  = Util::get_multicast(live_config, channel["input1"]);
+    live_config.type_id = channel["inputType2"];
+    auto in_multicast2  = Util::get_multicast(live_config, channel["input2"]);
 
     while(true){
         gst_task(channel, in_multicast1, in_multicast2, out_multicast, INPUT_PORT);
@@ -70,18 +63,18 @@ int main(int argc, char** argv)
     live_setting live_config;
     CHECK_LICENSE;
     Util::init(db);
-    if(!Util::get_live_config(db, live_config, "mixed")){
+    if(!Util::get_live_config(db, live_config, "mix")){
         LOG(info) << "Error in live config! Exit.";
         return -1;
     }
 
-    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
-    for(auto& chan : silver_channels ){
+    json channels = json::parse(db.find_mony("live_inputs_mix", "{}"));
+    for(auto& chan : channels ){
         IS_CHANNEL_VALID(chan);
-        if(chan["inputType"] == live_config.type_id){
-            json mixed_chan = json::parse(db.find_id("live_inputs_mixed", chan["input"]));
-            IS_CHANNEL_VALID(mixed_chan);
-            pool.emplace_back(start_channel, mixed_chan, live_config);
+        
+        if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
+            pool.emplace_back(start_channel, chan, live_config);
+            //break;
         }
     }
     for(auto& t : pool)

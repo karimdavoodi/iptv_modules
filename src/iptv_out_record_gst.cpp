@@ -5,17 +5,22 @@
 typedef void (*sighandler_t)(int);
 
 using namespace std;
-/*
-bool stop_threads = false;
-void sig_handler(int signum)
-{
-    LOG(warning) << "Stop threads";
-    stop_threads = true;
-}
-*/
+
+struct Record_data {
+    Gst::Data d;
+    Mongo db;
+    json channel;
+    int maxPerChannel;
+
+    Record_data(){}
+};
+
+void remove_old_timeshift(Mongo& db, int maxPerChannel, const string channel_name);
+void insert_content_info_db(Mongo &db,json& channel, uint64_t id);
+
 void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
 {
-    auto d = (Gst::Data*) data;
+    auto rdata = (Record_data *) data;
     auto caps_filter = gst_caps_new_any();
     auto caps = gst_pad_query_caps(pad, caps_filter);
     auto caps_struct = gst_caps_get_structure(caps, 0);
@@ -27,44 +32,46 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
     GstElement* audioparse = nullptr;
     GstElement* audiodecoder = nullptr;
     if(pad_type.find("video/x-h264") != string::npos){
-        videoparse = Gst::add_element(d->pipeline, "h264parse", "", true);
+        videoparse = Gst::add_element(rdata->d.pipeline, "h264parse", "", true);
         g_object_set(videoparse, "config-interval", 1, nullptr);
     }else if(pad_type.find("video/mpeg") != string::npos){
-        int m_version = 1;
-        gst_structure_get_int(caps_struct, "mpegversion", &m_version);
-        LOG(debug) << "Mpeg version type:" <<  m_version;
-        if(m_version == 4){
-            videoparse = Gst::add_element(d->pipeline, "mpeg4videoparse", "", true);
+        int mpegversion = 1;
+        gst_structure_get_int(caps_struct, "mpegversion", &mpegversion);
+        LOG(debug) << "Mpeg version type:" <<  mpegversion;
+        if(mpegversion == 4){
+            videoparse = Gst::add_element(rdata->d.pipeline, "mpeg4videoparse", "", true);
             g_object_set(videoparse, "config-interval", 1, nullptr);
         }else{
-            videoparse = Gst::add_element(d->pipeline, "mpegvideoparse", "", true);
+            videoparse = Gst::add_element(rdata->d.pipeline, "mpegvideoparse", "", true);
         }
     }else if(pad_type.find("audio/mpeg") != string::npos){
-        int m_version = 1;
-        gst_structure_get_int(caps_struct, "mpegversion", &m_version);
-        LOG(debug) << "Mpeg version type:" <<  m_version;
-        if(m_version == 1){
-            audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", "", true);
-        }else if(m_version > 1){
+        int mpegversion = 1;
+        gst_structure_get_int(caps_struct, "mpegversion", &mpegversion);
+        LOG(debug) << "Mpeg version type:" <<  mpegversion;
+        if(mpegversion == 1){
+            audioparse = Gst::add_element(rdata->d.pipeline, "mpegaudioparse", "", true);
+        }else if(mpegversion == 2 || mpegversion == 4){
             if(caps_str.find("loas") != string::npos){
                 // TODO: decode and encode 
-                audiodecoder = Gst::add_element(d->pipeline, "aacparse", "", true);
-                auto decoder = Gst::add_element(d->pipeline, "avdec_aac_latm", 
+                LOG(warning) << "Add transcoder for latm";
+                audiodecoder = Gst::add_element(rdata->d.pipeline, "aacparse", "", true);
+                auto decoder = Gst::add_element(rdata->d.pipeline, "avdec_aac_latm", 
                         "", true);
-                auto audioconvert = Gst::add_element(d->pipeline, "audioconvert", "", true);
-                auto queue = Gst::add_element(d->pipeline, "queue", "", true);
-                auto lamemp3enc = Gst::add_element(d->pipeline, "lamemp3enc", "", true);
-                audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", 
+                auto audioconvert = Gst::add_element(rdata->d.pipeline, "audioconvert", "", true);
+                auto queue = Gst::add_element(rdata->d.pipeline, "queue", "", true);
+                auto lamemp3enc = Gst::add_element(rdata->d.pipeline, "lamemp3enc", "", true);
+                audioparse = Gst::add_element(rdata->d.pipeline, "mpegaudioparse", 
                         "", true);
                 gst_element_link_many(audiodecoder, decoder, audioconvert, queue, 
                                 lamemp3enc, audioparse, nullptr);
+                g_object_set(audiodecoder, "disable-passthrough", true, nullptr);
             }else{
-                audioparse = Gst::add_element(d->pipeline, "aacparse", "", true);
+                audioparse = Gst::add_element(rdata->d.pipeline, "aacparse", "", true);
             }
         }
     }else if(pad_type.find("audio/x-ac3") != string::npos ||
              pad_type.find("audio/ac3") != string::npos){
-            audioparse = Gst::add_element(d->pipeline, "ac3parse", "", true);
+            audioparse = Gst::add_element(rdata->d.pipeline, "ac3parse", "", true);
     }else{
         LOG(warning) << "Not support:" << pad_type;
     }
@@ -75,11 +82,11 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
     auto parse_name = Gst::element_name(parse);
     if(parse != nullptr){
         g_object_set(parse, "disable-passthrough", true, nullptr);
-        auto queue = Gst::add_element(d->pipeline, "queue", "", true);
+        auto queue = Gst::add_element(rdata->d.pipeline, "queue", "", true);
         Gst::zero_queue_buffer(queue);
         if(!Gst::pad_link_element_static(pad, queue, "sink")){
             LOG(error) << "Can't link typefind to queue";
-            g_main_loop_quit(d->loop); return; 
+            g_main_loop_quit(rdata->d.loop); return; 
         }
 
         if(audiodecoder){
@@ -87,55 +94,62 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
         }else{
             gst_element_link(queue, parse);
         }
-        auto qtmux = gst_bin_get_by_name(GST_BIN(d->pipeline), "qtmux");
-        string sink_name = (videoparse != nullptr) ? "video_%u" : "audio_%u";
-        Gst::element_link_request(parse, "src", qtmux, sink_name.c_str());
-        gst_object_unref(qtmux);
+        auto mux = gst_bin_get_by_name(GST_BIN(rdata->d.pipeline), "mux");
+        string sink_name = (videoparse != nullptr) ? "video" : "audio_%u";
+        Gst::element_link_request(parse, "src", mux, sink_name.c_str());
+        gst_object_unref(mux);
     }
 }
+gchararray splitmuxsink_location_cb(GstElement*  splitmux,
+        guint fragment_id, gpointer data)
+{
+    Record_data* rdata = (Record_data *) data;
+    uint64_t id = std::chrono::system_clock::now().time_since_epoch().count();
+    insert_content_info_db(rdata->db, rdata->channel, id);
+    remove_old_timeshift(rdata->db, rdata->maxPerChannel, rdata->channel["name"]);
 
-bool gst_task(string in_multicast, int port, string file_path, int second)
+    string file_path = MEDIA_ROOT "TimeShift/" + to_string(id) + ".mp4"; 
+    LOG(trace) << "For " << rdata->channel["name"]
+               << " New file: " <<  file_path;
+    return  g_strdup(file_path.c_str());
+}
+bool gst_task(json channel, string in_multicast, int port, int maxPerChannel)
 {
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);
-    LOG(info) << "Start " << in_multicast << " -> " << file_path 
-        << " for " << second << " seconds";  
-    Gst::Data d;
-    d.loop      = g_main_loop_new(nullptr, false);
-    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
-    //signal(15, sig_handler);
+    LOG(info) << "Start recode " << in_multicast 
+        << " for " << maxPerChannel << " hour(s)"; 
+
+    Record_data rdata;
+    rdata.channel = channel;
+    rdata.maxPerChannel = maxPerChannel;
+
+    rdata.d.loop      = g_main_loop_new(nullptr, false);
+    rdata.d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
     try{
-        auto udpsrc = Gst::add_element(d.pipeline, "udpsrc"),
-             queue_src  = Gst::add_element(d.pipeline, "queue", "queue_src"),
-             tsdemux    = Gst::add_element(d.pipeline, "tsdemux"),
-             // add parser as dynamic
-             //multiqueue = Gst::add_element(d.pipeline, "multiqueue", "multiqueue"),
-             qtmux      = Gst::add_element(d.pipeline, "qtmux", "qtmux"),
-             queue_sink = Gst::add_element(d.pipeline, "queue","queue_sink"),
-             filesink   = Gst::add_element(d.pipeline, "filesink");
+        auto udpsrc       = Gst::add_element(rdata.d.pipeline, "udpsrc"),
+             queue_src    = Gst::add_element(rdata.d.pipeline, "queue", "queue_src"),
+             tsdemux      = Gst::add_element(rdata.d.pipeline, "tsdemux"),
+             splitmuxsink = Gst::add_element(rdata.d.pipeline, "splitmuxsink", "mux");
 
         gst_element_link_many(udpsrc, queue_src, tsdemux, nullptr);
-        gst_element_link_many(qtmux, queue_sink, filesink, nullptr);
 
-        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added), &d);
+        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added), &rdata);
+        g_signal_connect(splitmuxsink, "format-location", 
+                G_CALLBACK(splitmuxsink_location_cb), &rdata);
+
         g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
-        g_object_set(filesink, "location", file_path.c_str(), nullptr);
+        g_object_set(splitmuxsink, 
+                "max-size-time", RECORD_DURATION * GST_SECOND,   
+                "muxer-factory", "qtmux",
+                nullptr);
 
-        Gst::add_bus_watch(d);
-        bool stop_threads = false;
-        std::thread t([&](){
-                while(!stop_threads  && second-- ) Util::wait(1000);
-                if(d.bus)
-                    gst_bus_post(d.bus, gst_message_new_eos(GST_OBJECT(udpsrc)));
-                //Util::wait(100);
-                //if(d.loop) g_main_loop_quit(d.loop);
-                stop_threads = true;
-                });
+        Gst::add_bus_watch(rdata.d);
 
-        //Gst::dot_file(d.pipeline, "iptv_network", 5);
-        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
-        g_main_loop_run(d.loop);
-        t.join();
-        return stop_threads;
+        //Gst::dot_file(rdata.d.pipeline, "iptv_network", 5);
+        gst_element_set_state(GST_ELEMENT(rdata.d.pipeline), GST_STATE_PLAYING);
+        g_main_loop_run(rdata.d.loop);
+        return true;
+
     }catch(std::exception& e){
         LOG(error) << "Exception:" << e.what();
         return false;

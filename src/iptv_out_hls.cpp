@@ -41,18 +41,14 @@ int main()
         return -1;
     }
     Util::check_path(HLS_ROOT);
-    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
-    for(auto& chan : silver_channels ){
-        IS_CHANNEL_VALID(chan);
-        if(chan["hls"] == true){
-            if(chan["inputType"] != live_config.virtual_dvb_id &&
-               //chan["inputType"] == live_config.type_id && 
-               chan["inputType"] != live_config.virtual_net_id  ){
-                pool.emplace_back(start_channel, chan, live_config);
-            }
+    json channels = json::parse(db.find_mony("live_output_network", "{\"active\":true}"));
+    for(auto& chan : channels ){
+        if(chan["hls"] && Util::chan_in_input(db, chan["input"], chan["inputType"])){
+            pool.emplace_back(start_channel, chan, live_config);
         }
     }
     for(auto& t : pool)
         t.join();
+
     THE_END;
 } 

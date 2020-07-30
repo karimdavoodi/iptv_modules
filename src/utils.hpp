@@ -58,4 +58,7 @@ namespace Util {
     const std::string get_file_content(const std::string name);
     const std::pair<int,int> profile_resolution_pair(const std::string p_vsize);
     const std::string profile_resolution(const std::string p_vsize);
+    bool check_weektime(Mongo& db, int weektime_id);
+    bool chan_in_output(Mongo &db, int chan_id, int chan_type);
+    bool chan_in_input(Mongo &db, int chan_id, int chan_type);
 }

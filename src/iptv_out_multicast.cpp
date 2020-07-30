@@ -29,12 +29,10 @@ int main()
         return -1;
     }
     Util::route_add(live_config.multicast_class, live_config.multicast_iface);
-    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
-    for(auto& chan : silver_channels ){
+    json channels = json::parse(db.find_mony("live_output_network", "{\"active\":true}"));
+    for(auto& chan : channels ){
         IS_CHANNEL_VALID(chan);
-        if(chan["udp"] == true){
-            if(chan["inputType"] != live_config.virtual_dvb_id &&
-                    chan["inputType"] != live_config.virtual_net_id  )
+        if(chan["udp"] && Util::chan_in_input(db, chan["input"], chan["inputType"])){
             pool.emplace_back(start_channel, chan, live_config);
         }
     }

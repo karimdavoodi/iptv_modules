@@ -22,7 +22,7 @@ int main()
     Mongo db;
     vector<thread> pool;
     live_setting live_config;
-    map<int, vector<json> > chan_by_freq;
+    map<int, vector<json> > chan_by_dvbId;
     vector<string> tomts_cmd;
     vector<string> torf_cmd;
     CHECK_LICENSE;
@@ -31,39 +31,23 @@ int main()
         LOG(info) << "Error in live config! Exit.";
         return -1;
     }
-    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
-    for(auto& chan : silver_channels ){
+    json channels = json::parse(db.find_mony("live_output_dvb", "{\"active\":true}"));
+    for(auto& chan : channels ){
         IS_CHANNEL_VALID(chan);
-        if(chan["freq"].is_null()){
-            LOG(info) << chan.dump();
-            continue;
-        }
-        int freq = chan["freq"].get<int>() / 1000;
-        if(freq > 0){
-            if(chan["inputType"] != live_config.virtual_dvb_id &&
-                    chan["inputType"] != live_config.virtual_net_id  )
-                chan_by_freq[freq].push_back(chan); 
-                //pool.emplace_back(start_channel, chan, live_config);
-        }
+        int dvbId = chan["dvbId"];
+        chan_by_dvbId[dvbId].push_back(chan); 
     }
     int tid = 1, i = 1;
-    json live_tuners_output = json::parse(db.find_id("live_tuners_output", 1));
-    if(live_tuners_output["_id"].is_null()){
-        LOG(error) << "Invalid live_tuners_output!";
-        return 0;
-    }
-    int pcr = live_tuners_output["dvbtPcr"];
-    float bandwidth = live_tuners_output["dvbtBandwidth"];
-    vector<int> dvbt_freq = live_tuners_output["dvbt"].get<vector<int>>();
-    for(const auto& rf : chan_by_freq){
-        auto pos = std::find(dvbt_freq.begin(), dvbt_freq.end(), rf.first);
-        if(pos == dvbt_freq.end()){
-            LOG(error) << "Output Tuner frequency not set " << rf.first;
-            continue;
-        }
-        int tuner_id = pos - dvbt_freq.begin();
-        if(!boost::filesystem::exists("/dev/usb-it950x"+to_string(tuner_id))){
-            LOG(error) << "Output Tuner not found: " << tuner_id;
+    for(const auto& rf : chan_by_dvbId){
+        json tuner = json::parse(db.find_id("live_tuners_info", rf.first));
+        if(tuner["_id"].is_null()) continue;
+        json frequency = json::parse(db.find_id("live_satellites_frequencies", 
+                    tuner["frequencyId"]));
+        if(frequency["_id"].is_null()) continue;
+        int systemId = tuner["systemId"];
+        // TODO: work only with it950
+        if(!boost::filesystem::exists("/dev/usb-it950x"+to_string(systemId))){
+            LOG(error) << "Output Tuner not found: " << systemId;
             continue;
         }
         ofstream cfg("/opt/sms/tmp/mts_chan"+to_string(tid)+".conf");
@@ -88,6 +72,10 @@ int main()
             cfg.close();
             i++;
         }
+        int freq = frequency["frequency"];
+        float bandwidth = 31.7; // TODO : calc from frequency["parameters"]
+        int pcr = 0;
+
         int port = 1200 + tid;
         std::ostringstream tomts; 
         tomts << "/opt/sms/bin/tomts -q -c " << tid 
@@ -95,7 +83,7 @@ int main()
             << " -m " << pcr << " -P " << port << " &";
         std::ostringstream torf;
         torf << "/opt/sms/bin/torft "
-            << tuner_id << " " <<  rf.first << " " << port << " &";
+            << systemId << " " << freq << " " << port << " &";
         LOG(info) << tomts.str();
         LOG(info) << torf.str();
         Util::system(tomts.str());

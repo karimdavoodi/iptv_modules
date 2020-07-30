@@ -1,5 +1,5 @@
 #!/bin/bash
-D="-v --gst-debug-level=4"
+D="-v --gst-debug-level=6"
 
 TMM=/home/karim/Music/Video_Music/kitaro.mp4
 TMP4=/home/karim/Music/test_h264_aac.mp4
@@ -7,7 +7,19 @@ TTS=/home/karim/Music/test_h264_aac.ts
 TMP1=/home/karim/Music/test_mpeg1_mp2.mpeg
 TMP2=/home/karim/Music/test_mpeg2_mp2.mpeg
 TMKV=/home/karim/Music/test_h264_mp2.mkv
+
 ######## iptv_in_archive  ##########################################
+gst-launch-1.0 $D  \
+  udpsrc uri="udp://229.2.68.223:3200" ! queue ! \
+  tsdemux ! "video/x-h264" !  \
+  mpegtsmux name=mux ! \
+  queue ! udpsink host=229.1.1.1 port=3200 \
+  videotestsrc pattern=green ! \
+ "video/x-raw, width=1280, height=720, framerate=25/1" ! \
+  timeoverlay ! alpha method=green ! queue ! \
+  videoconvert ! dvbsubenc ! mux.
+exit 0
+
 gst-launch-1.0 \
   videotestsrc ! \
   video/x-raw,width=800,height=800 ! comp. \

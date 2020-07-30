@@ -29,14 +29,15 @@ int main()
         LOG(info) << "Error in live config! Exit.";
         return -1;
     }
-    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
-    for(auto& chan : silver_channels ){
-        IS_CHANNEL_VALID(chan);
-        // Active EPG only for DVB channels
-        if(chan["inputType"] == live_config.type_id){
-            pool.emplace_back(start_channel, chan, live_config);
-            //break;
-        }
+    json filter;
+    filter["active"] = true;
+    filter["inputType"] = live_config.type_id;
+
+    // TODO: EPG only on network channels 
+    json channels = json::parse(db.find_mony("live_output_network", filter.dump()));
+    for(auto& chan : channels ){
+        pool.emplace_back(start_channel, chan, live_config);
+        //break;
     }
     for(auto& t : pool)
         t.join();

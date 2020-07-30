@@ -21,6 +21,7 @@ void start_channel(json channel, live_setting live_config)
     string biss_key = channel["bissKey"].is_null() ? "" : 
         channel["bissKey"].get<string>();
 
+
     if(biss_key.size())
         gst_task(in_multicast, INPUT_PORT, out_multicast, biss_key);
     else
