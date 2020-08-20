@@ -30,19 +30,17 @@ const string SysUsage::getUsageJson(int systemId)
         float idled = current.cpuIdle - priviuse.cpuIdle;
         delta.cpuUsage = (totald - idled) / totald;
         // Disk Usage
-        for(const auto& curr : current.partitions){
+        for(const auto& [name, transfering] : current.partitions){
             transfer d;
-            string name = curr.first;
-            d.read =curr.second.read - priviuse.partitions[name].read;
-            d.write =curr.second.write - priviuse.partitions[name].write;
+            d.read = transfering.read - priviuse.partitions[name].read;
+            d.write = transfering.write - priviuse.partitions[name].write;
             delta.partitions[name] = d;
         }
         // Network Usage
-        for(const auto& curr : current.interfaces){
+        for(const auto& [name, transfering] : current.interfaces){
             transfer d;
-            string name = curr.first;
-            d.read =curr.second.read - priviuse.interfaces[name].read;
-            d.write =curr.second.write - priviuse.interfaces[name].write;
+            d.read = transfering.read - priviuse.interfaces[name].read;
+            d.write = transfering.write - priviuse.interfaces[name].write;
             delta.interfaces[name] = d;
         }
         // Total Disk Usage
@@ -141,8 +139,6 @@ void SysUsage::calcCurrentCpu()
     float irq = stof(*(++it));
     float softirq = stof(*(++it));
     float steal = stof(*(++it));
-    float guest = stof(*(++it));
-    float guest_nice = stof(*it);
     idle = idle + iowait;
     float nonIdle = user + nice + system + irq + softirq + steal;
     current.cpuIdle = idle;

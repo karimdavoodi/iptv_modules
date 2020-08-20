@@ -1,4 +1,4 @@
-#pragma onc;
+#pragma once
 #include <iostream>
 #include <boost/log/trivial.hpp>
 #include "../third_party/json.hpp"

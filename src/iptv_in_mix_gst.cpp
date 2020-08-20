@@ -5,7 +5,6 @@
 #include <iostream>
 #include "../third_party/json.hpp"
 #define WAIT_MILISECOND(x) std::this_thread::sleep_for(std::chrono::milliseconds(x))
-#define USE_INPUT1_DIMENSION 0
 
 using namespace std;
 using nlohmann::json;
@@ -26,100 +25,14 @@ struct Mix_data {
             video1{false},video2{false},mqueue_src_pads{},
             tsdemux_src_pads_num{0},tsdemux_no_more_pad{0}{}
 };
-GstElement* insert_parser(GstPad* pad, Mix_data* tdata)
-{
-    auto caps = gst_pad_query_caps(pad, nullptr);
-    auto caps_struct = gst_caps_get_structure(caps, 0);
-    auto pad_type = string(gst_structure_get_name(caps_struct));
-
-    GstElement* element = nullptr;
-    if(pad_type.find("video/x-h264") != string::npos){
-        element = Gst::add_element(tdata->d.pipeline, "h264parse", "", true);
-        g_object_set(element, "config-interval", 1, nullptr);
-    }else if(pad_type.find("video/mpeg") != string::npos){
-        int m_version = 1;
-        gst_structure_get_int(caps_struct, "mpegversion", &m_version);
-        LOG(debug) << "Mpeg version type:" <<  m_version;
-        if(m_version == 4){
-            element = Gst::add_element(tdata->d.pipeline, "mpeg4videoparse", "", true);
-            g_object_set(element, "config-interval", 1, nullptr);
-        }else{
-            element = Gst::add_element(tdata->d.pipeline, "mpegvideoparse", "", true);
-        }
-    }else if(pad_type.find("audio/mpeg") != string::npos){
-        int m_version = 1;
-        gst_structure_get_int(caps_struct, "mpegversion", &m_version);
-        LOG(debug) << "Mpeg version type:" <<  m_version;
-        if(m_version == 1){
-            element = Gst::add_element(tdata->d.pipeline, "mpegaudioparse", "", true);
-        }else{
-            element = Gst::add_element(tdata->d.pipeline, "aacparse", "", true);
-        }
-    }else if(pad_type.find("audio/x-ac3") != string::npos ||
-            pad_type.find("audio/ac3") != string::npos){
-        element = Gst::add_element(tdata->d.pipeline, "ac3parse", "", true);
-    }else{
-        LOG(error) << "Type not support:" << pad_type;
-    }
-    if(element){
-        g_object_set(element, "disable-passthrough", true, nullptr);
-    }
-    return element;
-}
 void connect_to_tsmux_mqueue(Mix_data* d, GstPad* pad)
 {
     auto mqueue = gst_bin_get_by_name(GST_BIN(d->d.pipeline), "tsmux_mqueue");
-    auto parser = insert_parser(pad, d);
+    auto parser = Gst::insert_parser(d->d.pipeline, pad);
     Gst::pad_link_element_static(pad, parser, "sink");
     Gst::element_link_request(parser, "src", mqueue, "sink_%u");
     gst_object_unref(mqueue);
 }
-#if USE_INPUT1_DIMENSION
-GstPadProbeReturn parser_caps_probe(
-        GstPad * pad, 
-        GstPadProbeInfo * info, 
-        gpointer data)
-{
-    auto d = (Mix_data *) data;
-    GstEvent *event = GST_PAD_PROBE_INFO_EVENT (info);
-
-    if(GST_EVENT_TYPE (event) != GST_EVENT_CAPS) return GST_PAD_PROBE_OK;
-
-    GstCaps* recvcaps = nullptr;
-    gst_event_parse_caps (event, &recvcaps);
-    if(recvcaps == nullptr) return GST_PAD_PROBE_OK;
-    auto caps_struct = gst_caps_get_structure(recvcaps, 0);
-    LOG(debug) << "Got caps event:" << Gst::caps_string(recvcaps);
-    string name = gst_structure_get_name(caps_struct);
-
-    if(name.find("video") != string::npos){
-        int width = 0, height = 0;
-        gst_structure_get_int(caps_struct, "width", &width);
-        gst_structure_get_int(caps_struct, "height", &height);
-        if(width && height){
-            LOG(warning) << "Got dimension of Video1: " << width << "x" << height;
-            d->video1_width = width;
-            d->video1_height = height;
-                // change last video dimension
-            if(d->video1_width && d->video1_height){
-                LOG(debug) << "Set Video Dimension: " << d->video1_width 
-                    << "x" << d->video1_height;
-                auto capsfilter = gst_bin_get_by_name(GST_BIN(d->d.pipeline), 
-                        "video_caps");
-                string caps_str = "video/x-raw, width=(int)" +
-                    to_string(d->video1_width) + " , height=(int)" + 
-                    to_string(d->video1_height);
-                auto resize_caps = gst_caps_from_string(caps_str.c_str());
-                g_object_set(capsfilter, "caps", resize_caps, nullptr);
-                gst_caps_unref(resize_caps);
-                gst_object_unref(capsfilter);
-            }
-            return GST_PAD_PROBE_REMOVE;
-        } 
-    }
-    return GST_PAD_PROBE_OK;
-}
-#endif
 GstElement* connect_to_parser_decoder_queue(Mix_data* d, GstPad* pad, string pad_type,
         bool detect_dimension = false)
 {
@@ -127,16 +40,8 @@ GstElement* connect_to_parser_decoder_queue(Mix_data* d, GstPad* pad, string pad
     auto caps = gst_pad_query_caps(pad, nullptr);
     auto caps_struct = gst_caps_get_structure(caps, 0);
 
-    auto parser = insert_parser(pad, d);
+    auto parser = Gst::insert_parser(d->d.pipeline, pad);
     Gst::pad_link_element_static(pad, parser, "sink");
-#if USE_INPUT1_DIMENSION
-    if(detect_dimension){
-        auto parse_src = gst_element_get_static_pad(parser, "src");
-        gst_pad_add_probe(parse_src, GST_PAD_PROBE_TYPE_EVENT_BOTH,
-                GstPadProbeCallback(parser_caps_probe), d, nullptr);
-
-    }
-#endif
 
     if(pad_type.find("video/x-h264") != string::npos){
         decoder_name = "avdec_h264";
@@ -293,7 +198,7 @@ void add_all_pads_to_mpegtsmux(Mix_data* tdata)
         src_pads--;
 
     if(tdata->tsdemux_no_more_pad == 2 &&
-            tdata->mqueue_src_pads.size() == src_pads){
+            tdata->mqueue_src_pads.size() == (size_t) src_pads){
         auto mpegtsmux = gst_bin_get_by_name(GST_BIN(tdata->d.pipeline), "mpegtsmux");
         LOG(debug) << "Try to link all pads to mpegtsmux";
         for(auto p : tdata->mqueue_src_pads){

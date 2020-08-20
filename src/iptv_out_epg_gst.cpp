@@ -69,7 +69,7 @@ void dump_tot (GstMpegtsSection * section)
 void dump_descriptors (GstMpegtsEITEvent *event)
 {
     GPtrArray *descriptors = event->descriptors;
-    for (int i = 0; i < descriptors->len; i++) {
+    for (int i = 0; i < (int)descriptors->len; i++) {
         GstMpegtsDescriptor *desc = (GstMpegtsDescriptor *)
                                     g_ptr_array_index (descriptors, i);
         if(desc->tag == GST_MTS_DESC_DVB_SHORT_EVENT) {
@@ -123,18 +123,18 @@ void dump_eit(GstMpegtsSection *sec)
 void channel_epg_update(Mongo& db, map<int, Event>& day_eit, int channel_id)
 {
     json eit = json::array();
-    for(auto &event : day_eit){
+    for(auto & [start, event] : day_eit){
         json j;
-        j["start"] = event.second.start;
-        j["name"] = event.second.name;
-        j["duration"] = event.second.duration;
-        j["text"] = event.second.text;
+        j["start"] = event.start;
+        j["name"] = event.name;
+        j["duration"] = event.duration;
+        j["text"] = event.text;
         eit.push_back(j);
         LOG(debug) 
-            <<  "Start:" << event.second.start
-            <<  " Name:" << event.second.name
-            <<  " Text:" << event.second.text
-            <<  " Duration:" << event.second.duration;
+            <<  "Start:" << event.start
+            <<  " Name:" << event.name
+            <<  " Text:" << event.text
+            <<  " Duration:" << event.duration;
     }
     
     day_eit.clear();
@@ -142,7 +142,7 @@ void channel_epg_update(Mongo& db, map<int, Event>& day_eit, int channel_id)
     epg["_id"] = channel_id;
     epg["total"] = eit.size();
     epg["content"] = eit;
-    db.insert_or_replace_id("live_output_silver_epg", channel_id, epg.dump());
+    db.insert_or_replace_id("live_output_epg", channel_id, epg.dump());
     LOG(info) << "Update EPG of channel_id:" << channel_id;
 }
 int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data)

@@ -1,4 +1,4 @@
-#pragma onc;
+#pragma once
 #include "config.hpp"
 #include <iostream>
 #include <gst/gst.h>
@@ -49,6 +49,13 @@ namespace Gst {
     bool pad_link_element_request(GstPad* pad, GstElement* element, const std::string pad_name);
     bool add_bus_watch(Data& d);
     bool element_link_request(GstElement* src, const char* src_name, 
-            GstElement* sink, const char* sink_name);
+              GstElement* sink, const char* sink_name);
+    GstElement* insert_parser(GstPipeline* pipeline, GstPad* pad);
+    bool demux_pad_link_to_muxer(
+            GstPipeline* pipeline,
+            GstPad* pad,
+            const std::string_view muxer_element_name,
+            const std::string_view muxer_audio_pad_name,
+            const std::string_view muxer_video_pad_name);
 
 }

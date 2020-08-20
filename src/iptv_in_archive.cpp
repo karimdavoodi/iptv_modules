@@ -37,7 +37,7 @@ int current_time()
     start += tm->tm_sec;
     return start;
 }
-void update_epg(Mongo& db, int silver_chan_id, int content_id)
+void update_epg(Mongo& db, int64_t silver_chan_id, int64_t content_id)
 {
     json content_info = json::parse(db.find_id("storage_contents_info",content_id)); 
     json j;
@@ -57,7 +57,7 @@ void update_epg(Mongo& db, int silver_chan_id, int content_id)
     db.insert_or_replace_id("live_output_silver_epg", silver_chan_id, epg.dump());
     LOG(info) << "Update EPG of channel_id:" << silver_chan_id;
 }
-void start_channel(json channel, int silver_chan_id, live_setting live_config)
+void start_channel(json channel, int64_t silver_chan_id, live_setting live_config)
 {
     Mongo db;
     LOG(info) << "Start Channel: " << channel["name"];
@@ -121,6 +121,7 @@ int main()
         IS_CHANNEL_VALID(chan);
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             pool.emplace_back(start_channel, chan, chan["_id"], live_config);
+            break;
         }
     }
     for(auto& t : pool)

@@ -38,8 +38,8 @@ int main()
         chan_by_dvbId[dvbId].push_back(chan); 
     }
     int tid = 1, i = 1;
-    for(const auto& rf : chan_by_dvbId){
-        json tuner = json::parse(db.find_id("live_tuners_info", rf.first));
+    for(const auto& [dvbId, chans] : chan_by_dvbId){
+        json tuner = json::parse(db.find_id("live_tuners_info", dvbId));
         if(tuner["_id"].is_null()) continue;
         json frequency = json::parse(db.find_id("live_satellites_frequencies", 
                     tuner["frequencyId"]));
@@ -59,7 +59,7 @@ int main()
             "provider_name = MoojAfzar\n"
             "transport_stream_id = "  << tid << "\n\n";
         i = 1;
-        for(const auto& chan: rf.second){
+        for(const auto& chan: chans){
             live_config.type_id = chan["inputType"];
             auto in_multicast = Util::get_multicast(live_config, chan["input"]);
             cfg << "\n[Channel" << i << "]\n"
@@ -72,6 +72,7 @@ int main()
             cfg.close();
             i++;
         }
+        
         int freq = frequency["frequency"];
         float bandwidth = 31.7; // TODO : calc from frequency["parameters"]
         int pcr = 0;

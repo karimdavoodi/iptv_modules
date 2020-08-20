@@ -21,6 +21,8 @@ void insert_content_info_db(Mongo &db,json& channel, uint64_t id);
 void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
 {
     auto rdata = (Record_data *) data;
+    Gst::demux_pad_link_to_muxer(rdata->d.pipeline, pad, "mux", "video", "audio_%u");
+        /*
     auto caps_filter = gst_caps_new_any();
     auto caps = gst_pad_query_caps(pad, caps_filter);
     auto caps_struct = gst_caps_get_structure(caps, 0);
@@ -99,6 +101,7 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
         Gst::element_link_request(parse, "src", mux, sink_name.c_str());
         gst_object_unref(mux);
     }
+    */
 }
 gchararray splitmuxsink_location_cb(GstElement*  splitmux,
         guint fragment_id, gpointer data)

@@ -41,9 +41,10 @@ int main()
         return -1;
     }
     Util::check_path(HLS_ROOT);
-    json channels = json::parse(db.find_mony("live_output_network", "{\"active\":true}"));
+    json channels = json::parse(db.find_mony("live_output_network", 
+                "{\"active\":true, \"hls\":true}"));
     for(auto& chan : channels ){
-        if(chan["hls"] && Util::chan_in_input(db, chan["input"], chan["inputType"])){
+        if(Util::chan_in_input(db, chan["input"], chan["inputType"])){
             pool.emplace_back(start_channel, chan, live_config);
         }
     }

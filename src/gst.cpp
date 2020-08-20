@@ -264,5 +264,139 @@ namespace Gst {
         d.watch_id = gst_bus_add_watch(d.bus, on_bus_message, &d);
         return d.watch_id != 0;
     }
+    bool demux_pad_link_to_muxer(
+            GstPipeline* pipeline,
+            GstPad* pad,
+            const std::string_view muxer_element_name,
+            const std::string_view muxer_audio_pad_name,
+            const std::string_view muxer_video_pad_name
+            ){
+        auto caps = gst_pad_query_caps(pad, gst_caps_new_any());
+        auto caps_struct = gst_caps_get_structure(caps, 0);
+        auto pad_type = string(gst_structure_get_name(caps_struct));
+        auto caps_str = Gst::caps_string(caps);
+        
+        LOG(debug) << Gst::pad_name(pad) << " Caps:" << caps_str;
+        
+        GstElement* videoparse   = nullptr;
+        GstElement* audioparse   = nullptr;
+        GstElement* audiodecoder = nullptr;
 
+        if(pad_type.find("video/x-h264") != string::npos){
+            videoparse = Gst::add_element(pipeline, "h264parse", "", true);
+            g_object_set(videoparse, "config-interval", 1, nullptr);
+        }else if(pad_type.find("video/mpeg") != string::npos){
+            int mpegversion = 1;
+            gst_structure_get_int(caps_struct, "mpegversion", &mpegversion);
+            LOG(debug) << "Mpeg version type:" <<  mpegversion;
+            if(mpegversion == 4){
+                videoparse = Gst::add_element(pipeline, "mpeg4videoparse", "", true);
+                g_object_set(videoparse, "config-interval", 1, nullptr);
+            }else{
+                videoparse = Gst::add_element(pipeline, "mpegvideoparse", "", true);
+            }
+        }else if(pad_type.find("audio/mpeg") != string::npos){
+            int mpegversion = 1;
+            gst_structure_get_int(caps_struct, "mpegversion", &mpegversion);
+            LOG(debug) << "Mpeg version type:" <<  mpegversion;
+            if(mpegversion == 1){
+                audioparse = Gst::add_element(pipeline, "mpegaudioparse", "", true);
+            }else if(mpegversion == 2 || mpegversion == 4){
+                if(caps_str.find("loas") != string::npos){
+                    LOG(warning) << "Add transcoder for latm";
+                    audiodecoder = Gst::add_element(pipeline, "aacparse", "", true);
+                    auto decoder = Gst::add_element(pipeline, "avdec_aac_latm", 
+                            "", true);
+                    auto audioconvert = Gst::add_element(pipeline, "audioconvert", "", true);
+                    auto queue = Gst::add_element(pipeline, "queue", "", true);
+                    auto lamemp3enc = Gst::add_element(pipeline, "lamemp3enc", "", true);
+                    audioparse = Gst::add_element(pipeline, "mpegaudioparse", 
+                            "", true);
+                    gst_element_link_many(audiodecoder, decoder, audioconvert, queue, 
+                            lamemp3enc, audioparse, nullptr);
+                    g_object_set(audiodecoder, "disable-passthrough", true, nullptr);
+                }else{
+                    audioparse = Gst::add_element(pipeline, "aacparse", "", true);
+                }
+            }
+        }else if(pad_type.find("audio/x-ac3") != string::npos ||
+                pad_type.find("audio/ac3") != string::npos){
+            audioparse = Gst::add_element(pipeline, "ac3parse", "", true);
+        }else{
+            LOG(warning) << "Not support:" << pad_type;
+            gst_caps_unref(caps);
+            return false;
+        }
+        gst_caps_unref(caps);
+        // link demux ---> queue --- > parse --> muxer
+        auto parse = (videoparse != nullptr) ? videoparse : audioparse;
+        auto parse_name = element_name(parse);
+        if(parse != nullptr){
+            g_object_set(parse, "disable-passthrough", true, nullptr);
+            auto queue = Gst::add_element(pipeline, "queue", "", true);
+            Gst::zero_queue_buffer(queue);
+            if(!Gst::pad_link_element_static(pad, queue, "sink")){
+                LOG(error) << "Can't link typefind to queue";
+            }
+            if(audiodecoder){
+                gst_element_link(queue, audiodecoder);
+            }else{
+                gst_element_link(queue, parse);
+            }
+            auto mux = gst_bin_get_by_name(GST_BIN(pipeline), muxer_element_name.data());
+            if(!mux){
+                LOG(error) << "Can't find element in pipeline:" << muxer_element_name;
+                return false;
+            }
+            auto sink_name = (videoparse != nullptr) ? 
+                muxer_video_pad_name : 
+                muxer_audio_pad_name;
+            Gst::element_link_request(parse, "src", mux, sink_name.data());
+            gst_object_unref(mux);
+            return true;
+        }
+        return false;
+    }
+    GstElement* insert_parser(GstPipeline* pipeline, GstPad* pad)
+    {
+        auto caps = gst_pad_query_caps(pad, nullptr);
+        auto caps_struct = gst_caps_get_structure(caps, 0);
+        auto pad_type = string(gst_structure_get_name(caps_struct));
+
+        GstElement* element = nullptr;
+        if(pad_type.find("video/x-h264") != string::npos){
+            element = Gst::add_element(pipeline, "h264parse", "", true);
+            g_object_set(element, "config-interval", 1, nullptr);
+        }else if(pad_type.find("video/mpeg") != string::npos){
+            int m_version = 1;
+            gst_structure_get_int(caps_struct, "mpegversion", &m_version);
+            LOG(debug) << "Mpeg version type:" <<  m_version;
+            if(m_version == 4){
+                element = Gst::add_element(pipeline, "mpeg4videoparse", "", true);
+                g_object_set(element, "config-interval", 1, nullptr);
+            }else{
+                element = Gst::add_element(pipeline, "mpegvideoparse", "", true);
+            }
+        }else if(pad_type.find("audio/mpeg") != string::npos){
+            int m_version = 1;
+            gst_structure_get_int(caps_struct, "mpegversion", &m_version);
+            LOG(debug) << "Mpeg version type:" <<  m_version;
+            if(m_version == 1){
+                element = Gst::add_element(pipeline, "mpegaudioparse", "", true);
+            }else{
+                element = Gst::add_element(pipeline, "aacparse", "", true);
+            }
+        }else if(pad_type.find("audio/x-ac3") != string::npos ||
+                pad_type.find("audio/ac3") != string::npos){
+            element = Gst::add_element(pipeline, "ac3parse", "", true);
+        }else{
+            LOG(error) << "Type not support:" << pad_type;
+        }
+        if(element){
+            g_object_set(element, "disable-passthrough", true, nullptr);
+        }else{
+            LOG(error) << "Not add parser";
+        }
+        return element;
+    }
 }

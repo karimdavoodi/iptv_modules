@@ -29,10 +29,11 @@ int main()
         return -1;
     }
     Util::route_add(live_config.multicast_class, live_config.multicast_iface);
-    json channels = json::parse(db.find_mony("live_output_network", "{\"active\":true}"));
+    json channels = json::parse(db.find_mony("live_output_network", 
+                "{\"active\":true, \"udp\":true}"));
     for(auto& chan : channels ){
         IS_CHANNEL_VALID(chan);
-        if(chan["udp"] && Util::chan_in_input(db, chan["input"], chan["inputType"])){
+        if(Util::chan_in_input(db, chan["input"], chan["inputType"])){
             pool.emplace_back(start_channel, chan, live_config);
         }
     }

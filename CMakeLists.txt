@@ -11,6 +11,7 @@ add_definitions(
     -fdiagnostics-generate-patch 
     -DBOOST_LOG_DYN_LINK=1
     -DGST_USE_UNSTABLE_API=1
+    -Wall
     #-g
     )
 
@@ -68,8 +69,8 @@ set( project_EXES
      iptv_out_rtsp         # TODO: do by Gst-rtsp-server library
      iptv_out_rf           # TODO: do by Gst
      iptv_out_http         # TODO: work by keyframe 
-     iptv_out_gold         # TODO: ...
-     iptv_out_dlna         # TODO: disabled. do by Rygel library
+     #iptv_out_gold         # TODO: ...
+     #iptv_out_dlna        # TODO: disabled. do by Rygel library
      iptv_out_snapshot     # TODO: test it 
      iptv_utils            # TODO: test it   
      )

@@ -38,7 +38,7 @@ void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data)
         tdata->mqueue_src_pads.push_back(pad);
 
         if(tdata->tsdemux_no_more_pad &&
-           tdata->mqueue_src_pads.size() == tdata->tsdemux_src_pads_num){
+           tdata->mqueue_src_pads.size() == (size_t)tdata->tsdemux_src_pads_num){
             auto mpegtsmux = gst_bin_get_by_name(GST_BIN(tdata->d.pipeline), "mpegtsmux");
             LOG(debug) << "Try to link all pads to mpegtsmux";
             for(auto p : tdata->mqueue_src_pads){
@@ -363,42 +363,6 @@ GstPadProbeReturn parser_caps_probe(
     }
     return GST_PAD_PROBE_OK;
 }
-GstElement* insert_parser(const string pad_type, GstStructure* caps_struct, transcoder_data* tdata)
-{
-    GstElement* element = nullptr;
-    if(pad_type.find("video/x-h264") != string::npos){
-        element = Gst::add_element(tdata->d.pipeline, "h264parse", "", true);
-        g_object_set(element, "config-interval", 1, nullptr);
-    }else if(pad_type.find("video/mpeg") != string::npos){
-        int m_version = 1;
-        gst_structure_get_int(caps_struct, "mpegversion", &m_version);
-        LOG(debug) << "Mpeg version type:" <<  m_version;
-        if(m_version == 4){
-            element = Gst::add_element(tdata->d.pipeline, "mpeg4videoparse", "", true);
-            g_object_set(element, "config-interval", 1, nullptr);
-        }else{
-            element = Gst::add_element(tdata->d.pipeline, "mpegvideoparse", "", true);
-        }
-    }else if(pad_type.find("audio/mpeg") != string::npos){
-        int m_version = 1;
-        gst_structure_get_int(caps_struct, "mpegversion", &m_version);
-        LOG(debug) << "Mpeg version type:" <<  m_version;
-        if(m_version == 1){
-            element = Gst::add_element(tdata->d.pipeline, "mpegaudioparse", "", true);
-        }else{
-            element = Gst::add_element(tdata->d.pipeline, "aacparse", "", true);
-        }
-    }else if(pad_type.find("audio/x-ac3") != string::npos ||
-            pad_type.find("audio/ac3") != string::npos){
-        element = Gst::add_element(tdata->d.pipeline, "ac3parse", "", true);
-    }else{
-        LOG(error) << "Type not support:" << pad_type;
-    }
-    if(element){
-        g_object_set(element, "disable-passthrough", true, nullptr);
-    }
-    return element;
-}
 void tsdemux_no_more_pad(GstElement* object, gpointer data)
 {
     auto tdata = (transcoder_data *) data;
@@ -407,14 +371,10 @@ void tsdemux_no_more_pad(GstElement* object, gpointer data)
 void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
 {
     auto tdata = (transcoder_data *) data;
-    auto caps = gst_pad_query_caps(pad, nullptr);
-    auto caps_struct = gst_caps_get_structure(caps, 0);
-    auto pad_type = string(gst_structure_get_name(caps_struct));
 
-    LOG(debug) << Gst::pad_name(pad) << " Caps:" << Gst::caps_string(caps);
-    gst_caps_unref(caps);
+    LOG(debug) << Gst::pad_name(pad) << " Caps:" << Gst::pad_caps_string(pad);
 
-    auto parse = insert_parser(pad_type, caps_struct, tdata);
+    auto parse = Gst::insert_parser(tdata->d.pipeline, pad);
     if(parse != nullptr){
         auto parse_name = Gst::element_name(parse);
         LOG(trace) << "link tsdemux to " << parse_name;

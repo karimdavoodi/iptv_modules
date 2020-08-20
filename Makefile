@@ -124,32 +124,6 @@ iptv_utils/fast:
 .PHONY : iptv_utils/fast
 
 #=============================================================================
-# Target rules for targets named iptv_out_dlna
-
-# Build rule for target.
-iptv_out_dlna: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 iptv_out_dlna
-.PHONY : iptv_out_dlna
-
-# fast build rule for target.
-iptv_out_dlna/fast:
-	$(MAKE) -f CMakeFiles/iptv_out_dlna.dir/build.make CMakeFiles/iptv_out_dlna.dir/build
-.PHONY : iptv_out_dlna/fast
-
-#=============================================================================
-# Target rules for targets named iptv_out_gold
-
-# Build rule for target.
-iptv_out_gold: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 iptv_out_gold
-.PHONY : iptv_out_gold
-
-# fast build rule for target.
-iptv_out_gold/fast:
-	$(MAKE) -f CMakeFiles/iptv_out_gold.dir/build.make CMakeFiles/iptv_out_gold.dir/build
-.PHONY : iptv_out_gold/fast
-
-#=============================================================================
 # Target rules for targets named iptv_out_http
 
 # Build rule for target.
@@ -775,60 +749,6 @@ src/iptv_in_web_gst.cpp.s:
 	$(MAKE) -f CMakeFiles/iptv_in_web.dir/build.make CMakeFiles/iptv_in_web.dir/src/iptv_in_web_gst.cpp.s
 .PHONY : src/iptv_in_web_gst.cpp.s
 
-src/iptv_out_dlna.o: src/iptv_out_dlna.cpp.o
-
-.PHONY : src/iptv_out_dlna.o
-
-# target to build an object file
-src/iptv_out_dlna.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_out_dlna.dir/build.make CMakeFiles/iptv_out_dlna.dir/src/iptv_out_dlna.cpp.o
-.PHONY : src/iptv_out_dlna.cpp.o
-
-src/iptv_out_dlna.i: src/iptv_out_dlna.cpp.i
-
-.PHONY : src/iptv_out_dlna.i
-
-# target to preprocess a source file
-src/iptv_out_dlna.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_out_dlna.dir/build.make CMakeFiles/iptv_out_dlna.dir/src/iptv_out_dlna.cpp.i
-.PHONY : src/iptv_out_dlna.cpp.i
-
-src/iptv_out_dlna.s: src/iptv_out_dlna.cpp.s
-
-.PHONY : src/iptv_out_dlna.s
-
-# target to generate assembly for a file
-src/iptv_out_dlna.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_out_dlna.dir/build.make CMakeFiles/iptv_out_dlna.dir/src/iptv_out_dlna.cpp.s
-.PHONY : src/iptv_out_dlna.cpp.s
-
-src/iptv_out_dlna_gst.o: src/iptv_out_dlna_gst.cpp.o
-
-.PHONY : src/iptv_out_dlna_gst.o
-
-# target to build an object file
-src/iptv_out_dlna_gst.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_out_dlna.dir/build.make CMakeFiles/iptv_out_dlna.dir/src/iptv_out_dlna_gst.cpp.o
-.PHONY : src/iptv_out_dlna_gst.cpp.o
-
-src/iptv_out_dlna_gst.i: src/iptv_out_dlna_gst.cpp.i
-
-.PHONY : src/iptv_out_dlna_gst.i
-
-# target to preprocess a source file
-src/iptv_out_dlna_gst.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_out_dlna.dir/build.make CMakeFiles/iptv_out_dlna.dir/src/iptv_out_dlna_gst.cpp.i
-.PHONY : src/iptv_out_dlna_gst.cpp.i
-
-src/iptv_out_dlna_gst.s: src/iptv_out_dlna_gst.cpp.s
-
-.PHONY : src/iptv_out_dlna_gst.s
-
-# target to generate assembly for a file
-src/iptv_out_dlna_gst.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_out_dlna.dir/build.make CMakeFiles/iptv_out_dlna.dir/src/iptv_out_dlna_gst.cpp.s
-.PHONY : src/iptv_out_dlna_gst.cpp.s
-
 src/iptv_out_epg.o: src/iptv_out_epg.cpp.o
 
 .PHONY : src/iptv_out_epg.o
@@ -882,60 +802,6 @@ src/iptv_out_epg_gst.s: src/iptv_out_epg_gst.cpp.s
 src/iptv_out_epg_gst.cpp.s:
 	$(MAKE) -f CMakeFiles/iptv_out_epg.dir/build.make CMakeFiles/iptv_out_epg.dir/src/iptv_out_epg_gst.cpp.s
 .PHONY : src/iptv_out_epg_gst.cpp.s
-
-src/iptv_out_gold.o: src/iptv_out_gold.cpp.o
-
-.PHONY : src/iptv_out_gold.o
-
-# target to build an object file
-src/iptv_out_gold.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_out_gold.dir/build.make CMakeFiles/iptv_out_gold.dir/src/iptv_out_gold.cpp.o
-.PHONY : src/iptv_out_gold.cpp.o
-
-src/iptv_out_gold.i: src/iptv_out_gold.cpp.i
-
-.PHONY : src/iptv_out_gold.i
-
-# target to preprocess a source file
-src/iptv_out_gold.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_out_gold.dir/build.make CMakeFiles/iptv_out_gold.dir/src/iptv_out_gold.cpp.i
-.PHONY : src/iptv_out_gold.cpp.i
-
-src/iptv_out_gold.s: src/iptv_out_gold.cpp.s
-
-.PHONY : src/iptv_out_gold.s
-
-# target to generate assembly for a file
-src/iptv_out_gold.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_out_gold.dir/build.make CMakeFiles/iptv_out_gold.dir/src/iptv_out_gold.cpp.s
-.PHONY : src/iptv_out_gold.cpp.s
-
-src/iptv_out_gold_gst.o: src/iptv_out_gold_gst.cpp.o
-
-.PHONY : src/iptv_out_gold_gst.o
-
-# target to build an object file
-src/iptv_out_gold_gst.cpp.o:
-	$(MAKE) -f CMakeFiles/iptv_out_gold.dir/build.make CMakeFiles/iptv_out_gold.dir/src/iptv_out_gold_gst.cpp.o
-.PHONY : src/iptv_out_gold_gst.cpp.o
-
-src/iptv_out_gold_gst.i: src/iptv_out_gold_gst.cpp.i
-
-.PHONY : src/iptv_out_gold_gst.i
-
-# target to preprocess a source file
-src/iptv_out_gold_gst.cpp.i:
-	$(MAKE) -f CMakeFiles/iptv_out_gold.dir/build.make CMakeFiles/iptv_out_gold.dir/src/iptv_out_gold_gst.cpp.i
-.PHONY : src/iptv_out_gold_gst.cpp.i
-
-src/iptv_out_gold_gst.s: src/iptv_out_gold_gst.cpp.s
-
-.PHONY : src/iptv_out_gold_gst.s
-
-# target to generate assembly for a file
-src/iptv_out_gold_gst.cpp.s:
-	$(MAKE) -f CMakeFiles/iptv_out_gold.dir/build.make CMakeFiles/iptv_out_gold.dir/src/iptv_out_gold_gst.cpp.s
-.PHONY : src/iptv_out_gold_gst.cpp.s
 
 src/iptv_out_hls.o: src/iptv_out_hls.cpp.o
 
@@ -1432,8 +1298,6 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... iptv_utils"
-	@echo "... iptv_out_dlna"
-	@echo "... iptv_out_gold"
 	@echo "... iptv_out_http"
 	@echo "... utils"
 	@echo "... iptv_out_snapshot"
@@ -1496,24 +1360,12 @@ help:
 	@echo "... src/iptv_in_web_gst.o"
 	@echo "... src/iptv_in_web_gst.i"
 	@echo "... src/iptv_in_web_gst.s"
-	@echo "... src/iptv_out_dlna.o"
-	@echo "... src/iptv_out_dlna.i"
-	@echo "... src/iptv_out_dlna.s"
-	@echo "... src/iptv_out_dlna_gst.o"
-	@echo "... src/iptv_out_dlna_gst.i"
-	@echo "... src/iptv_out_dlna_gst.s"
 	@echo "... src/iptv_out_epg.o"
 	@echo "... src/iptv_out_epg.i"
 	@echo "... src/iptv_out_epg.s"
 	@echo "... src/iptv_out_epg_gst.o"
 	@echo "... src/iptv_out_epg_gst.i"
 	@echo "... src/iptv_out_epg_gst.s"
-	@echo "... src/iptv_out_gold.o"
-	@echo "... src/iptv_out_gold.i"
-	@echo "... src/iptv_out_gold.s"
-	@echo "... src/iptv_out_gold_gst.o"
-	@echo "... src/iptv_out_gold_gst.i"
-	@echo "... src/iptv_out_gold_gst.s"
 	@echo "... src/iptv_out_hls.o"
 	@echo "... src/iptv_out_hls.i"
 	@echo "... src/iptv_out_hls.s"

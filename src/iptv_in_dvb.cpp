@@ -106,24 +106,23 @@ int main()
         LOG(error) << "Error in live config! Exit.";
         return -1;
     }
-    json tuners = json::parse(db.find_mony("live_tuners_input", "{}"));
-    if(tuners.is_null() || tuners.size() == 0){
-        LOG(warning) << "Live input tuners in empty!";
-    }
-    json silver_channels = json::parse(db.find_mony("live_output_silver", "{}"));
-    for(auto& chan : silver_channels ){
+    json filter;
+    filter["active"] = true;
+    json tuners = json::parse(db.find_mony("live_tuners_info", filter.dump()));
+    LOG(debug) << "Active tuner number:" << tuners.size();
+     
+    json channels = json::parse(db.find_mony("live_inputs_dvb", "{}"));
+    for(auto& chan : channels ){
         IS_CHANNEL_VALID(chan);
-        if(chan["inputType"] == live_config.type_id){
-            json dvb_chan = json::parse(db.find_id("live_inputs_dvb", chan["input"]));
-            IS_CHANNEL_VALID(dvb_chan);
+        if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             for(auto& tuner : tuners ){
                 int t_id = tuner["_id"];
-                int c_id = dvb_chan["dvb_id"];
+                int c_id = chan["dvb_id"];
                 if(t_id == c_id){
-                    IS_CHANNEL_VALID(tuner);
                     if(tuner["channels"].is_null())
                         tuner["channels"] = json::array();
-                    tuner["channels"].push_back(dvb_chan);
+                    tuner["channels"].push_back(chan);
+                    LOG(trace) << "Add channel " << chan["_id"] << " to tuner " << t_id;
                     break;
                 }
             }

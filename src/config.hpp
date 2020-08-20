@@ -1,4 +1,4 @@
-#pragma onc;
+#pragma once
 
 #define ERROR            1
 #define INFO             1

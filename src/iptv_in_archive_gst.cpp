@@ -24,55 +24,7 @@ void multiqueue_padd_added(GstElement* object, GstPad* pad, gpointer data)
 void demux_padd_added(GstElement* object, GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
-    auto caps = gst_pad_query_caps(pad, nullptr);
-    auto caps_struct = gst_caps_get_structure(caps, 0);
-    auto pad_type = string(gst_structure_get_name(caps_struct));
-    LOG(info) << " Caps:" << Gst::caps_string(caps);
-    GstElement* videoparse = nullptr;
-    GstElement* audioparse = nullptr;
-    if(pad_type.find("video/x-h264") != string::npos){
-        videoparse = Gst::add_element(d->pipeline, "h264parse", "", true);
-        g_object_set(videoparse, "config-interval", 1, nullptr);
-    }else if(pad_type.find("video/mpeg") != string::npos){
-        int m_version = 1;
-        gst_structure_get_int(caps_struct, "mpegversion", &m_version);
-        LOG(info) << "Mpeg version type:" <<  m_version;
-        if(m_version == 4){
-            videoparse = Gst::add_element(d->pipeline, "mpeg4videoparse", "", true);
-            g_object_set(videoparse, "config-interval", 1, nullptr);
-        }else{
-            videoparse = Gst::add_element(d->pipeline, "mpegvideoparse", "", true);
-        }
-    }else if(pad_type.find("audio/mpeg") != string::npos){
-        int m_version = 1;
-        gst_structure_get_int(caps_struct, "mpegversion", &m_version);
-        LOG(info) << "Mpeg version type:" <<  m_version;
-        if(m_version == 1){
-            audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", "", true);
-        }else{
-            audioparse = Gst::add_element(d->pipeline, "aacparse", "", true);
-        }
-    }else if(pad_type.find("audio/x-ac3") != string::npos ||
-             pad_type.find("audio/ac3") != string::npos){
-            audioparse = Gst::add_element(d->pipeline, "ac3parse", "", true);
-    }else{
-        LOG(warning) << "Not support:" << pad_type;
-    }
-    gst_caps_unref(caps);
-    // link typefind ---> parse --- > queue
-    auto parse = (videoparse != nullptr) ? videoparse : audioparse;
-    auto parse_name = Gst::element_name(parse);
-    if(parse != nullptr){
-        g_object_set(parse, "disable-passthrough", true, nullptr);
-        if(!Gst::pad_link_element_static(pad, parse, "sink")){
-            LOG(error) << "Can't link typefind to " << parse_name;
-            g_main_loop_quit(d->loop);
-            return;
-        }
-        auto multiqueue = gst_bin_get_by_name(GST_BIN(d->pipeline), "multiqueue");
-        Gst::element_link_request(parse, "src", multiqueue, "sink_%u");
-        gst_object_unref(multiqueue);
-    }
+    Gst::demux_pad_link_to_muxer(d->pipeline, pad, "multiqueue", "sink_%u", "sink_%u");
 }
 void typefind_have_type(GstElement* typefind,
                                      guint arg0,
