@@ -4,6 +4,7 @@
 #include "../third_party/json.hpp"
 #include "mongo_driver.hpp"
 #include "config.hpp"
+#define WAIT_MILISECOND(x) std::this_thread::sleep_for(std::chrono::milliseconds(x))
 #define THE_END                                            \
     BOOST_LOG_TRIVIAL(warning) << "THE END!";              \
     do{                                                    \

@@ -11,12 +11,8 @@
 #include "utils.hpp"
 using namespace std;
 void gst_task(string in_multicast, string out_multicast);
-void start_channel(json channel, live_setting live_config)
-{
-    live_config.type_id = channel["inputType"];
-    auto in_multicast = Util::get_multicast(live_config, channel["input"]);
-    LOG(error) << "TODO: implement RF ...";
-}
+void start_channel(json channel, live_setting live_config);
+
 int main()
 {
     Mongo db;
@@ -93,3 +89,9 @@ int main()
     }
     THE_END;
 } 
+void start_channel(json channel, live_setting live_config)
+{
+    live_config.type_id = channel["inputType"];
+    auto in_multicast = Util::get_multicast(live_config, channel["input"]);
+    LOG(error) << "TODO: implement RF ...";
+}

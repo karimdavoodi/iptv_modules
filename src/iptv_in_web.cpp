@@ -12,17 +12,15 @@ using nlohmann::json;
 
 void init_display(int display_id);
 void gst_task(string web_url, string out_multicast, int port);
+void start_channel(json channel, live_setting live_config);
 
-void start_channel(json channel, live_setting live_config)
-{
-    LOG(info) << "Start web Channel: " << channel["name"];
-    string url = channel["url"];
-    auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
-    while(true){
-        gst_task(url, out_multicast, INPUT_PORT);
-        Util::wait(5000);
-    }
-}
+/*
+ *   The main()
+ *      - check license
+ *      - read channels from mongoDB 
+ *      - start thread for each active channel
+ *      - wait to join
+ * */
 int main(int argc, char** argv)
 {
     Mongo db;
@@ -42,7 +40,8 @@ int main(int argc, char** argv)
         // it is master program. and start process for any channel
     }
 
-    json channels = json::parse(db.find_mony("live_inputs_network", "{}"));
+    json channels = json::parse(db.find_mony("live_inputs_network",
+                "{\"active\":true}"));
     for(auto& chan : channels ){
         IS_CHANNEL_VALID(chan);
         
@@ -68,3 +67,20 @@ int main(int argc, char** argv)
         t.join();
     THE_END;
 } 
+/*
+ *  The channel thread function
+ *  
+ *  @param channel : config of channel
+ *  @param live_config : general live streamer config
+ *
+ * */
+void start_channel(json channel, live_setting live_config)
+{
+    LOG(info) << "Start web Channel: " << channel["name"];
+    string url = channel["url"];
+    auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
+    while(true){
+        gst_task(url, out_multicast, INPUT_PORT);
+        Util::wait(5000);
+    }
+}

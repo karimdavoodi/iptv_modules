@@ -1,11 +1,76 @@
-#include <boost/log/trivial.hpp>
-#include "gst.hpp"
-
-using namespace std;
 /*
  *  TODO: 
  *      - invalid timestamps in TS files 
  * */
+#include <boost/log/trivial.hpp>
+#include "gst.hpp"
+
+using namespace std;
+void multiqueue_padd_added(GstElement* object, GstPad* pad, gpointer data);
+void demux_padd_added(GstElement* object, GstPad* pad, gpointer data);
+void typefind_have_type(GstElement* typefind,
+                                     guint arg0,
+                                     GstCaps* caps,
+                                     gpointer user_data);
+/*
+ *   The Gstreamer main function
+ *   Stream media file to udp:://multicast:port
+ *   
+ *   @param media_path: media file 
+ *   @param multicast : multicast IP address
+ *   @param port: multicast port numper 
+ *
+ * */
+void gst_task(string media_path, string multicast_addr, int port)
+{
+    {   // for test 
+        char* test_file = getenv("GST_FILE_NAME");
+        if(test_file!=nullptr) media_path = string(test_file);
+    }
+    LOG(info) 
+        << "Start " << media_path 
+        << " --> udp://" << multicast_addr << ":" << port;
+    Gst::Data d;
+    d.loop      = g_main_loop_new(nullptr, false);
+    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
+
+    try{
+        auto filesrc    = Gst::add_element(d.pipeline, "filesrc"),
+             queue_src  = Gst::add_element(d.pipeline, "queue", "queue_src"),
+             identity   = Gst::add_element(d.pipeline, "identity"),
+             typefind   = Gst::add_element(d.pipeline, "typefind"),
+             multiqueue = Gst::add_element(d.pipeline, "multiqueue", "multiqueue"),
+             mpegtsmux  = Gst::add_element(d.pipeline, "mpegtsmux", "mpegtsmux"),
+             tsparse    = Gst::add_element(d.pipeline, "tsparse"),
+             queue      = Gst::add_element(d.pipeline, "queue","queue_sink"),
+             udpsink    = Gst::add_element(d.pipeline, "udpsink");
+
+        gst_element_link_many(filesrc, queue_src, identity, typefind, nullptr);
+        gst_element_link_many(mpegtsmux, tsparse, queue ,udpsink, nullptr);
+    
+        g_signal_connect(typefind, "have-type", G_CALLBACK(typefind_have_type), &d);
+        g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_padd_added), &d);
+        g_object_set(filesrc, 
+                "location", media_path.c_str(), 
+                nullptr);
+        g_object_set(udpsink, 
+                "multicast_iface", "lo", 
+                "host", multicast_addr.c_str() ,
+                "port", port,
+                "sync", true, nullptr);
+        g_object_set(mpegtsmux, "alignment", 7, nullptr);
+        g_object_set(tsparse, "set-timestamps", true, nullptr);
+        g_object_set(identity, "sync", true, nullptr);
+
+        Gst::add_bus_watch(d);
+        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
+        Gst::dot_file(d.pipeline, "iptv_archive", 5);
+        g_main_loop_run(d.loop);
+        
+    }catch(std::exception& e){
+        LOG(error) << "Exception:" << e.what();
+    }
+}
 void multiqueue_padd_added(GstElement* object, GstPad* pad, gpointer data)
 {
     LOG(debug) << "Multiqueue PAD:" << Gst::pad_name(pad);
@@ -73,55 +138,5 @@ void typefind_have_type(GstElement* typefind,
         }else{
             g_signal_connect(demux, "pad-added", G_CALLBACK(demux_padd_added), d);
         }
-    }
-}
-void gst_task(string media_path, string multicast_addr, int port)
-{
-    {   // for test 
-        char* test_file = getenv("GST_FILE_NAME");
-        if(test_file!=nullptr) media_path = string(test_file);
-    }
-    LOG(info) 
-        << "Start " << media_path 
-        << " --> udp://" << multicast_addr << ":" << port;
-    Gst::Data d;
-    d.loop      = g_main_loop_new(nullptr, false);
-    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
-
-    try{
-        auto filesrc    = Gst::add_element(d.pipeline, "filesrc"),
-             queue_src  = Gst::add_element(d.pipeline, "queue", "queue_src"),
-             identity   = Gst::add_element(d.pipeline, "identity"),
-             typefind   = Gst::add_element(d.pipeline, "typefind"),
-             multiqueue = Gst::add_element(d.pipeline, "multiqueue", "multiqueue"),
-             mpegtsmux  = Gst::add_element(d.pipeline, "mpegtsmux", "mpegtsmux"),
-             tsparse    = Gst::add_element(d.pipeline, "tsparse"),
-             queue      = Gst::add_element(d.pipeline, "queue","queue_sink"),
-             udpsink    = Gst::add_element(d.pipeline, "udpsink");
-
-        gst_element_link_many(filesrc, queue_src, identity, typefind, nullptr);
-        gst_element_link_many(mpegtsmux, tsparse, queue ,udpsink, nullptr);
-    
-        g_signal_connect(typefind, "have-type", G_CALLBACK(typefind_have_type), &d);
-        g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_padd_added), &d);
-        g_object_set(filesrc, 
-                "location", media_path.c_str(), 
-                nullptr);
-        g_object_set(udpsink, 
-                "multicast_iface", "lo", 
-                "host", multicast_addr.c_str() ,
-                "port", port,
-                "sync", true, nullptr);
-        g_object_set(mpegtsmux, "alignment", 7, nullptr);
-        g_object_set(tsparse, "set-timestamps", true, nullptr);
-        g_object_set(identity, "sync", true, nullptr);
-
-        Gst::add_bus_watch(d);
-        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
-        Gst::dot_file(d.pipeline, "iptv_archive", 5);
-        g_main_loop_run(d.loop);
-        
-    }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
     }
 }

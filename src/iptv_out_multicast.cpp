@@ -6,18 +6,17 @@
 #include <thread>
 #include "utils.hpp"
 using namespace std;
+
 void gst_task(string in_multicast, string out_multicast, int port);
-void start_channel(json channel, live_setting live_config)
-{
-    LOG(info) << "Start Multicast for " << channel["name"];
-    live_config.type_id = channel["inputType"];
-    auto in_multicast = Util::get_multicast(live_config, channel["input"]);
-    auto out_multicast = Util::get_multicast(live_config, channel["_id"], true);
-    while(true){
-        gst_task(in_multicast, out_multicast, INPUT_PORT); 
-        Util::wait(5000);
-    }
-}
+void start_channel(json channel, live_setting live_config);
+
+/*
+ *   The main()
+ *      - check license
+ *      - read channels from mongoDB 
+ *      - start thread for each active channel
+ *      - wait to join
+ * */
 int main()
 {
     Mongo db;
@@ -41,3 +40,20 @@ int main()
         t.join();
     THE_END;
 } 
+/*
+ *  The channel thread function
+ *  @param channel : config of channel
+ *  @param live_config : general live streamer config
+ *
+ * */
+void start_channel(json channel, live_setting live_config)
+{
+    LOG(info) << "Start Multicast for " << channel["name"];
+    live_config.type_id = channel["inputType"];
+    auto in_multicast = Util::get_multicast(live_config, channel["input"]);
+    auto out_multicast = Util::get_multicast(live_config, channel["_id"], true);
+    while(true){
+        gst_task(in_multicast, out_multicast, INPUT_PORT); 
+        Util::wait(5000);
+    }
+}

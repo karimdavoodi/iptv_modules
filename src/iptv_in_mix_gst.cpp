@@ -25,6 +25,130 @@ struct Mix_data {
             video1{false},video2{false},mqueue_src_pads{},
             tsdemux_src_pads_num{0},tsdemux_no_more_pad{0}{}
 };
+
+void connect_to_tsmux_mqueue(Mix_data* d, GstPad* pad);
+void ignore_pad(Mix_data* d, GstPad* pad);
+void tsdemux1_pad_added(GstElement* object, GstPad* pad, gpointer data);
+void tsdemux2_pad_added(GstElement* object, GstPad* pad, gpointer data);
+void add_all_pads_to_mpegtsmux(Mix_data* tdata);
+void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data);
+void tsdemux_no_more_pad1(GstElement* object, gpointer data);
+void tsdemux_no_more_pad2(GstElement* object, gpointer data);
+
+/*
+ *  PIPELINE:
+ *
+ *
+ *   tsdemux1 -->   video -- if single use-----------------------> tsmux_mqueue
+ *                           if both   use--> dec -> queue_v1 -> MIX 
+ *                  audio -- if use -----------------------------> tsmux_mqueue
+ *
+ *   tsdemux2 -->   video -- if single use-----------------------> tsmux_mqueue
+ *                           if both   use--> dec -> queue_v2 -> MIX
+ *                  audio -- if use -----------------------------> tsmux_mqueue
+ *                              
+ *   MIX: queue_v1 ---------------------------> compositor   
+ *        queue_v2 --if transparent--> alpha -> compositor(pos,size)
+ *               --else -------------------->
+ *               queue -> enc -> tsmux_mqueue
+ * */
+/*
+ *   The Gstreamer main function
+ *   Mix to UDP Stream in One UDP stream.
+ *  
+ *   @param config: config of mixing
+ *   @param in_multicast1 : UDP multicast of first input
+ *   @param in_multicast2 : UDP multicast of second input
+ *   @param out_multicast : UDP multicast of output
+ *   @param port: multicast port numper of all stream
+ *
+ * */
+void gst_task(json config, string in_multicast1, string in_multicast2, string out_multicast, int port)
+{
+    in_multicast1 = "udp://" + in_multicast1 + ":" + to_string(port);
+    in_multicast2 = "udp://" + in_multicast2 + ":" + to_string(port);
+
+    LOG(info) 
+        << "Start " << in_multicast1 << " + " <<  in_multicast2 
+        << " --> udp://" << out_multicast << ":" << port;
+
+    Mix_data mdata;
+    mdata.config = config;
+    mdata.d.loop      = g_main_loop_new(nullptr, false);
+    mdata.d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
+    try{
+        
+        auto udpsrc1       = Gst::add_element(mdata.d.pipeline, "udpsrc", "udpsrc1"),
+             queue_src1    = Gst::add_element(mdata.d.pipeline, "queue", "queue_src1"),
+             tsdemux1      = Gst::add_element(mdata.d.pipeline, "tsdemux", "tsdemux1"),
+
+             udpsrc2       = Gst::add_element(mdata.d.pipeline, "udpsrc", "udpsrc2"),
+             queue_src2    = Gst::add_element(mdata.d.pipeline, "queue", "queue_src2"),
+             tsdemux2      = Gst::add_element(mdata.d.pipeline, "tsdemux", "tsdemux2"),
+
+             multiqueue    = Gst::add_element(mdata.d.pipeline, "multiqueue", "tsmux_mqueue"),
+             mpegtsmux    = Gst::add_element(mdata.d.pipeline, "mpegtsmux", "mpegtsmux"),
+             queue_sink   = Gst::add_element(mdata.d.pipeline, "queue", "queue-sink"),
+             udpsink      = Gst::add_element(mdata.d.pipeline, "udpsink");
+
+        g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_pad_added), &mdata);
+        g_signal_connect(tsdemux1,   "pad-added", G_CALLBACK(tsdemux1_pad_added), &mdata);
+        g_signal_connect(tsdemux2,   "pad-added", G_CALLBACK(tsdemux2_pad_added), &mdata);
+        g_signal_connect(tsdemux1, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad1), &mdata);
+        g_signal_connect(tsdemux2, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad2), &mdata);
+
+        mdata.video1 = config["_profile"]["input1"]["useVideo"];
+        mdata.video2 = config["_profile"]["input2"]["useVideo"];
+        if(mdata.video1 && mdata.video2 ){
+            auto compositor   = Gst::add_element(mdata.d.pipeline, "compositor", "compositor"),
+                 queue0       = Gst::add_element(mdata.d.pipeline, "queue"),
+                 videoconvert = Gst::add_element(mdata.d.pipeline, "videoconvert"),
+                 videoscale   = Gst::add_element(mdata.d.pipeline, "videoscale"),
+                 capsfilter   = Gst::add_element(mdata.d.pipeline, "capsfilter", "video_caps"),
+                 queue1       = Gst::add_element(mdata.d.pipeline, "queue"),
+                 x264enc      = Gst::add_element(mdata.d.pipeline, "x264enc"),
+                 queue2       = Gst::add_element(mdata.d.pipeline, "queue"),
+                 h264parse    = Gst::add_element(mdata.d.pipeline, "h264parse", "h264parse_x264");
+            gst_element_link_many(compositor, queue0, videoconvert, videoscale, capsfilter, 
+                    queue1, x264enc, queue2, h264parse, nullptr); 
+            Gst::element_link_request(h264parse, "src", multiqueue, "sink_%u");
+            g_object_set (x264enc, "speed-preset", 1, nullptr);
+            g_object_set(h264parse, "disable-passthrough", true, nullptr);
+
+            string resize_caps_str = 
+                    "video/x-raw, width=(int)" + 
+                    to_string(config["_profile"]["output"]["width"]) +
+                    " , height=(int)"+
+                    to_string(config["_profile"]["output"]["height"]) ;
+            auto resize_caps = gst_caps_from_string(resize_caps_str.c_str());
+            g_object_set(capsfilter, "caps", resize_caps, nullptr);
+            gst_caps_unref(resize_caps);
+        } 
+        gst_element_link_many(udpsrc1, queue_src1, tsdemux1, nullptr); 
+        gst_element_link_many(udpsrc2, queue_src2, tsdemux2, nullptr); 
+        gst_element_link_many(mpegtsmux, queue_sink, udpsink, nullptr); 
+
+
+        g_object_set(udpsrc1, "uri", in_multicast1.c_str(), nullptr);
+        g_object_set(udpsrc2, "uri", in_multicast2.c_str(), nullptr);
+        g_object_set(mpegtsmux, "alignment", 7, nullptr); 
+        g_object_set(queue_src1, "max-size-time", 2 * GST_SECOND, nullptr); 
+        g_object_set(queue_src2, "max-size-time", 2 * GST_SECOND, nullptr); 
+        g_object_set(udpsink, 
+                "multicast_iface", "lo", 
+                "host", out_multicast.c_str() ,
+                "port", port,
+                "sync", true, 
+                nullptr);
+        Gst::add_bus_watch(mdata.d);
+        Gst::dot_file(mdata.d.pipeline, "iptv_in_mix", 7);
+        gst_element_set_state(GST_ELEMENT(mdata.d.pipeline), GST_STATE_PLAYING);
+        g_main_loop_run(mdata.d.loop);
+
+    }catch(std::exception& e){
+        LOG(error) << "Exception:" << e.what();
+    }
+}
 void connect_to_tsmux_mqueue(Mix_data* d, GstPad* pad)
 {
     auto mqueue = gst_bin_get_by_name(GST_BIN(d->d.pipeline), "tsmux_mqueue");
@@ -241,107 +365,3 @@ void tsdemux_no_more_pad2(GstElement* object, gpointer data)
     LOG(debug) << "no more pad";
     add_all_pads_to_mpegtsmux(tdata);
 }
-/*
- *  PIPELINE:
- *
- *
- *   tsdemux1 -->   video -- if single use-----------------------> tsmux_mqueue
- *                           if both   use--> dec -> queue_v1 -> MIX 
- *                  audio -- if use -----------------------------> tsmux_mqueue
- *
- *   tsdemux2 -->   video -- if single use-----------------------> tsmux_mqueue
- *                           if both   use--> dec -> queue_v2 -> MIX
- *                  audio -- if use -----------------------------> tsmux_mqueue
- *                              
- *   MIX: queue_v1 ---------------------------> compositor   
- *        queue_v2 --if transparent--> alpha -> compositor(pos,size)
- *               --else -------------------->
- *               queue -> enc -> tsmux_mqueue
- * */
-void gst_task(json config, string in_multicast1, string in_multicast2, string out_multicast, int port)
-{
-    in_multicast1 = "udp://" + in_multicast1 + ":" + to_string(port);
-    in_multicast2 = "udp://" + in_multicast2 + ":" + to_string(port);
-
-    LOG(info) 
-        << "Start " << in_multicast1 << " + " <<  in_multicast2 
-        << " --> udp://" << out_multicast << ":" << port;
-
-    Mix_data mdata;
-    mdata.config = config;
-    mdata.d.loop      = g_main_loop_new(nullptr, false);
-    mdata.d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
-    try{
-        
-        auto udpsrc1       = Gst::add_element(mdata.d.pipeline, "udpsrc", "udpsrc1"),
-             queue_src1    = Gst::add_element(mdata.d.pipeline, "queue", "queue_src1"),
-             tsdemux1      = Gst::add_element(mdata.d.pipeline, "tsdemux", "tsdemux1"),
-
-             udpsrc2       = Gst::add_element(mdata.d.pipeline, "udpsrc", "udpsrc2"),
-             queue_src2    = Gst::add_element(mdata.d.pipeline, "queue", "queue_src2"),
-             tsdemux2      = Gst::add_element(mdata.d.pipeline, "tsdemux", "tsdemux2"),
-
-             multiqueue    = Gst::add_element(mdata.d.pipeline, "multiqueue", "tsmux_mqueue"),
-             mpegtsmux    = Gst::add_element(mdata.d.pipeline, "mpegtsmux", "mpegtsmux"),
-             queue_sink   = Gst::add_element(mdata.d.pipeline, "queue", "queue-sink"),
-             udpsink      = Gst::add_element(mdata.d.pipeline, "udpsink");
-
-        g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_pad_added), &mdata);
-        g_signal_connect(tsdemux1,   "pad-added", G_CALLBACK(tsdemux1_pad_added), &mdata);
-        g_signal_connect(tsdemux2,   "pad-added", G_CALLBACK(tsdemux2_pad_added), &mdata);
-        g_signal_connect(tsdemux1, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad1), &mdata);
-        g_signal_connect(tsdemux2, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad2), &mdata);
-
-        mdata.video1 = config["_profile"]["input1"]["useVideo"];
-        mdata.video2 = config["_profile"]["input2"]["useVideo"];
-        if(mdata.video1 && mdata.video2 ){
-            auto compositor   = Gst::add_element(mdata.d.pipeline, "compositor", "compositor"),
-                 queue0       = Gst::add_element(mdata.d.pipeline, "queue"),
-                 videoconvert = Gst::add_element(mdata.d.pipeline, "videoconvert"),
-                 videoscale   = Gst::add_element(mdata.d.pipeline, "videoscale"),
-                 capsfilter   = Gst::add_element(mdata.d.pipeline, "capsfilter", "video_caps"),
-                 queue1       = Gst::add_element(mdata.d.pipeline, "queue"),
-                 x264enc      = Gst::add_element(mdata.d.pipeline, "x264enc"),
-                 queue2       = Gst::add_element(mdata.d.pipeline, "queue"),
-                 h264parse    = Gst::add_element(mdata.d.pipeline, "h264parse", "h264parse_x264");
-            gst_element_link_many(compositor, queue0, videoconvert, videoscale, capsfilter, 
-                    queue1, x264enc, queue2, h264parse, nullptr); 
-            Gst::element_link_request(h264parse, "src", multiqueue, "sink_%u");
-            g_object_set (x264enc, "speed-preset", 1, nullptr);
-            g_object_set(h264parse, "disable-passthrough", true, nullptr);
-
-            string resize_caps_str = 
-                    "video/x-raw, width=(int)" + 
-                    to_string(config["_profile"]["output"]["width"]) +
-                    " , height=(int)"+
-                    to_string(config["_profile"]["output"]["height"]) ;
-            auto resize_caps = gst_caps_from_string(resize_caps_str.c_str());
-            g_object_set(capsfilter, "caps", resize_caps, nullptr);
-            gst_caps_unref(resize_caps);
-        } 
-        gst_element_link_many(udpsrc1, queue_src1, tsdemux1, nullptr); 
-        gst_element_link_many(udpsrc2, queue_src2, tsdemux2, nullptr); 
-        gst_element_link_many(mpegtsmux, queue_sink, udpsink, nullptr); 
-
-
-        g_object_set(udpsrc1, "uri", in_multicast1.c_str(), nullptr);
-        g_object_set(udpsrc2, "uri", in_multicast2.c_str(), nullptr);
-        g_object_set(mpegtsmux, "alignment", 7, nullptr); 
-        g_object_set(queue_src1, "max-size-time", 2 * GST_SECOND, nullptr); 
-        g_object_set(queue_src2, "max-size-time", 2 * GST_SECOND, nullptr); 
-        g_object_set(udpsink, 
-                "multicast_iface", "lo", 
-                "host", out_multicast.c_str() ,
-                "port", port,
-                "sync", true, 
-                nullptr);
-        Gst::add_bus_watch(mdata.d);
-        Gst::dot_file(mdata.d.pipeline, "iptv_in_mix", 7);
-        gst_element_set_state(GST_ELEMENT(mdata.d.pipeline), GST_STATE_PLAYING);
-        g_main_loop_run(mdata.d.loop);
-
-    }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
-    }
-}
-

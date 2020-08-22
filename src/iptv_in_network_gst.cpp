@@ -1,10 +1,64 @@
 #include <boost/log/trivial.hpp>
 #include "gst.hpp"
 using namespace std;
+
+void urisourcebin_pad_added(GstElement* urisourcebin, 
+                                    GstPad* pad, gpointer data);
+void demux_padd_added(GstElement* object, GstPad* pad, gpointer data);
+void typefind_have_type(GstElement* typefind,
+                                     guint arg0,
+                                     GstCaps* caps,
+                                     gpointer user_data);
+
 /*
- *  TODO: 
+ *   The Gstreamer main function
+ *   Stream network stream to udp:://multicast:port
+ *   
+ *   @param url: URL of input stream in UDP, HTTP, RTSP, RTP
+ *   @param out_multicast : multicast of output stream
+ *   @param port: output multicast port numper 
  *
  * */
+void gst_task(string url, string out_multicast, int port)
+{
+    LOG(info) 
+        << "Start " << url 
+        << " --> udp://" << out_multicast << ":" << port;
+    Gst::Data d;
+    d.loop      = g_main_loop_new(nullptr, false);
+    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
+
+    try{
+        auto urisourcebin = Gst::add_element(d.pipeline, "urisourcebin"),
+             queue_src  = Gst::add_element(d.pipeline, "queue", "queue_src"),
+             typefind   = Gst::add_element(d.pipeline, "typefind"),
+             mpegtsmux  = Gst::add_element(d.pipeline, "mpegtsmux", "mpegtsmux"),
+             tsparse    = Gst::add_element(d.pipeline, "tsparse"),
+             queue      = Gst::add_element(d.pipeline, "queue","queue_sink"),
+             udpsink    = Gst::add_element(d.pipeline, "udpsink", "udpsink");
+
+        gst_element_link_many(queue_src, typefind, nullptr);
+        gst_element_link_many(mpegtsmux, queue, tsparse, udpsink, nullptr);
+
+        g_signal_connect(urisourcebin, "pad-added", G_CALLBACK(urisourcebin_pad_added), &d);
+        g_signal_connect(typefind, "have-type", G_CALLBACK(typefind_have_type), &d);
+        g_object_set(urisourcebin, "uri", url.c_str(), nullptr);
+        g_object_set(udpsink, 
+                "multicast_iface", "lo", 
+                "host", out_multicast.c_str() ,
+                "port", port,
+                nullptr);
+        g_object_set(mpegtsmux, "alignment", 7, nullptr);
+        g_object_set(tsparse, "set-timestamps", true, nullptr);
+
+        //Gst::dot_file(d.pipeline, "iptv_network", 5);
+        Gst::add_bus_watch(d);
+        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
+        g_main_loop_run(d.loop);
+    }catch(std::exception& e){
+        LOG(error) << "Exception:" << e.what();
+    }
+}
 void urisourcebin_pad_added(GstElement* urisourcebin, GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
@@ -86,45 +140,5 @@ void typefind_have_type(GstElement* typefind,
         }else{
             g_signal_connect(demux, "pad-added", G_CALLBACK(demux_padd_added), d);
         }
-    }
-}
-void gst_task(string url, string multicast_addr, int port)
-{
-    LOG(info) 
-        << "Start " << url 
-        << " --> udp://" << multicast_addr << ":" << port;
-    Gst::Data d;
-    d.loop      = g_main_loop_new(nullptr, false);
-    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
-
-    try{
-        auto urisourcebin = Gst::add_element(d.pipeline, "urisourcebin"),
-             queue_src  = Gst::add_element(d.pipeline, "queue", "queue_src"),
-             typefind   = Gst::add_element(d.pipeline, "typefind"),
-             mpegtsmux  = Gst::add_element(d.pipeline, "mpegtsmux", "mpegtsmux"),
-             tsparse    = Gst::add_element(d.pipeline, "tsparse"),
-             queue      = Gst::add_element(d.pipeline, "queue","queue_sink"),
-             udpsink    = Gst::add_element(d.pipeline, "udpsink", "udpsink");
-
-        gst_element_link_many(queue_src, typefind, nullptr);
-        gst_element_link_many(mpegtsmux, queue, tsparse, udpsink, nullptr);
-
-        g_signal_connect(urisourcebin, "pad-added", G_CALLBACK(urisourcebin_pad_added), &d);
-        g_signal_connect(typefind, "have-type", G_CALLBACK(typefind_have_type), &d);
-        g_object_set(urisourcebin, "uri", url.c_str(), nullptr);
-        g_object_set(udpsink, 
-                "multicast_iface", "lo", 
-                "host", multicast_addr.c_str() ,
-                "port", port,
-                nullptr);
-        g_object_set(mpegtsmux, "alignment", 7, nullptr);
-        g_object_set(tsparse, "set-timestamps", true, nullptr);
-
-        //Gst::dot_file(d.pipeline, "iptv_network", 5);
-        Gst::add_bus_watch(d);
-        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
-        g_main_loop_run(d.loop);
-    }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
     }
 }

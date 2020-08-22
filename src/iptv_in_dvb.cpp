@@ -11,8 +11,76 @@
 #include <boost/tokenizer.hpp>
 #include "utils.hpp"
 #define BY_DVBLAST 1
+
 using namespace std;
 using nlohmann::json;
+
+void start_channel(json tuner, live_setting live_config);
+void report_tuners(Mongo& db);
+
+/*
+ *   the main()
+ *      - check license
+ *      - read channels from mongoDB 
+ *      - start thread for each active channel
+ *      - wait to join
+ * */
+int main()
+{
+    Mongo db;
+    vector<thread> pool;
+    live_setting live_config;
+    CHECK_LICENSE;
+    Util::init(db);
+    if(!Util::get_live_config(db, live_config, "dvb")){
+        LOG(error) << "Error in live config! Exit.";
+        return -1;
+    }
+    json tuners = json::parse(db.find_mony("live_tuners_info", 
+                "{\"active\":true}"));
+
+    LOG(debug) << "Active tuner number:" << tuners.size();
+     
+    json channels = json::parse(db.find_mony("live_inputs_dvb", "{}"));
+    for(auto& chan : channels ){
+        IS_CHANNEL_VALID(chan);
+        if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
+            for(auto& tuner : tuners ){
+                int t_id = tuner["_id"];
+                int c_id = chan["dvb_id"];
+                if(t_id == c_id){
+                    if(tuner["channels"].is_null())
+                        tuner["channels"] = json::array();
+                    tuner["channels"].push_back(chan);
+                    LOG(trace) << "Add channel " << chan["_id"] << " to tuner " << t_id;
+                    break;
+                }
+            }
+        }
+    }
+    for(auto& tuner : tuners ){
+        if(!tuner["channels"].is_null()){
+            string dvb_path = "/dev/dvb/adapter" + to_string(tuner["_id"]); 
+            if(boost::filesystem::exists(dvb_path)){
+                pool.emplace_back(start_channel, tuner, live_config);
+            }else{
+                LOG(error) << "DVB Not found: "<< dvb_path;
+            }
+        }
+    }
+
+    report_tuners(db);
+    for(auto& t : pool){
+        t.join();
+    }
+    THE_END;
+} 
+/*
+ *  The channel thread function
+ *  @param tuner : config of tuner
+ *  @param live_config : general live streamer config
+ *
+ * */
 void start_channel(json tuner, live_setting live_config)
 {
     LOG(debug) << tuner.dump(4);
@@ -51,6 +119,10 @@ void start_channel(json tuner, live_setting live_config)
     // TODO: do by Gstreamer
 #endif
 }
+/*
+ *   Write status of input/output Tuners to DB
+ *   
+ * */
 void report_tuners(Mongo& db)
 {
     while(true){
@@ -95,53 +167,3 @@ void report_tuners(Mongo& db)
     }
 
 }
-int main()
-{
-    Mongo db;
-    vector<thread> pool;
-    live_setting live_config;
-    CHECK_LICENSE;
-    Util::init(db);
-    if(!Util::get_live_config(db, live_config, "dvb")){
-        LOG(error) << "Error in live config! Exit.";
-        return -1;
-    }
-    json filter;
-    filter["active"] = true;
-    json tuners = json::parse(db.find_mony("live_tuners_info", filter.dump()));
-    LOG(debug) << "Active tuner number:" << tuners.size();
-     
-    json channels = json::parse(db.find_mony("live_inputs_dvb", "{}"));
-    for(auto& chan : channels ){
-        IS_CHANNEL_VALID(chan);
-        if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
-            for(auto& tuner : tuners ){
-                int t_id = tuner["_id"];
-                int c_id = chan["dvb_id"];
-                if(t_id == c_id){
-                    if(tuner["channels"].is_null())
-                        tuner["channels"] = json::array();
-                    tuner["channels"].push_back(chan);
-                    LOG(trace) << "Add channel " << chan["_id"] << " to tuner " << t_id;
-                    break;
-                }
-            }
-        }
-    }
-    for(auto& tuner : tuners ){
-        if(!tuner["channels"].is_null()){
-            string dvb_path = "/dev/dvb/adapter" + to_string(tuner["_id"]); 
-            if(boost::filesystem::exists(dvb_path)){
-                pool.emplace_back(start_channel, tuner, live_config);
-            }else{
-                LOG(error) << "DVB Not found: "<< dvb_path;
-            }
-        }
-    }
-
-    report_tuners(db);
-    for(auto& t : pool){
-        t.join();
-    }
-    THE_END;
-} 

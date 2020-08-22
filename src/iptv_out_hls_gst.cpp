@@ -3,6 +3,55 @@
 #include "gst.hpp"
 using namespace std;
 
+void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data);
+
+/*
+ *   The Gstreamer main function
+ *   Convert udp:://in_multicast:port to HLS playlist 
+ *   
+ *   @param in_multicast : multicast of input stream
+ *   @param port: output multicast port numper 
+ *   @param hls_root: Path of HLS playlist
+ *
+ * */
+void gst_task(string in_multicast, int port, string hls_root)
+{
+
+    in_multicast = "udp://" + in_multicast + ":" + to_string(port);
+    LOG(info) << "Start " << in_multicast << " -> " << hls_root;
+
+    Gst::Data d;
+    d.loop      = g_main_loop_new(nullptr, false);
+    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
+    try{
+        auto udpsrc     = Gst::add_element(d.pipeline, "udpsrc"),
+             queue_src  = Gst::add_element(d.pipeline, "queue", "queue_src"),
+             tsdemux    = Gst::add_element(d.pipeline, "tsdemux"),
+             hlssink    = Gst::add_element(d.pipeline, "hlssink2", "hlssink");
+
+        gst_element_link_many(udpsrc, queue_src, tsdemux, nullptr);
+
+        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added), &d);
+        g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
+        string segment_location = hls_root + "/s__%05d.ts";
+        string playlist_location = hls_root + "/p.m3u8";
+        g_object_set(hlssink, 
+                "max-files", 14,
+                "playlist-length", 5,
+                "playlist-location", playlist_location.c_str(),
+                "location", segment_location.c_str(),
+                "message-forward", true,
+                "target-duration", 5,
+                nullptr);
+
+        Gst::add_bus_watch(d);
+        Gst::dot_file(d.pipeline, "iptv_network", 5);
+        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
+        g_main_loop_run(d.loop);
+    }catch(std::exception& e){
+        LOG(error) << "Exception:" << e.what();
+    }
+}
 void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
@@ -80,44 +129,5 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
         string type = videoparse ? "video" : "audio";
         Gst::element_link_request(parse, "src", hlssink, type.c_str());
         gst_object_unref(hlssink);
-    }
-}
-
-void gst_task(string in_multicast, int port, string hls_root)
-{
-
-    in_multicast = "udp://" + in_multicast + ":" + to_string(port);
-    LOG(info) << "Start " << in_multicast << " -> " << hls_root;
-
-    Gst::Data d;
-    d.loop      = g_main_loop_new(nullptr, false);
-    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
-    try{
-        auto udpsrc     = Gst::add_element(d.pipeline, "udpsrc"),
-             queue_src  = Gst::add_element(d.pipeline, "queue", "queue_src"),
-             tsdemux    = Gst::add_element(d.pipeline, "tsdemux"),
-             hlssink    = Gst::add_element(d.pipeline, "hlssink2", "hlssink");
-
-        gst_element_link_many(udpsrc, queue_src, tsdemux, nullptr);
-
-        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added), &d);
-        g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
-        string segment_location = hls_root + "/s__%05d.ts";
-        string playlist_location = hls_root + "/p.m3u8";
-        g_object_set(hlssink, 
-                "max-files", 14,
-                "playlist-length", 5,
-                "playlist-location", playlist_location.c_str(),
-                "location", segment_location.c_str(),
-                "message-forward", true,
-                "target-duration", 5,
-                nullptr);
-
-        Gst::add_bus_watch(d);
-        Gst::dot_file(d.pipeline, "iptv_network", 5);
-        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
-        g_main_loop_run(d.loop);
-    }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
     }
 }

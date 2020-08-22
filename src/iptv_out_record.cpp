@@ -7,15 +7,72 @@
 #include <vector>
 #include <thread>
 #include "utils.hpp"
+
 #define BY_FFMPEG 0
 #define TIME_SHIFT_TYPE 9
 #define MP4_FORMAT 2
+
 using namespace std;
+
 bool gst_task(json, string in_multicast, int port, int maxPerChannel);
-void remove_old_timeshift(Mongo& db, int maxPerChannel, const string channel_name);
+void remove_old_timeshift(Mongo& db, int maxPerChannel, 
+                                            const string channel_name);
 void insert_content_info_db(Mongo &db,json& channel, uint64_t id);
+void start_channel(json channel, int maxPerChannel, live_setting live_config);
 
+/*
+ *   The main()
+ *      - check license
+ *      - read channels from mongoDB 
+ *      - start thread for each active channel
+ *      - wait to join
+ * */
+int main()
+{
+    Mongo db;
+    vector<thread> pool;
+    live_setting live_config;
+    CHECK_LICENSE;
+    Util::init(db);
+    string time_shift_dir = string(MEDIA_ROOT) + "TimeShift";
+    if(!boost::filesystem::exists(time_shift_dir)){
+        LOG(info) << "Create " << time_shift_dir;
+        boost::filesystem::create_directory(time_shift_dir);
+    }
+    if(!Util::get_live_config(db, live_config, "archive")){
+        LOG(info) << "Error in live config! Exit.";
+        return -1;
+    }
+    json storage_setting = json::parse(db.find_id("storage_setting", 1));
+    int maxPerChannel = 0;
+    if(!storage_setting["timeShift"].is_null() )
+        maxPerChannel = storage_setting["timeShift"]["maxPerChannel"];
 
+    if(maxPerChannel > 0){
+        json channels = json::parse(db.find_mony("live_output_archive", 
+                    "{\"active\":true}"));
+        for(auto& chan : channels ){
+            IS_CHANNEL_VALID(chan);
+            if(chan["timeShift"] > 0 && !chan["virtual"]){
+                pool.emplace_back(start_channel, chan, maxPerChannel, live_config);
+                //break;
+                Util::wait(100);
+            }
+        }
+        for(auto& t : pool)
+            t.join();
+    }else{
+        LOG(warning) << "maxPerChannel == 0 ";
+    }
+    THE_END;
+} 
+/*
+ *   Clean Storage from recorded file that expired
+ *
+ *   @param maxPerChannel: time in houre to expire media files
+ *   @param channel_name: name of channel
+ *
+ * */
 void remove_old_timeshift(Mongo& db, int maxPerChannel, const string channel_name)
 {
     json filter;
@@ -46,6 +103,13 @@ void remove_old_timeshift(Mongo& db, int maxPerChannel, const string channel_nam
         }
     }
 }
+/*
+ *   Insert record in DB at storage_contents_info table
+ *   @param db: DB instance 
+ *   @param channel: config of channel
+ *   @param id: id of new record  
+ *   
+ * */
 void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
 {
     string name = channel["name"];
@@ -78,6 +142,14 @@ void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
     LOG(info) << "Record " << channel["name"] << ":" << name;
 
 }
+/*
+ *  The channel thread function
+ *  
+ *  @param channel : config of channel
+ *  @param maxPerChannel: time in houre to expire media files
+ *  @param live_config : general live streamer config
+ *
+ * */
 void start_channel(json channel, int maxPerChannel, live_setting live_config)
 {
     live_config.type_id = channel["inputType"];
@@ -102,41 +174,3 @@ void start_channel(json channel, int maxPerChannel, live_setting live_config)
     }
     Util::wait(5000);
 }
-int main()
-{
-    Mongo db;
-    vector<thread> pool;
-    live_setting live_config;
-    CHECK_LICENSE;
-    Util::init(db);
-    string time_shift_dir = string(MEDIA_ROOT) + "TimeShift";
-    if(!boost::filesystem::exists(time_shift_dir)){
-        LOG(info) << "Create " << time_shift_dir;
-        boost::filesystem::create_directory(time_shift_dir);
-    }
-    if(!Util::get_live_config(db, live_config, "archive")){
-        LOG(info) << "Error in live config! Exit.";
-        return -1;
-    }
-    json storage_setting = json::parse(db.find_id("storage_setting", 1));
-    int maxPerChannel = 0;
-    if(!storage_setting["timeShift"].is_null() )
-        maxPerChannel = storage_setting["timeShift"]["maxPerChannel"];
-
-    if(maxPerChannel > 0){
-        json channels = json::parse(db.find_mony("live_output_archive", "{\"active\":true}"));
-        for(auto& chan : channels ){
-            IS_CHANNEL_VALID(chan);
-            if(chan["timeShift"] > 0 && !chan["virtual"]){
-                pool.emplace_back(start_channel, chan, maxPerChannel, live_config);
-                //break;
-                Util::wait(100);
-            }
-        }
-        for(auto& t : pool)
-            t.join();
-    }else{
-        LOG(warning) << "maxPerChannel == 0 ";
-    }
-    THE_END;
-} 

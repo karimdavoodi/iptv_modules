@@ -1,7 +1,17 @@
 #include <exception>
 #include <thread>
 #include "gst.hpp"
+
 using namespace std;
+/*
+ *   The Gstreamer main function
+ *   Relay udp:://in_multicast:port to udp:://out_multicast:port 
+ *   
+ *   @param in_multicast : multicast of input stream
+ *   @param out_multicast : multicast of output stream
+ *   @param port: output multicast port numper 
+ *
+ * */
 void gst_task(string  in_multicast, string out_multicast, int port)
 {
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);

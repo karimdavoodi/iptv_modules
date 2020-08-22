@@ -3,81 +3,38 @@
 #include <thread>
 #include <mutex>
 #include <iostream>
-
 #include <gtk/gtk.h>
 #include <webkit2/webkit2.h>
-
 
 #define FPS 2
 #define DELAY (1000/FPS)
 #define WIDTH 1280
 #define HEIGHT 720
 #define FRAME_SIZE (WIDTH * HEIGHT * 4)
-
 #define WAIT_MILISECOND(x) std::this_thread::sleep_for(std::chrono::milliseconds(x))
 
 using namespace std;
-
 
 GstClockTime timestamp = 0;
 uint8_t* frame = nullptr;
 cairo_surface_t* surface = nullptr;
 std::mutex frame_mutex;
 
-void init_display(int display_id)
-{
-    LOG(trace) << "Init display:" << display_id;
-    string display = ":" + to_string(display_id);
-    string cmd = "Xvfb " + display + " -screen scrn 1280x720x24   &";
-    system(cmd.c_str());
-    WAIT_MILISECOND(1000);
+void init_display(int display_id);
+void app_need_data (GstElement *appsrc, guint unused_size, gpointer user_data);
+void get_snapshot(GObject *object, GAsyncResult *result, gpointer data);
 
-    const char* argv_a[] = {"prog", "--display", display.c_str(), nullptr};
-    int argc = 3;
-    char** argv = (char**) argv_a;
-    gtk_init(&argc, &argv);
-
-}
-void app_need_data (GstElement *appsrc, guint unused_size, gpointer user_data)
-{
-    Gst::Data* d = (Gst::Data*) user_data; 
-    GstBuffer *buffer;
-    GstFlowReturn ret;
-
-    WAIT_MILISECOND(DELAY);
-    buffer = gst_buffer_new_allocate (NULL, FRAME_SIZE, NULL);
-    {
-        std::unique_lock<std::mutex> lock(frame_mutex);
-        gst_buffer_fill(buffer, 0, frame, FRAME_SIZE);
-    }
-
-    GST_BUFFER_PTS (buffer) = timestamp;
-    GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale_int (1, GST_SECOND, FPS);
-    timestamp += GST_BUFFER_DURATION (buffer);
-    LOG(trace) << "push buffer";
-    g_signal_emit_by_name (appsrc, "push-buffer", buffer, &ret);
-    gst_buffer_unref (buffer);
-    if (ret != GST_FLOW_OK) {
-        g_main_loop_quit (d->loop);
-    }
-}
-void get_snapshot(GObject *object, GAsyncResult *result, gpointer data)
-{
-    WebKitWebView * webview = (WebKitWebView*)data;
-    GError* error = NULL;
-	surface = webkit_web_view_get_snapshot_finish(webview, result, &error);
-    
-    LOG(trace) << "Got frame";
-    std::unique_lock<std::mutex> lock(frame_mutex);
-    uint8_t* f = (uint8_t*) cairo_image_surface_get_data(surface);
-    memcpy(frame, f, FRAME_SIZE);
-    cairo_surface_destroy(surface);
-}
-
-
+/*
+ *   The Gstreamer main function
+ *   Streaming of Web site to udp:://out_multicast:port
+ *   
+ *   @param web_url: URL of Web site
+ *   @param out_multicast : multicast of output stream
+ *   @param port: output multicast port numper 
+ *
+ * */
 void gst_task(string web_url, string out_multicast, int port)
 {
-
     //web_url = "http://127.0.0.1/s/?mmk&u=1&p=1";
     LOG(info) 
         << "Start " << web_url 
@@ -176,4 +133,52 @@ void gst_task(string web_url, string out_multicast, int port)
         LOG(error) << "Exception:" << e.what();
     }
 }
+void init_display(int display_id)
+{
+    LOG(trace) << "Init display:" << display_id;
+    string display = ":" + to_string(display_id);
+    string cmd = "Xvfb " + display + " -screen scrn 1280x720x24   &";
+    system(cmd.c_str());
+    WAIT_MILISECOND(1000);
 
+    const char* argv_a[] = {"prog", "--display", display.c_str(), nullptr};
+    int argc = 3;
+    char** argv = (char**) argv_a;
+    gtk_init(&argc, &argv);
+
+}
+void app_need_data (GstElement *appsrc, guint unused_size, gpointer user_data)
+{
+    Gst::Data* d = (Gst::Data*) user_data; 
+    GstBuffer *buffer;
+    GstFlowReturn ret;
+
+    WAIT_MILISECOND(DELAY);
+    buffer = gst_buffer_new_allocate (NULL, FRAME_SIZE, NULL);
+    {
+        std::unique_lock<std::mutex> lock(frame_mutex);
+        gst_buffer_fill(buffer, 0, frame, FRAME_SIZE);
+    }
+
+    GST_BUFFER_PTS (buffer) = timestamp;
+    GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale_int (1, GST_SECOND, FPS);
+    timestamp += GST_BUFFER_DURATION (buffer);
+    LOG(trace) << "push buffer";
+    g_signal_emit_by_name (appsrc, "push-buffer", buffer, &ret);
+    gst_buffer_unref (buffer);
+    if (ret != GST_FLOW_OK) {
+        g_main_loop_quit (d->loop);
+    }
+}
+void get_snapshot(GObject *object, GAsyncResult *result, gpointer data)
+{
+    WebKitWebView * webview = (WebKitWebView*)data;
+    GError* error = NULL;
+	surface = webkit_web_view_get_snapshot_finish(webview, result, &error);
+    
+    LOG(trace) << "Got frame";
+    std::unique_lock<std::mutex> lock(frame_mutex);
+    uint8_t* f = (uint8_t*) cairo_image_surface_get_data(surface);
+    memcpy(frame, f, FRAME_SIZE);
+    cairo_surface_destroy(surface);
+}

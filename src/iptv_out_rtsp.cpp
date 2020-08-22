@@ -8,9 +8,6 @@
 #include "utils.hpp"
 using namespace std;
 void gst_task(string in_multicast, string out_multicast);
-void start_channel(json channel, live_setting live_config)
-{
-}
 int main()
 {
     Mongo db;

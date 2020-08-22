@@ -6,18 +6,22 @@
 #include "gst.hpp"
 using namespace std;
 
-#define WAIT_MILISECOND(x) std::this_thread::sleep_for(std::chrono::milliseconds(x))
-#define FRAME_SIZE 1316
-#define FPS 2
-#define CODEWORD_LENGTH 16
-#define BISSKEY_LENGTH 6
-
 struct Scramble_data {
     Gst::Data d;
-
     Scramble_data():d{}{}
 };
 
+/*
+ *   The Gstreamer main function
+ *   Encrypt/Decrypt of input UDP to udp:://multicast:port
+ *   
+ *   @param in_multicast : multicast of input stream
+ *   @param out_multicast : multicast of output stream
+ *   @param port: output multicast port numper 
+ *   @param alg_name: name of cryptography algorithm: AES128, AES256, BISS
+ *   @param alg_key: key of cryptography algorithm
+ *
+ * */
 void gst_task(string in_multicast, int port, string out_multicast, 
         bool decrypt, string alg_name, string alg_key)
 {

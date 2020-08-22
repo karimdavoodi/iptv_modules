@@ -9,26 +9,10 @@
 #include "utils.hpp"
 #include "iptv_utils_gst.hpp"
 using namespace std;
+
 const string system_usages();
-int check_license_db(Mongo& db)
-{
-    string systemId = "0";
-    json license = json::object();
-    license["_id"] = 1;
-    license["license"] = json::object();
-    try{
-        string licStr = Util::get_file_content("/run/sms/license.json");
-        if(licStr.size()>0){
-            license["license"] = json::parse(licStr);
-            LOG(debug) << license.dump(2);
-            systemId = license["license"]["General"]["MMK_ID"];
-            db.insert_or_replace_id("system_license",1,license.dump());
-        }
-    }catch(std::exception& e){
-        LOG(error) << e.what();
-    }
-    return stoi(systemId);
-}
+int check_license_db(Mongo& db);
+
 
 int main()
 {
@@ -50,3 +34,22 @@ int main()
     }
     return 0;
 } 
+int check_license_db(Mongo& db)
+{
+    string systemId = "0";
+    json license = json::object();
+    license["_id"] = 1;
+    license["license"] = json::object();
+    try{
+        string licStr = Util::get_file_content("/run/sms/license.json");
+        if(licStr.size()>0){
+            license["license"] = json::parse(licStr);
+            LOG(debug) << license.dump(2);
+            systemId = license["license"]["General"]["MMK_ID"];
+            db.insert_or_replace_id("system_license",1,license.dump());
+        }
+    }catch(std::exception& e){
+        LOG(error) << e.what();
+    }
+    return stoi(systemId);
+}

@@ -28,6 +28,103 @@ struct transcoder_data {
     transcoder_data():video_process{false},audio_process{false},
         mqueue_src_pads{},tsdemux_src_pads_num{0},tsdemux_no_more_pad{false}{}
 };
+
+
+void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data);
+void to_multiqueue(GstPad* src_pad, transcoder_data* tdata);
+void video_transcode(GstPad* src_pad, GstStructure* caps_struct, 
+                                        transcoder_data* tdata);
+void audio_transcode(GstPad* src_pad, GstStructure* caps_struct, 
+                                        transcoder_data* tdata);
+void stream_passthrough(GstPad* src_pad, transcoder_data* tdata);
+void process_audio_pad(GstPad* pad, transcoder_data* tdata);
+void tsdemux_no_more_pad(GstElement* object, gpointer data);
+void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data);
+
+
+/*
+ *   The Gstreamer main function
+ *   Ttranscoding of  udp:://in_multicast:port to udp:://out_multicast:port
+ *   
+ *   @param in_multicast : multicast of input stream
+ *   @param out_multicast : multicast of output stream
+ *   @param port: output multicast port numper 
+ *   @param profile: config of Ttranscoding 
+ *
+ * */
+void gst_task(string in_multicast, int port, string out_multicast, json& profile)
+{
+    in_multicast = "udp://" + in_multicast + ":" + to_string(port);
+    LOG(info) 
+        << "Start  " << in_multicast 
+        << " --> udp://" << out_multicast << ":" << port;
+
+    transcoder_data tdata;
+    tdata.d.loop      = g_main_loop_new(nullptr, false);
+    tdata.d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
+
+    try{
+        tdata.target.preset     = profile["preset"].is_null()? "" :
+                                  profile["preset"];
+        tdata.target.videoCodec = profile["videoCodec"].is_null()? "" :
+                                  profile["videoCodec"];
+        tdata.target.videoSize  = profile["videoSize"].is_null()? "" :
+                                  profile["videoSize"];
+        tdata.target.videoFps   = !profile["videoFps"].is_number()? 0 :
+                                  profile["videoFps"].get<int>();
+        tdata.target.videoRate  = !profile["videoRate"].is_number()? 0 :
+                                  profile["videoRate"].get<int>();
+        tdata.target.videoProfile  = profile["videoProfile"].is_null()? "" :
+                                  profile["videoProfile"];
+        tdata.target.audioCodec = profile["audioCodec"].is_null()? "" :
+                                  profile["audioCodec"];
+        tdata.target.audioRate  = !profile["audioRate"].is_number()? 0 :
+                                  profile["audioRate"].get<int>();
+
+        // udpsrc -> tsdemux -> decoders -> encoders -> mpegtsmux -> udpsink
+        auto udpsrc     = Gst::add_element(tdata.d.pipeline, "udpsrc"),
+             queue_src  = Gst::add_element(tdata.d.pipeline, "queue", "queue_src"),
+             tsdemux    = Gst::add_element(tdata.d.pipeline, "tsdemux"),
+             multiqueue = Gst::add_element(tdata.d.pipeline, "multiqueue", "multiqueue"),
+             mpegtsmux  = Gst::add_element(tdata.d.pipeline, "mpegtsmux", "mpegtsmux"),
+             queue_sink = Gst::add_element(tdata.d.pipeline, "queue", "queue_sink"),
+             udpsink    = Gst::add_element(tdata.d.pipeline, "udpsink");
+
+        gst_element_link_many(udpsrc, queue_src, tsdemux, nullptr);
+        gst_element_link_many(mpegtsmux, queue_sink, udpsink, nullptr);
+
+        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added), &tdata);
+        g_signal_connect(tsdemux, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad), &tdata);
+        g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_pad_added), &tdata);
+        g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
+        g_object_set(queue_sink,
+                "max-size-time", 2 * GST_SECOND,
+                nullptr);
+        g_object_set(multiqueue,
+                "sync-by-running-time", true,
+                "unlinked-cache-time", 0,
+                "max-size-buffers", 0,
+                "max-size-bytes", 0,
+                "max-size-time", 0,
+                nullptr);
+        g_object_set(udpsink, 
+                "multicast_iface", "lo", 
+                "host", out_multicast.c_str() ,
+                "port", port,
+                //"sync", false,
+                nullptr);
+        g_object_set(mpegtsmux, "alignment", 7, nullptr);
+
+        Gst::add_bus_watch(tdata.d);
+        gst_element_set_state(GST_ELEMENT(tdata.d.pipeline), GST_STATE_PLAYING);
+        Gst::dot_file(tdata.d.pipeline, "iptv_transcoder", 9);
+        g_main_loop_run(tdata.d.loop);
+        //Gst::dot_file(tdata.d.pipeline, "iptv_transcoder", 0);
+    }catch(std::exception& e){
+        LOG(error) << "Exception:" << e.what();
+    }
+}
+
 void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data)
 {
     if(GST_PAD_IS_SRC(pad)){
@@ -387,77 +484,5 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
         gst_pad_add_probe(parse_src, GST_PAD_PROBE_TYPE_EVENT_BOTH,
                 GstPadProbeCallback(parser_caps_probe), data, nullptr);
         tdata->tsdemux_src_pads_num++;
-    }
-}
-void gst_task(string in_multicast, int port, string out_multicast, json& profile)
-{
-    in_multicast = "udp://" + in_multicast + ":" + to_string(port);
-    LOG(info) 
-        << "Start  " << in_multicast 
-        << " --> udp://" << out_multicast << ":" << port;
-
-    transcoder_data tdata;
-    tdata.d.loop      = g_main_loop_new(nullptr, false);
-    tdata.d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
-
-    try{
-        tdata.target.preset     = profile["preset"].is_null()? "" :
-                                  profile["preset"];
-        tdata.target.videoCodec = profile["videoCodec"].is_null()? "" :
-                                  profile["videoCodec"];
-        tdata.target.videoSize  = profile["videoSize"].is_null()? "" :
-                                  profile["videoSize"];
-        tdata.target.videoFps   = !profile["videoFps"].is_number()? 0 :
-                                  profile["videoFps"].get<int>();
-        tdata.target.videoRate  = !profile["videoRate"].is_number()? 0 :
-                                  profile["videoRate"].get<int>();
-        tdata.target.videoProfile  = profile["videoProfile"].is_null()? "" :
-                                  profile["videoProfile"];
-        tdata.target.audioCodec = profile["audioCodec"].is_null()? "" :
-                                  profile["audioCodec"];
-        tdata.target.audioRate  = !profile["audioRate"].is_number()? 0 :
-                                  profile["audioRate"].get<int>();
-
-        // udpsrc -> tsdemux -> decoders -> encoders -> mpegtsmux -> udpsink
-        auto udpsrc     = Gst::add_element(tdata.d.pipeline, "udpsrc"),
-             queue_src  = Gst::add_element(tdata.d.pipeline, "queue", "queue_src"),
-             tsdemux    = Gst::add_element(tdata.d.pipeline, "tsdemux"),
-             multiqueue = Gst::add_element(tdata.d.pipeline, "multiqueue", "multiqueue"),
-             mpegtsmux  = Gst::add_element(tdata.d.pipeline, "mpegtsmux", "mpegtsmux"),
-             queue_sink = Gst::add_element(tdata.d.pipeline, "queue", "queue_sink"),
-             udpsink    = Gst::add_element(tdata.d.pipeline, "udpsink");
-
-        gst_element_link_many(udpsrc, queue_src, tsdemux, nullptr);
-        gst_element_link_many(mpegtsmux, queue_sink, udpsink, nullptr);
-
-        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added), &tdata);
-        g_signal_connect(tsdemux, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad), &tdata);
-        g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_pad_added), &tdata);
-        g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
-        g_object_set(queue_sink,
-                "max-size-time", 2 * GST_SECOND,
-                nullptr);
-        g_object_set(multiqueue,
-                "sync-by-running-time", true,
-                "unlinked-cache-time", 0,
-                "max-size-buffers", 0,
-                "max-size-bytes", 0,
-                "max-size-time", 0,
-                nullptr);
-        g_object_set(udpsink, 
-                "multicast_iface", "lo", 
-                "host", out_multicast.c_str() ,
-                "port", port,
-                //"sync", false,
-                nullptr);
-        g_object_set(mpegtsmux, "alignment", 7, nullptr);
-
-        Gst::add_bus_watch(tdata.d);
-        gst_element_set_state(GST_ELEMENT(tdata.d.pipeline), GST_STATE_PLAYING);
-        Gst::dot_file(tdata.d.pipeline, "iptv_transcoder", 9);
-        g_main_loop_run(tdata.d.loop);
-        //Gst::dot_file(tdata.d.pipeline, "iptv_transcoder", 0);
-    }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
     }
 }

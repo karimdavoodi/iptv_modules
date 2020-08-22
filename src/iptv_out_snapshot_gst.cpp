@@ -9,35 +9,24 @@ struct ProbData {
     GstBus* bus;
     GstElement* src; 
 };
+
+void uridecodebin_pad_added(GstElement* object, GstPad* pad, 
+                            gpointer data);
 GstPadProbeReturn filesink_get_buffer(
-        GstPad *pad,
-        GstPadProbeInfo *info,
-        gpointer user_data)
-{
-    auto d = (ProbData *)user_data;
-    LOG(debug) << "Got Buffer in filesink";
-    d->buffer_count++;
-    if(d->buffer_count > 1){
-        gst_bus_post(d->bus, gst_message_new_eos(GST_OBJECT(d->src)));
-        LOG(debug) << "Post EOS message";
-    }
-    return GST_PAD_PROBE_OK;
-}
-void uridecodebin_pad_added(GstElement* object, GstPad* pad, gpointer data)
-{
-    auto d = (Gst::Data *)data;
-    auto pad_type = Gst::pad_caps_type(pad);
-    LOG(debug) << "pad type:" << pad_type;
-    if(pad_type.find("video") != string::npos){
-        LOG(debug) << "try to link to capsfilter";
-        auto capsfilter = gst_bin_get_by_name(GST_BIN(d->pipeline), "capsfilter");
-        Gst::pad_link_element_static(pad, capsfilter, "sink");
-        gst_object_unref(capsfilter);
-    }else{
-        //auto fakesink = Gst::add_element(d->pipeline, "fakesink", "", true);
-        //Gst::pad_link_element_static(pad, fakesink, "sink");
-    }
-}
+                            GstPad *pad,
+                            GstPadProbeInfo *info,
+                            gpointer user_data);
+
+
+/*
+ *   The Gstreamer main function
+ *   Got snapshot from udp:://in_multicast:port
+ *   
+ *   @param in_multicast : multicast of input stream
+ *   @param port: output multicast port numper 
+ *   @param pic_path: the path of snapshot image
+ *
+ * */
 bool gst_task(string in_multicast, int port, const string pic_path)
 {
     Gst::Data d;
@@ -94,5 +83,32 @@ bool gst_task(string in_multicast, int port, const string pic_path)
         return false;
     }
 }
-
-
+GstPadProbeReturn filesink_get_buffer(
+        GstPad *pad,
+        GstPadProbeInfo *info,
+        gpointer user_data)
+{
+    auto d = (ProbData *)user_data;
+    LOG(debug) << "Got Buffer in filesink";
+    d->buffer_count++;
+    if(d->buffer_count > 1){
+        gst_bus_post(d->bus, gst_message_new_eos(GST_OBJECT(d->src)));
+        LOG(debug) << "Post EOS message";
+    }
+    return GST_PAD_PROBE_OK;
+}
+void uridecodebin_pad_added(GstElement* object, GstPad* pad, gpointer data)
+{
+    auto d = (Gst::Data *)data;
+    auto pad_type = Gst::pad_caps_type(pad);
+    LOG(debug) << "pad type:" << pad_type;
+    if(pad_type.find("video") != string::npos){
+        LOG(debug) << "try to link to capsfilter";
+        auto capsfilter = gst_bin_get_by_name(GST_BIN(d->pipeline), "capsfilter");
+        Gst::pad_link_element_static(pad, capsfilter, "sink");
+        gst_object_unref(capsfilter);
+    }else{
+        //auto fakesink = Gst::add_element(d->pipeline, "fakesink", "", true);
+        //Gst::pad_link_element_static(pad, fakesink, "sink");
+    }
+}

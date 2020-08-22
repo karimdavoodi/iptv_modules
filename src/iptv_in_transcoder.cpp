@@ -11,9 +11,50 @@
 
 using namespace std;
 
-void gst_task(string in_multicast, int port, string out_multicast, json& profile);
+void gst_task(string in_multicast, int port, 
+                    string out_multicast, json& profile);
 const string profile_resolution(const string p_vsize);
+void start_channel(json channel, live_setting live_config);
 
+/*
+ *   The main()
+ *      - check license
+ *      - read channels from mongoDB 
+ *      - start thread for each active channel
+ *      - wait to join
+ * */
+int main()
+{
+    Mongo db;
+    vector<thread> pool;
+    live_setting live_config;
+    CHECK_LICENSE;
+    Util::init(db);
+    if(!Util::get_live_config(db, live_config, "transcode")){
+        LOG(info) << "Error in live config! Exit.";
+        return -1;
+    }
+    json channels = json::parse(db.find_mony("live_inputs_transcode",
+                "{\"active\":true}"));
+    for(auto& chan : channels ){
+        IS_CHANNEL_VALID(chan);
+        
+        if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
+            pool.emplace_back(start_channel, chan, live_config);
+            //break;
+        }
+    }
+    for(auto& t : pool)
+        t.join();
+    THE_END;
+} 
+/*
+ *  The channel thread function
+ *
+ *  @param channel : config of channel
+ *  @param live_config : general live streamer config
+ *
+ * */
 void start_channel(json channel, live_setting live_config)
 {
     Mongo db;
@@ -28,21 +69,6 @@ void start_channel(json channel, live_setting live_config)
     auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
     live_config.type_id = channel["inputType"];
     auto in_multicast  = Util::get_multicast(live_config, channel["input"]);
-    // TODO: do by Gst
-   /* 
-                "_id": int,
-                "active": boolean,
-                "name": string, 
-                "preset": string,       # from 'ultrafast','fast','medium','slow','veryslow' 
-                "videoCodec": string,   # from  'h265','h264','mpeg2' 
-                "videoSize": string,    # from '4K', 'FHD', 'HD', 'SD', 'CD' 
-                "videoRate": int,       # from 1 .. 100000000 
-                "videoFps": int,        # from 1 .. 60
-                "videoProfile": string, # from 'Baseline', 'Main', 'High'
-                "audioCodec": string,   # from 'aac','mp3','mp2' 
-                "audioRate": int,       # from 1 to 1000000
-                "extra": string 
-    */
     LOG(trace) << profile.dump(2);
 #if TEST_BY_FFMPEG 
     // TODO: apply  videoProfile and extra
@@ -91,27 +117,3 @@ void start_channel(json channel, live_setting live_config)
 #endif
     
 }
-int main()
-{
-    Mongo db;
-    vector<thread> pool;
-    live_setting live_config;
-    CHECK_LICENSE;
-    Util::init(db);
-    if(!Util::get_live_config(db, live_config, "transcode")){
-        LOG(info) << "Error in live config! Exit.";
-        return -1;
-    }
-    json channels = json::parse(db.find_mony("live_inputs_transcode", "{}"));
-    for(auto& chan : channels ){
-        IS_CHANNEL_VALID(chan);
-        
-        if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
-            pool.emplace_back(start_channel, chan, live_config);
-            //break;
-        }
-    }
-    for(auto& t : pool)
-        t.join();
-    THE_END;
-} 

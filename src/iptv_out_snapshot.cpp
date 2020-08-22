@@ -7,8 +7,60 @@
 #include <boost/format.hpp>
 #include "utils.hpp"
 #define SNAPSHOT_PERIOD 120
+
 using namespace std;
+
 bool gst_task(string in_multicast, int port, const string pic_path);
+void start_snapshot(const json& channel, live_setting live_config);
+
+/*
+ *   The main()
+ *      - check license
+ *      - read channels from mongoDB 
+ *      - start thread for each active channel
+ *      - wait to join
+ * */
+int main()
+{
+    Mongo db;
+    vector<thread> pool;
+    live_setting live_config;
+    CHECK_LICENSE;
+    Util::init(db);
+    if(!Util::get_live_config(db, live_config, "dvb")){
+        LOG(error) << "Error in live config! Exit.";
+        return -1;
+    }
+    Util::check_path(string(MEDIA_ROOT) + "Snapshot");
+
+    json channels_net = json::parse(db.find_mony("live_output_network", 
+                "{\"active\":true}"));
+    json channels_dvb = json::parse(db.find_mony("live_output_dvb", 
+                "{\"active\":true}"));
+    while(true){
+        auto start = time(nullptr);
+        for(auto& chan : channels_net ){
+            start_snapshot(chan, live_config);
+        }
+        for(auto& chan : channels_dvb ){
+            start_snapshot(chan, live_config);
+        }
+        auto duration = time(nullptr) - start;
+        if(duration < SNAPSHOT_PERIOD){
+            LOG(info) << "Wait for next snapshot for " 
+                << SNAPSHOT_PERIOD - duration;
+            Util::wait((SNAPSHOT_PERIOD - duration) * 1000);
+        } 
+    }
+    THE_END;
+} 
+/*
+ *  The channel thread function
+ *
+ *  @param channel : config of channel
+ *  @param live_config : general live streamer config
+ *
+ * */
 void start_snapshot(const json& channel, live_setting live_config)
 {
     Mongo db;
@@ -59,35 +111,3 @@ void start_snapshot(const json& channel, live_setting live_config)
     db.insert("report_channels", report.dump());
     Util::wait(1000);
 }
-int main()
-{
-    Mongo db;
-    vector<thread> pool;
-    live_setting live_config;
-    CHECK_LICENSE;
-    Util::init(db);
-    if(!Util::get_live_config(db, live_config, "dvb")){
-        LOG(error) << "Error in live config! Exit.";
-        return -1;
-    }
-    Util::check_path(string(MEDIA_ROOT) + "Snapshot");
-
-    json channels_net = json::parse(db.find_mony("live_output_network", "{\"active\":true}"));
-    json channels_dvb = json::parse(db.find_mony("live_output_dvb", "{\"active\":true}"));
-    while(true){
-        auto start = time(nullptr);
-        for(auto& chan : channels_net ){
-            start_snapshot(chan, live_config);
-        }
-        for(auto& chan : channels_dvb ){
-            start_snapshot(chan, live_config);
-        }
-        auto duration = time(nullptr) - start;
-        if(duration < SNAPSHOT_PERIOD){
-            LOG(info) << "Wait for next snapshot for " 
-                << SNAPSHOT_PERIOD - duration;
-            Util::wait((SNAPSHOT_PERIOD - duration) * 1000);
-        } 
-    }
-    THE_END;
-} 

@@ -9,9 +9,7 @@
 #include "gst.hpp"
 
 using namespace std;
-/*
-   gst-launch-1.0 -v udpsrc uri=udp://229.2.0.1:3200 ! tsparse ! fakesink
-   */
+
 struct Event {
     string name;
     string text;
@@ -22,6 +20,68 @@ map<int, Event> day_eit;
 struct DayTime {
     int hour, minute, second;
 };
+
+int gst_date_to_int(GstDateTime* date);
+void gst_date_to_day_time(GstDateTime* date, DayTime& d);
+string gst_date_to_str(GstDateTime* date);
+void dump_tdt (GstMpegtsSection * section);
+void dump_tot (GstMpegtsSection * section);
+void dump_descriptors (GstMpegtsEITEvent *event);
+void dump_eit(GstMpegtsSection *sec);
+void channel_epg_update(Mongo& db, map<int, Event>& day_eit, int channel_id);
+int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data);
+
+/*
+ *   The Gstreamer main function
+ *   Capture EPG of udp:://in_multicast:port and update in DB
+ *   
+ *   @param in_multicast : multicast of input stream
+ *   @param port: output multicast port numper 
+ *   @param db: instanse of MongoDB
+ *   @param channel_id: Id of channel in DB 
+ *
+ * */
+void gst_task(Mongo& db, string in_multicast, int port, int channel_id)
+{
+    in_multicast = "udp://" + in_multicast + ":" + to_string(port);
+    LOG(info) << "Start in " << in_multicast;
+
+    Gst::Data d;
+    d.loop      = g_main_loop_new(nullptr, false);
+    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
+
+    try{
+        auto udpsrc     = Gst::add_element(d.pipeline, "udpsrc"),
+             tsparse    = Gst::add_element(d.pipeline, "tsparse"),
+             fakesink   = Gst::add_element(d.pipeline, "fakesink");
+
+        gst_element_link_many(udpsrc, tsparse, fakesink, nullptr);
+
+        g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
+        d.bus = gst_pipeline_get_bus(d.pipeline);
+        d.watch_id = gst_bus_add_watch(d.bus, bus_on_message, &d); 
+        bool thread_running = true;
+        std::thread t([&](){
+                while(thread_running){
+                    int wait = EPG_UPDATE_TIME;
+                    while(thread_running && wait--) Util::wait(1000);
+                    try{
+                        LOG(info) << "Try to save EPG in DB";
+                        channel_epg_update(db, day_eit, channel_id);
+                    }catch(std::exception& e){
+                        LOG(error) << "Exception:" << e.what();
+                    }
+                }
+                });
+        t.detach();
+
+        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
+        g_main_loop_run(d.loop);
+        thread_running = false;
+    }catch(std::exception& e){
+        LOG(error) << "Exception:" << e.what();
+    }
+}
 int gst_date_to_int(GstDateTime* date)
 {
     int n = 0;
@@ -42,7 +102,8 @@ string gst_date_to_str(GstDateTime* date)
     if(date){
         DayTime d;
         gst_date_to_day_time(date, d);
-        ret = to_string(d.hour) + ":" + to_string(d.minute) + ":" + to_string(d.second);
+        ret = to_string(d.hour) + ":" + to_string(d.minute) 
+                                + ":" + to_string(d.second);
     }
     return ret;
 }
@@ -187,46 +248,4 @@ int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data)
         default: ;
     }
     return true;
-}
-
-void gst_task(Mongo& db, string in_multicast, int port, int channel_id)
-{
-    in_multicast = "udp://" + in_multicast + ":" + to_string(port);
-    LOG(info) << "Start in " << in_multicast;
-
-    Gst::Data d;
-    d.loop      = g_main_loop_new(nullptr, false);
-    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
-
-    try{
-        auto udpsrc     = Gst::add_element(d.pipeline, "udpsrc"),
-             tsparse    = Gst::add_element(d.pipeline, "tsparse"),
-             fakesink   = Gst::add_element(d.pipeline, "fakesink");
-
-        gst_element_link_many(udpsrc, tsparse, fakesink, nullptr);
-
-        g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
-        d.bus = gst_pipeline_get_bus(d.pipeline);
-        d.watch_id = gst_bus_add_watch(d.bus, bus_on_message, &d); 
-        bool thread_running = true;
-        std::thread t([&](){
-                while(thread_running){
-                    int wait = EPG_UPDATE_TIME;
-                    while(thread_running && wait--) Util::wait(1000);
-                    try{
-                        LOG(info) << "Try to save EPG in DB";
-                        channel_epg_update(db, day_eit, channel_id);
-                    }catch(std::exception& e){
-                        LOG(error) << "Exception:" << e.what();
-                    }
-                }
-                });
-        t.detach();
-
-        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
-        g_main_loop_run(d.loop);
-        thread_running = false;
-    }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
-    }
 }

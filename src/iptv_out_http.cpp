@@ -7,27 +7,18 @@
 #include <boost/format.hpp>
 #include "utils.hpp"
 using namespace std;
-void gst_task(string in_multicast, int in_port, int http_stream_port, const string ch_name);
-void start_channel(json channel, live_setting live_config)
-{
-    try{
-        live_config.type_id = channel["inputType"];
-        auto in_multicast = Util::get_multicast(live_config, channel["input"]);
-        // TODO: find better way to calculate channel's port
-        int tcpserver_port = 4000 + (channel["_id"].get<long>() % 6000);
-        LOG(info) << "Start channle " << channel["name"] << " id:" << channel["_id"]
-            << " on Port:" << tcpserver_port;
-        while(true){
-            in_multicast = "229.1.1.1";
-            gst_task(in_multicast, INPUT_PORT, tcpserver_port, 
-                    channel["name"].get<string>()); 
-            Util::wait(5000);
-        }
 
-    }catch(std::exception& e){
-        LOG(error) << e.what();
-    }
-}
+void gst_task(string in_multicast, int in_port, int http_stream_port, 
+                                            const string ch_name);
+void start_channel(json channel, live_setting live_config);
+
+/*
+ *   The main()
+ *      - check license
+ *      - read channels from mongoDB 
+ *      - start thread for each active channel
+ *      - wait to join
+ * */
 int main()
 {
     Mongo db;
@@ -51,3 +42,29 @@ int main()
         t.join();
     THE_END;
 } 
+/*
+ *  The channel thread function
+ *  @param channel : config of channel
+ *  @param live_config : general live streamer config
+ *
+ * */
+void start_channel(json channel, live_setting live_config)
+{
+    try{
+        live_config.type_id = channel["inputType"];
+        auto in_multicast = Util::get_multicast(live_config, channel["input"]);
+        // TODO: find better way to calculate channel's port
+        int tcpserver_port = 4000 + (channel["_id"].get<long>() % 6000);
+        LOG(info) << "Start channle " << channel["name"] << " id:" << channel["_id"]
+            << " on Port:" << tcpserver_port;
+        while(true){
+            in_multicast = "229.1.1.1";
+            gst_task(in_multicast, INPUT_PORT, tcpserver_port, 
+                    channel["name"].get<string>()); 
+            Util::wait(5000);
+        }
+
+    }catch(std::exception& e){
+        LOG(error) << e.what();
+    }
+}

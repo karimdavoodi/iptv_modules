@@ -8,16 +8,15 @@
 using namespace std;
 
 void gst_task(Mongo& db, string in_multicast, int port, int chan_id);
+void start_channel(json channel, live_setting live_config);
 
-void start_channel(json channel, live_setting live_config)
-{
-    Mongo db;
-    auto in_multicast = Util::get_multicast(live_config, channel["input"]);
-    while(true){
-        gst_task(db, in_multicast, INPUT_PORT, channel["_id"]); 
-        Util::wait(5000);
-    }
-}
+/*
+ *   The main()
+ *      - check license
+ *      - read channels from mongoDB 
+ *      - start thread for each active channel
+ *      - wait to join
+ * */
 int main()
 {
     Mongo db;
@@ -32,9 +31,9 @@ int main()
     json filter;
     filter["active"] = true;
     filter["inputType"] = live_config.type_id;
-
     // TODO: EPG only on network channels 
-    json channels = json::parse(db.find_mony("live_output_network", filter.dump()));
+    json channels = json::parse(db.find_mony("live_output_network", 
+                filter.dump()));
     for(auto& chan : channels ){
         pool.emplace_back(start_channel, chan, live_config);
         //break;
@@ -43,3 +42,19 @@ int main()
         t.join();
     THE_END;
 } 
+/*
+ *  The channel thread function
+ *
+ *  @param channel : config of channel
+ *  @param live_config : general live streamer config
+ *
+ * */
+void start_channel(json channel, live_setting live_config)
+{
+    Mongo db;
+    auto in_multicast = Util::get_multicast(live_config, channel["input"]);
+    while(true){
+        gst_task(db, in_multicast, INPUT_PORT, channel["_id"]); 
+        Util::wait(5000);
+    }
+}
