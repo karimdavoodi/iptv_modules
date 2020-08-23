@@ -35,22 +35,18 @@ void typefind_have_type(GstElement* typefind,
                                      gpointer user_data);
 /*
  *   The Gstreamer main function
- *   Stream media file to udp:://multicast:port
+ *   Stream media file to udp:://out_multicast:port
  *   
  *   @param media_path: media file 
- *   @param multicast : multicast IP address
+ *   @param out_multicast : multicast IP address of output
  *   @param port: multicast port numper 
  *
  * */
-void gst_task(string media_path, string multicast_addr, int port)
+void gst_task(string media_path, string out_multicast, int port)
 {
-    {   // for test 
-        char* test_file = getenv("GST_FILE_NAME");
-        if(test_file!=nullptr) media_path = string(test_file);
-    }
     LOG(info) 
         << "Start " << media_path 
-        << " --> udp://" << multicast_addr << ":" << port;
+        << " --> udp://" << out_multicast << ":" << port;
     Gst::Data d;
     d.loop      = g_main_loop_new(nullptr, false);
     d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
@@ -76,7 +72,7 @@ void gst_task(string media_path, string multicast_addr, int port)
                 nullptr);
         g_object_set(udpsink, 
                 "multicast_iface", "lo", 
-                "host", multicast_addr.c_str() ,
+                "host", out_multicast.c_str() ,
                 "port", port,
                 "sync", true, nullptr);
         g_object_set(mpegtsmux, "alignment", 7, nullptr);

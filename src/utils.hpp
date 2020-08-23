@@ -25,44 +25,45 @@
 #include "../third_party/json.hpp"
 #include "mongo_driver.hpp"
 #include "config.hpp"
-#define WAIT_MILISECOND(x) std::this_thread::sleep_for(std::chrono::milliseconds(x))
-#define THE_END                                            \
-    BOOST_LOG_TRIVIAL(warning) << "THE END!";              \
-    do{                                                    \
-        this_thread::sleep_for(chrono::seconds(100));      \
-    }while(true)
-#define CHECK_LICENSE                                       \
-    do{                                                     \
-        int check;                                          \
-        if(!license_capability_bool("GB_EPG", &check)){      \
-            BOOST_LOG_TRIVIAL(error) << "Invalid license!"; \
-            return -1;                                      \
-        }                                                   \
+
+#define CHECK_LICENSE                                           \
+    do{                                                         \
+        if(ENABLE_LICENSE){                                     \
+            int check;                                          \
+            if(!license_capability_bool("GB_EPG", &check)){     \
+                BOOST_LOG_TRIVIAL(error) << "Invalid license!"; \
+                return -1;                                      \
+            }                                                   \
+        }                                                       \
     }while(0)
-#define IS_CHANNEL_VALID(chan)                               \
-        if(chan["active"].is_null()) {                       \
-            BOOST_LOG_TRIVIAL(error) << "Invalid channel!";  \
-            continue;                                        \
-        }                                                    \
-        if(chan["active"] == false) {                        \
-            BOOST_LOG_TRIVIAL(warning) << "Inactive channel " << chan["name"];\
-            continue;                                        \
-        }                                                    \
-        if(!chan["input"].is_null() &&                     \
-           !chan["input"].is_number()) {                   \
-            BOOST_LOG_TRIVIAL(error) << "Invalid silver channel!";  \
-            continue;                                        \
-        } do{}while(0)
+
 using nlohmann::json;
+
+int license_capability_bool(const char *var,int *val);
+
 struct live_setting {
     int type_id;
     int multicast_class;
     std::string multicast_iface;
     std::string main_iface;
-    int virtual_net_id, virtual_dvb_id;
+    live_setting():
+        type_id(0),
+        multicast_class(239),
+        multicast_iface("lo"),
+        main_iface("")
+    {}
 };
-int license_capability_bool(const char *var,int *val);
+class config_error : public std::exception {
+    private:
+        std::string msg;
+    public:
+        config_error(const char* _msg):msg(_msg){}
+        virtual const char* what() const noexcept { return msg.c_str(); }
+}; 
+
 namespace Util {
+
+    void wait_forever();
     int get_systemId(Mongo& db);
     void system(const std::string cmd);
     void wait(int millisecond);
@@ -72,9 +73,9 @@ namespace Util {
     void report_error(Mongo& db, const std::string, int level = 1);
     bool get_live_config(Mongo& db, live_setting& cfg, std::string type);
     const std::string get_multicast(const live_setting& config, int channel_id, 
-                                                bool out_multicast=false);
+            bool out_multicast=false);
     const std::string get_content_path(Mongo& db, int id);
-    void route_add(int multicast_class, std::string nic);
+    void add_route_by_mask8(int multicast_class, std::string nic);
     void init(Mongo& db);
     void check_path(const std::string path);
     const std::string get_file_content(const std::string name);

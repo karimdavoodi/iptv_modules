@@ -41,7 +41,7 @@
 #include "gst.hpp"
 using namespace std;
 namespace Util {
-    int systemId = 0;
+    static int systemId = 0;
     int get_systemId(Mongo& db)
     {
         try{
@@ -51,7 +51,8 @@ namespace Util {
             if(license["license"]["General"]["MMK_ID"].is_null()) return 0;
             systemId = license["license"]["General"]["MMK_ID"];
             return systemId;
-        }catch( ... ){
+        }catch(std::exception& e){
+            LOG(error) << e.what();
             return 0;
         }
     }
@@ -66,6 +67,13 @@ namespace Util {
     void wait(int millisecond)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(millisecond));
+    }
+    void wait_forever()
+    {
+        LOG(warning) << "Wait Forever!";
+        while(true){
+            wait(1000000000L);
+        }
     }
     const std::string shell_out(const std::string cmd) {
         std::array<char, 128> buffer;
@@ -92,7 +100,8 @@ namespace Util {
             namespace keywords = logging::keywords;
             namespace attrs = logging::attributes;
             logging::add_common_attributes();
-            logging::core::get()->add_global_attribute("Process", attrs::current_process_name());
+            logging::core::get()->add_global_attribute("Process", 
+                    attrs::current_process_name());
 
             // Set Debug level
             json system_location = json::parse(db.find_id("system_general",1));
@@ -103,14 +112,15 @@ namespace Util {
             if(env_iptv_debug_level != nullptr){
                 debug_level = atoi(env_iptv_debug_level);
             }
-            string out_file = "/opt/sms/tmp/log.log"; 
+            string out_file = "/tmp/iptv_modules.log"; 
+            // Check evnironment debug file
             char* env_iptv_debug_file = getenv("IPTV_DEBUG_FILE");
             if(env_iptv_debug_file != nullptr){
                 out_file = env_iptv_debug_file; 
             }
             LOG(info) << "Log file:" << out_file << " level:" << debug_level;
             debug_level = abs(5-debug_level);
-
+            // Set Debug 
             logging::add_file_log
                 (
                  keywords::file_name = out_file,
@@ -122,7 +132,44 @@ namespace Util {
             logging::core::get()->set_filter(
                     logging::trivial::severity >= debug_level);
         }catch(std::exception& e){
-            LOG(error) << "Exception " << e.what();
+            LOG(error) << e.what();
+        }
+    }
+    void _set_gst_debug_level()
+    {
+        char* d_level = getenv("GST_DEBUG");
+        string debug_level = (d_level != nullptr) ? d_level : "";
+        if(debug_level  == "WARNING"){
+            gst_debug_set_default_threshold(GST_LEVEL_WARNING);
+        }else if(debug_level  == "ERROR"){
+            gst_debug_set_default_threshold(GST_LEVEL_ERROR);
+        }else if(debug_level  == "DEBUG"){
+            gst_debug_set_default_threshold(GST_LEVEL_DEBUG);
+        }else if(debug_level  == "LOG"){
+            gst_debug_set_default_threshold(GST_LEVEL_LOG);
+        }else if(debug_level  == "INFO"){
+            gst_debug_set_default_threshold(GST_LEVEL_INFO);
+        }else if(debug_level  == "TRACE"){
+            gst_debug_set_default_threshold(GST_LEVEL_TRACE);
+        }
+    }
+    void _set_internal_multicat_route()
+    {
+        if( geteuid() == 0 ){
+            bool found = false;
+            ifstream route("/proc/net/route");
+            string line;
+            while(route.good()){
+                std::getline(route, line);
+                if(line.find("lo") != string::npos &&
+                        line.find("000000E5")/*229.0.0.0*/ != string::npos ){
+                    found = true;
+                }
+            }
+            if(!found)
+                add_route_by_mask8(INPUT_MULTICAST, "lo");
+            else
+                LOG(debug) << "Found local multicast route, not add it";
         }
     }
     void init(Mongo& db)
@@ -130,71 +177,31 @@ namespace Util {
         try{
             boost_log_init(db);
             gst_init(nullptr, nullptr);
-            char* d_level = getenv("GST_DEBUG");
-            string debug_level = (d_level != nullptr) ? d_level : "";
-            if(debug_level  == "WARNING"){
-                gst_debug_set_default_threshold(GST_LEVEL_WARNING);
-            }else if(debug_level  == "ERROR"){
-                gst_debug_set_default_threshold(GST_LEVEL_ERROR);
-            }else if(debug_level  == "DEBUG"){
-                gst_debug_set_default_threshold(GST_LEVEL_DEBUG);
-            }else if(debug_level  == "LOG"){
-                gst_debug_set_default_threshold(GST_LEVEL_LOG);
-            }else if(debug_level  == "INFO"){
-                gst_debug_set_default_threshold(GST_LEVEL_INFO);
-            }else if(debug_level  == "TRACE"){
-                gst_debug_set_default_threshold(GST_LEVEL_TRACE);
-            }
-            // Add internal multicast net to localhost 
-            if( geteuid() == 0 ){
-                bool found = false;
-                ifstream route("/proc/net/route");
-                string line;
-                while(route.good()){
-                    std::getline(route, line);
-                    if(line.find("lo") != string::npos &&
-                            line.find("000000E5")/*229.0.0.0*/ != string::npos ){
-                        found = true;
-                    }
-                }
-                if(!found)
-                    route_add(INPUT_MULTICAST, "lo");
-                else
-                    LOG(debug) << "Found local multicast route, not add it";
-            }
+            _set_gst_debug_level();
+            _set_internal_multicat_route();
         }catch(std::exception& e){
-            LOG(error) << "Exception"<< e.what();
+            LOG(error) << e.what();
         }
     }
-    void route_add(int multicast_class, string nic)
+    void add_route_by_mask8(int multicast_class, string nic)
     {
         string multicat_addr = to_string(multicast_class) + ".0.0.0";
         string netmask = "255.0.0.0";
         string cmd = "ip route add " + multicat_addr + "/8 dev " + nic;
         system(cmd);
     }
-    void live_input_type_id(Mongo& db, live_setting& cfg, const string type)
-    {
-        try{
-            cfg.type_id = 0;
-            json input_types = json::parse(db.find_mony("live_inputs_types", "{}"));
-            for(auto& t : input_types){
-                if(t["name"] == type){
-                    cfg.type_id =  t["_id"];
-                    break;
-                }
-            }
-        }catch(std::exception& e){
-            LOG(error) << "Exception " << e.what();
-        }
-    }
     bool get_live_config(Mongo& db, live_setting& cfg, string type)
     {
         try{
-            live_input_type_id(db, cfg, type);
+            // Get type id
+            json input_type = json::parse(db.find_one("live_inputs_types",
+                        "{\"name\":\"" + type + "\"}"));
+
+            if(!input_type.is_null()){
+                cfg.type_id =  input_type["_id"];
+            }
+            // Get network config
             json net = json::parse(db.find_id("system_network",1));
-            cfg.multicast_iface = "lo";
-            cfg.main_iface = "";
             cfg.multicast_class = net["multicastBase"];
             int m_id = net["multicastInterface"]; 
             int main_id = net["mainInterface"]; 
@@ -206,24 +213,23 @@ namespace Util {
                     cfg.main_iface = iface["name"];
                 }
             } 
-            if(cfg.multicast_class > 239 || cfg.multicast_class < 224)
+            if(cfg.multicast_class > 239 || cfg.multicast_class < 224){
                 cfg.multicast_class = 239;
+                LOG(error) << "Invalid multicat, fix by 239.";
+            }
             LOG(debug) 
                 << "Live config:  "
                 << " multicast_class:" << cfg.multicast_class 
                 << " multicast_iface:" << cfg.multicast_iface 
                 << " type_id:" << cfg.type_id;
-            if(cfg.type_id == -1 || 
-                    cfg.multicast_class > 239 ||
-                    cfg.multicast_class < 224 ||
+            if(cfg.type_id < 1 || 
                     cfg.multicast_iface.size() < 1){
                 LOG(error)  << "invalid config";
                 return false;
             } 
             return true;
         }catch(std::exception& e){
-            LOG(error) << "Exception " << e.what();
-            cfg.multicast_class = 239;
+            LOG(error) << e.what();
             return false;
         }
     }
@@ -266,7 +272,7 @@ namespace Util {
             LOG(trace) << "Media Path:" << path;
             return path;
         }catch(std::exception& e){
-            LOG(error) << "Exception " << e.what();
+            LOG(error) << e.what();
             return "";
         }
     }

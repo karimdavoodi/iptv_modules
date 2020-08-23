@@ -61,7 +61,8 @@ int main()
     }
     for(auto& t : pool)
         t.join();
-    THE_END;
+
+    Util::wait_forever();
 } 
 /*
  *  The channel thread function
