@@ -399,4 +399,36 @@ namespace Util {
         LOG(info) << "Not found channel id:" << chan_id << " in outputs"; 
         return false;
     }
+    void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
+    {
+        string name = channel["name"];
+        json media = json::object();
+        media["_id"] = id;
+        media["format"] = MP4_FORMAT;
+        media["type"] = TIME_SHIFT_TYPE;
+        media["price"] = 0;
+        media["date"] = time(nullptr);
+        media["languages"] = json::array();
+        media["permission"] = channel["permission"];
+        media["platform"] = json::array();
+        media["category"] = channel["category"];
+        media["description"] = {
+            {"en",{
+                      { "name" ,name },
+                      { "description" ,"" }
+                  }},
+            {"fa",{
+                      { "name" ,name },
+                      { "description" ,"" }
+                  }},
+            {"ar",{
+                      { "name" ,name },
+                      { "description" ,"" }
+                  }}
+        };
+        media["name"] = channel["name"];
+        db.insert("storage_contents_info", media.dump());
+        LOG(info) << "Record " << channel["name"] << ":" << name;
+
+    }
 }

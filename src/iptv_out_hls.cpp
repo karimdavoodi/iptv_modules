@@ -30,7 +30,7 @@
 #define BY_FFMPEG 0
 using namespace std;
 
-void gst_task(string in_multicast, int in_port, string hls_root);
+void gst_convert_udp_to_hls(string in_multicast, int in_port, string hls_root);
 void start_channel(json channel, live_setting live_config);
 
 /*
@@ -62,7 +62,7 @@ int main()
     for(auto& t : pool)
         t.join();
 
-    THE_END;
+    Util::wait_forever();
 } 
 /*
  *  The channel thread function
@@ -85,7 +85,7 @@ void start_channel(json channel, live_setting live_config)
     Util::exec_shell_loop(cmd.str());
 #else
     while(true){
-        gst_task(in_multicast, INPUT_PORT, hls_root); 
+        gst_convert_udp_to_hls(in_multicast, INPUT_PORT, hls_root); 
         Util::wait(5000);
     }
 #endif

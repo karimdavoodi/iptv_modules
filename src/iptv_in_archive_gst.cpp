@@ -19,17 +19,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-/*
- *  TODO: 
- *      - invalid timestamps in TS files 
- * */
 #include <boost/log/trivial.hpp>
 #include "gst.hpp"
 
 using namespace std;
-void multiqueue_padd_added(GstElement* object, GstPad* pad, gpointer data);
-void demux_padd_added(GstElement* object, GstPad* pad, gpointer data);
-void typefind_have_type(GstElement* typefind,
+void multiqueue_padd_added_a(GstElement* object, GstPad* pad, gpointer data);
+void demux_padd_added_a(GstElement* object, GstPad* pad, gpointer data);
+void typefind_have_type_a(GstElement* typefind,
                                      guint arg0,
                                      GstCaps* caps,
                                      gpointer user_data);
@@ -42,7 +38,7 @@ void typefind_have_type(GstElement* typefind,
  *   @param port: multicast port numper 
  *
  * */
-void gst_task(string media_path, string out_multicast, int port)
+void gst_stream_media_file(string media_path, string out_multicast, int port)
 {
     LOG(info) 
         << "Start " << media_path 
@@ -65,8 +61,8 @@ void gst_task(string media_path, string out_multicast, int port)
         gst_element_link_many(filesrc, queue_src, identity, typefind, nullptr);
         gst_element_link_many(mpegtsmux, tsparse, queue ,udpsink, nullptr);
     
-        g_signal_connect(typefind, "have-type", G_CALLBACK(typefind_have_type), &d);
-        g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_padd_added), &d);
+        g_signal_connect(typefind, "have-type", G_CALLBACK(typefind_have_type_a), &d);
+        g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_padd_added_a), &d);
         g_object_set(filesrc, 
                 "location", media_path.c_str(), 
                 nullptr);
@@ -88,7 +84,7 @@ void gst_task(string media_path, string out_multicast, int port)
         LOG(error) << "Exception:" << e.what();
     }
 }
-void multiqueue_padd_added(GstElement* object, GstPad* pad, gpointer data)
+void multiqueue_padd_added_a(GstElement* object, GstPad* pad, gpointer data)
 {
     LOG(debug) << "Multiqueue PAD:" << Gst::pad_name(pad);
     if(gst_pad_get_direction(pad) == GST_PAD_SRC ){
@@ -103,12 +99,12 @@ void multiqueue_padd_added(GstElement* object, GstPad* pad, gpointer data)
         gst_object_unref(mpegtsmux);
     }
 }
-void demux_padd_added(GstElement* object, GstPad* pad, gpointer data)
+void demux_padd_added_a(GstElement* object, GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
     Gst::demux_pad_link_to_muxer(d->pipeline, pad, "multiqueue", "sink_%u", "sink_%u");
 }
-void typefind_have_type(GstElement* typefind,
+void typefind_have_type_a(GstElement* typefind,
                                      guint arg0,
                                      GstCaps* caps,
                                      gpointer user_data)
@@ -153,7 +149,7 @@ void typefind_have_type(GstElement* typefind,
             Gst::element_link_request(queue, "src", mpegtsmux, "sink_%d");
             gst_object_unref(mpegtsmux);
         }else{
-            g_signal_connect(demux, "pad-added", G_CALLBACK(demux_padd_added), d);
+            g_signal_connect(demux, "pad-added", G_CALLBACK(demux_padd_added_a), d);
         }
     }
 }

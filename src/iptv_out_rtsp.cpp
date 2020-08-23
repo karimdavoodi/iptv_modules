@@ -59,5 +59,5 @@ int main()
     }else{
         LOG(info) << "Dosen't have license for RTSP";
     }
-    THE_END;
+    Util::wait_forever();
 } 

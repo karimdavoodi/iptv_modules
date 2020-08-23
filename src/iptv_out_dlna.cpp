@@ -65,5 +65,5 @@ album_art_names=Folder.jpg/folder.jpg/Thumb.jpg/thumb.jpg
         LOG(info) << "DLNA dosen't have license.";
     }
     
-    THE_END;
+    Util::wait_forever();
 } 

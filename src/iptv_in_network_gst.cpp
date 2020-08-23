@@ -25,22 +25,22 @@ using namespace std;
 
 void urisourcebin_pad_added(GstElement* urisourcebin, 
                                     GstPad* pad, gpointer data);
-void demux_padd_added(GstElement* object, GstPad* pad, gpointer data);
-void typefind_have_type(GstElement* typefind,
+void demux_padd_added_n(GstElement* object, GstPad* pad, gpointer data);
+void typefind_have_type_n(GstElement* typefind,
                                      guint arg0,
                                      GstCaps* caps,
                                      gpointer user_data);
 
 /*
  *   The Gstreamer main function
- *   Stream network stream to udp:://multicast:port
+ *   Stream network stream to udp:://out_multicast:port
  *   
  *   @param url: URL of input stream in UDP, HTTP, RTSP, RTP
  *   @param out_multicast : multicast of output stream
  *   @param port: output multicast port numper 
  *
  * */
-void gst_task(string url, string out_multicast, int port)
+void gst_convert_stream_to_udp(string url, string out_multicast, int port)
 {
     LOG(info) 
         << "Start " << url 
@@ -62,7 +62,7 @@ void gst_task(string url, string out_multicast, int port)
         gst_element_link_many(mpegtsmux, queue, tsparse, udpsink, nullptr);
 
         g_signal_connect(urisourcebin, "pad-added", G_CALLBACK(urisourcebin_pad_added), &d);
-        g_signal_connect(typefind, "have-type", G_CALLBACK(typefind_have_type), &d);
+        g_signal_connect(typefind, "have-type", G_CALLBACK(typefind_have_type_n), &d);
         g_object_set(urisourcebin, "uri", url.c_str(), nullptr);
         g_object_set(udpsink, 
                 "multicast_iface", "lo", 
@@ -92,12 +92,12 @@ void urisourcebin_pad_added(GstElement* urisourcebin, GstPad* pad, gpointer data
     }
     gst_object_unref(queue);
 }
-void demux_padd_added(GstElement* object, GstPad* pad, gpointer data)
+void demux_padd_added_n(GstElement* object, GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
     Gst::demux_pad_link_to_muxer(d->pipeline, pad, "mpegtsmux", "sink_%d", "sink_%d");
 }
-void typefind_have_type(GstElement* typefind,
+void typefind_have_type_n(GstElement* typefind,
                                      guint arg0,
                                      GstCaps* caps,
                                      gpointer user_data)
@@ -132,7 +132,7 @@ void typefind_have_type(GstElement* typefind,
             auto rtpmp2tdepay = Gst::add_element(d->pipeline, "rtpmp2tdepay", "", true);
             demux = Gst::add_element(d->pipeline, "tsdemux", "", true);
             gst_element_link_many(typefind, rtpmp2tdepay, demux, nullptr);
-            g_signal_connect(demux, "pad-added", G_CALLBACK(demux_padd_added), d);
+            g_signal_connect(demux, "pad-added", G_CALLBACK(demux_padd_added_n), d);
             return;
         }else{
             // TODO: check other types ... 
@@ -159,7 +159,7 @@ void typefind_have_type(GstElement* typefind,
             Gst::element_link_request(queue, "src", mpegtsmux, "sink_%d");
             gst_object_unref(mpegtsmux);
         }else{
-            g_signal_connect(demux, "pad-added", G_CALLBACK(demux_padd_added), d);
+            g_signal_connect(demux, "pad-added", G_CALLBACK(demux_padd_added_n), d);
         }
     }
 }

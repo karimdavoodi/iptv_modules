@@ -54,7 +54,7 @@ void get_snapshot(GObject *object, GAsyncResult *result, gpointer data);
  *   @param port: output multicast port numper 
  *
  * */
-void gst_task(string web_url, string out_multicast, int port)
+void gst_convert_web_to_stream(string web_url, string out_multicast, int port)
 {
     //web_url = "http://127.0.0.1/s/?mmk&u=1&p=1";
     LOG(info) 

@@ -28,7 +28,7 @@
 #include "utils.hpp"
 using namespace std;
 
-void gst_task(Mongo& db, string in_multicast, int port, int chan_id);
+void gst_get_epg_of_stream(Mongo& db, string in_multicast, int port, int chan_id);
 void start_channel(json channel, live_setting live_config);
 
 /*
@@ -61,7 +61,7 @@ int main()
     }
     for(auto& t : pool)
         t.join();
-    THE_END;
+    Util::wait_forever();
 } 
 /*
  *  The channel thread function
@@ -75,7 +75,7 @@ void start_channel(json channel, live_setting live_config)
     Mongo db;
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
     while(true){
-        gst_task(db, in_multicast, INPUT_PORT, channel["_id"]); 
+        gst_get_epg_of_stream(db, in_multicast, INPUT_PORT, channel["_id"]); 
         Util::wait(5000);
     }
 }

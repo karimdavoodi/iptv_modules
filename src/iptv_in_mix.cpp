@@ -31,11 +31,8 @@
 using namespace std;
 using nlohmann::json;
 
-void gst_task(json channel, 
-        string in_multicast1, 
-        string in_multicast2, 
-        string out_multicast, 
-        int port);
+void gst_mix_two_udp_stream(json config, string in_multicast1, string in_multicast2, 
+                                                    string out_multicast, int port);
 void start_channel(json channel, live_setting live_config);
 
 /*
@@ -60,8 +57,6 @@ int main(int argc, char** argv)
     json channels = json::parse(db.find_mony("live_inputs_mix", 
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        IS_CHANNEL_VALID(chan);
-        
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             pool.emplace_back(start_channel, chan, live_config);
             //break;
@@ -69,7 +64,7 @@ int main(int argc, char** argv)
     }
     for(auto& t : pool)
         t.join();
-    THE_END;
+    Util::wait_forever();
 } 
 /*
  *  The channel thread function
@@ -118,7 +113,7 @@ void start_channel(json channel, live_setting live_config)
     auto in_multicast2  = Util::get_multicast(live_config, channel["input2"]);
 
     while(true){
-        gst_task(channel, in_multicast1, in_multicast2, out_multicast, INPUT_PORT);
+        gst_mix_two_udp_stream(channel, in_multicast1, in_multicast2, out_multicast, INPUT_PORT);
         Util::wait(5000);
     }
 }

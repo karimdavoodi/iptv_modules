@@ -31,7 +31,7 @@ struct ProbData {
     GstElement* src; 
 };
 
-void uridecodebin_pad_added(GstElement* object, GstPad* pad, 
+void uridecodebin_pad_added_s(GstElement* object, GstPad* pad, 
                             gpointer data);
 GstPadProbeReturn filesink_get_buffer(
                             GstPad *pad,
@@ -48,7 +48,7 @@ GstPadProbeReturn filesink_get_buffer(
  *   @param pic_path: the path of snapshot image
  *
  * */
-bool gst_task(string in_multicast, int port, const string pic_path)
+bool gst_capture_udp_in_jpg(string in_multicast, int port, const string pic_path)
 {
     Gst::Data d;
     d.loop = g_main_loop_new(nullptr, false);
@@ -72,7 +72,7 @@ bool gst_task(string in_multicast, int port, const string pic_path)
         g_object_set(capsfilter, "caps", caps, nullptr);
         gst_caps_unref(caps);
 
-        g_signal_connect(uridecodebin, "pad-added",G_CALLBACK(uridecodebin_pad_added),
+        g_signal_connect(uridecodebin, "pad-added",G_CALLBACK(uridecodebin_pad_added_s),
                                                 &d);
 
         Gst::add_bus_watch(d);
@@ -118,7 +118,7 @@ GstPadProbeReturn filesink_get_buffer(
     }
     return GST_PAD_PROBE_OK;
 }
-void uridecodebin_pad_added(GstElement* object, GstPad* pad, gpointer data)
+void uridecodebin_pad_added_s(GstElement* object, GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data *)data;
     auto pad_type = Gst::pad_caps_type(pad);

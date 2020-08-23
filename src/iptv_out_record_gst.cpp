@@ -21,6 +21,7 @@
  */
 #include <thread>
 #include <signal.h>
+#include <boost/filesystem.hpp>
 #include "utils.hpp"
 #include "gst.hpp"
 
@@ -36,10 +37,9 @@ struct Record_data {
 
 void remove_old_timeshift(Mongo& db, int maxPerChannel, 
                                             const string channel_name);
-void insert_content_info_db(Mongo &db,json& channel, uint64_t id);
 gchararray splitmuxsink_location_cb(GstElement*  splitmux,
         guint fragment_id, gpointer data);
-void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data);
+void tsdemux_pad_added_r(GstElement* object, GstPad* pad, gpointer data);
 
 /*
  *   The Gstreamer main function
@@ -51,7 +51,7 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data);
  *   @param maxPerChannel: expire time of recorded files 
  *
  * */
-bool gst_task(json channel, string in_multicast, int port, int maxPerChannel)
+bool gst_convert_udp_to_mp4(json channel, string in_multicast, int port, int maxPerChannel)
 {
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);
     LOG(info) << "Start recode " << in_multicast 
@@ -71,7 +71,7 @@ bool gst_task(json channel, string in_multicast, int port, int maxPerChannel)
 
         gst_element_link_many(udpsrc, queue_src, tsdemux, nullptr);
 
-        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added), &rdata);
+        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added_r), &rdata);
         g_signal_connect(splitmuxsink, "format-location", 
                 G_CALLBACK(splitmuxsink_location_cb), &rdata);
 
@@ -93,7 +93,7 @@ bool gst_task(json channel, string in_multicast, int port, int maxPerChannel)
         return false;
     }
 }
-void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
+void tsdemux_pad_added_r(GstElement* object, GstPad* pad, gpointer data)
 {
     auto rdata = (Record_data *) data;
     Gst::demux_pad_link_to_muxer(rdata->d.pipeline, pad, 
@@ -104,11 +104,48 @@ gchararray splitmuxsink_location_cb(GstElement*  splitmux,
 {
     Record_data* rdata = (Record_data *) data;
     int64_t id = std::chrono::system_clock::now().time_since_epoch().count();
-    insert_content_info_db(rdata->db, rdata->channel, id);
+    Util::insert_content_info_db(rdata->db, rdata->channel, id);
     remove_old_timeshift(rdata->db, rdata->maxPerChannel, rdata->channel["name"]);
 
     string file_path = MEDIA_ROOT "TimeShift/" + to_string(id) + ".mp4"; 
     LOG(trace) << "For " << rdata->channel["name"]
                << " New file: " <<  file_path;
     return  g_strdup(file_path.c_str());
+}
+/*
+ *   Clean Storage from recorded file that expired
+ *
+ *   @param maxPerChannel: time in houre to expire media files
+ *   @param channel_name: name of channel
+ *
+ * */
+void remove_old_timeshift(Mongo& db, int maxPerChannel, const string channel_name)
+{
+    json filter;
+    filter["name"] = channel_name;
+    filter["type"] = TIME_SHIFT_TYPE;
+    long now = time(nullptr);
+
+    LOG(debug) << "Remove old timeShift media before " << maxPerChannel;
+    json channel_media = json::parse(db.find_mony("storage_contents_info", filter.dump()));
+
+    LOG(trace) << "Filter:" << filter.dump(2) << " result count:" << channel_media.size();
+    for(auto& media : channel_media){
+        long media_date = media["date"];
+        long late = now - media_date;
+        if(late > maxPerChannel * RECORD_DURATION ){
+            LOG(warning) << "Remove " << media["name"] << " of channel " << channel_name 
+                << " for time " << media_date;
+            uint64_t media_id = media["_id"];
+            auto media_path = MEDIA_ROOT "TimeShift/" + 
+                                                to_string(media_id) + ".mp4";
+            db.remove_id("storage_contents_info", media_id);
+            if(boost::filesystem::exists(media_path)){
+                boost::filesystem::remove(media_path);
+                LOG(info) << "TimeShift file removed:" << media_path;
+            }else{
+                LOG(error) << "TimeShift file not exists:" << media_path;
+            }
+        }
+    }
 }

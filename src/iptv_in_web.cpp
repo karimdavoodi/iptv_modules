@@ -31,9 +31,9 @@
 using namespace std;
 using nlohmann::json;
 
-void init_display(int display_id);
-void gst_task(string web_url, string out_multicast, int port);
+void gst_convert_web_to_stream(string web_url, string out_multicast, int port);
 void start_channel(json channel, live_setting live_config);
+void init_display(int display_id);
 
 /*
  *   The main()
@@ -64,8 +64,6 @@ int main(int argc, char** argv)
     json channels = json::parse(db.find_mony("live_inputs_network",
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        IS_CHANNEL_VALID(chan);
-        
         if(chan["virtual"] || !chan["webPage"] ) 
             continue;
 
@@ -86,7 +84,7 @@ int main(int argc, char** argv)
 
     for(auto& t : pool)
         t.join();
-    THE_END;
+    Util::wait_forever();
 } 
 /*
  *  The channel thread function
@@ -101,7 +99,7 @@ void start_channel(json channel, live_setting live_config)
     string url = channel["url"];
     auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
     while(true){
-        gst_task(url, out_multicast, INPUT_PORT);
+        gst_convert_web_to_stream(url, out_multicast, INPUT_PORT);
         Util::wait(5000);
     }
 }

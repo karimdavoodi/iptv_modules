@@ -31,7 +31,7 @@
 using namespace std;
 using nlohmann::json;
 
-void gst_task(string in_multicast, int port, string out_multicast, 
+void gst_mpegts_crypto(string in_multicast, int port, string out_multicast, 
         bool decrypt, string alg_name, string alg_key);
 void start_channel(json channel, live_setting live_config);
 
@@ -56,8 +56,6 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_scramble",
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        IS_CHANNEL_VALID(chan);
-        
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             pool.emplace_back(start_channel, chan, live_config);
             //break;
@@ -65,7 +63,7 @@ int main()
     }
     for(auto& t : pool)
         t.join();
-    THE_END;
+    Util::wait_forever();
 } 
 /*
  *  The channel thread function
@@ -93,7 +91,7 @@ void start_channel(json channel, live_setting live_config)
     string algorithm_name = profile["offline"]["algorithm"];
     string algorithm_key  = profile["offline"]["key"];
     if(algorithm_name.size() > 0 && algorithm_key.size() > 0){
-        gst_task(in_multicast, INPUT_PORT, out_multicast, channel["decrypt"], 
+        gst_mpegts_crypto(in_multicast, INPUT_PORT, out_multicast, channel["decrypt"], 
                 algorithm_name, algorithm_key);
     }else{
         LOG(warning) << "Only support offline scrambling!";

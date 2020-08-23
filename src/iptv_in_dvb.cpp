@@ -62,9 +62,9 @@ int main()
 
     LOG(debug) << "Active tuner number:" << tuners.size();
      
-    json channels = json::parse(db.find_mony("live_inputs_dvb", "{}"));
+    json channels = json::parse(db.find_mony("live_inputs_dvb", 
+                    "{\"active\":true}"));
     for(auto& chan : channels ){
-        IS_CHANNEL_VALID(chan);
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             for(auto& tuner : tuners ){
                 int t_id = tuner["_id"];
@@ -94,7 +94,7 @@ int main()
     for(auto& t : pool){
         t.join();
     }
-    THE_END;
+    Util::wait_forever();
 } 
 /*
  *  The channel thread function

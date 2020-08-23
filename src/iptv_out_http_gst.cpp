@@ -35,7 +35,7 @@ using namespace std;
  *   @param ch_name: the name of channel 
  *
  * */
-void gst_task(string in_multicast, int port, int http_stream_port, const string ch_name)
+void gst_convert_udp_to_http(string in_multicast, int port, int http_stream_port, const string ch_name)
 {
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);
     LOG(info) << "Start " << in_multicast << " -> http://IP:" << http_stream_port

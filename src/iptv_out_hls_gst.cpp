@@ -24,7 +24,7 @@
 #include "gst.hpp"
 using namespace std;
 
-void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data);
+void tsdemux_pad_added_h(GstElement* object, GstPad* pad, gpointer data);
 
 /*
  *   The Gstreamer main function
@@ -35,7 +35,7 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data);
  *   @param hls_root: Path of HLS playlist
  *
  * */
-void gst_task(string in_multicast, int port, string hls_root)
+void gst_convert_udp_to_hls(string in_multicast, int port, string hls_root)
 {
 
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);
@@ -52,7 +52,7 @@ void gst_task(string in_multicast, int port, string hls_root)
 
         gst_element_link_many(udpsrc, queue_src, tsdemux, nullptr);
 
-        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added), &d);
+        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added_h), &d);
         g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
         string segment_location = hls_root + "/s__%05d.ts";
         string playlist_location = hls_root + "/p.m3u8";
@@ -73,7 +73,7 @@ void gst_task(string in_multicast, int port, string hls_root)
         LOG(error) << "Exception:" << e.what();
     }
 }
-void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
+void tsdemux_pad_added_h(GstElement* object, GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
     auto caps = gst_pad_query_caps(pad, nullptr);

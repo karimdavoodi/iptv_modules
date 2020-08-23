@@ -29,7 +29,7 @@
 #include "utils.hpp"
 using namespace std;
 
-void gst_task(string in_multicast, int in_port, int http_stream_port, 
+void gst_convert_udp_to_http(string in_multicast, int in_port, int http_stream_port, 
                                             const string ch_name);
 void start_channel(json channel, live_setting live_config);
 
@@ -80,8 +80,7 @@ void start_channel(json channel, live_setting live_config)
         LOG(info) << "Start channle " << channel["name"] << " id:" << channel["_id"]
             << " on Port:" << tcpserver_port;
         while(true){
-            in_multicast = "229.1.1.1";
-            gst_task(in_multicast, INPUT_PORT, tcpserver_port, 
+            gst_convert_udp_to_http(in_multicast, INPUT_PORT, tcpserver_port, 
                     channel["name"].get<string>()); 
             Util::wait(5000);
         }

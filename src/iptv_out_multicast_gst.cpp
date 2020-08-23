@@ -33,7 +33,7 @@ using namespace std;
  *   @param port: output multicast port numper 
  *
  * */
-void gst_task(string  in_multicast, string out_multicast, int port)
+void gst_relay_udp_to_udp(string  in_multicast, string out_multicast, int port)
 {
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);
     LOG(info) << "Start " << in_multicast << " -> udp://" << out_multicast << ":" << port;

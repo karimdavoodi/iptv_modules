@@ -33,7 +33,7 @@
 
 using namespace std;
 
-void gst_task(string media_path, string multicast_addr, int port);
+void gst_stream_media_file(string media_path, string multicast_addr, int port);
 bool time_to_play(Mongo& db, json& media);
 int current_time();
 void update_epg(Mongo& db, int64_t silver_chan_id, int64_t content_id);
@@ -60,7 +60,6 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_archive", 
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        IS_CHANNEL_VALID(chan);
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             pool.emplace_back(start_channel, chan, live_config);
             break;
@@ -68,7 +67,7 @@ int main()
     }
     for(auto& t : pool)
         t.join();
-    THE_END;
+    Util::wait_forever();
 } 
 /*
  *  The channel thread function
@@ -111,7 +110,7 @@ void start_channel(json channel, live_setting live_config)
                         % INPUT_PORT;
                     Util::system(cmd.str());
 #else
-                    gst_task(media_path, multicast, INPUT_PORT);
+                    gst_stream_media_file(media_path, multicast, INPUT_PORT);
 #endif
                 }else{
                     LOG(debug) << "Not play media id: " << media["content"]

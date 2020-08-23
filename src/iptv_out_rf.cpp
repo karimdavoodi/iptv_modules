@@ -48,9 +48,9 @@ int main()
         LOG(info) << "Error in live config! Exit.";
         return -1;
     }
-    json channels = json::parse(db.find_mony("live_output_dvb", "{\"active\":true}"));
+    json channels = json::parse(db.find_mony("live_output_dvb", 
+                "{\"active\":true}"));
     for(auto& chan : channels ){
-        IS_CHANNEL_VALID(chan);
         int dvbId = chan["dvbId"];
         chan_by_dvbId[dvbId].push_back(chan); 
     }
@@ -108,7 +108,7 @@ int main()
         Util::system(torf.str());
         tid++;
     }
-    THE_END;
+    Util::wait_forever();
 } 
 void start_channel(json channel, live_setting live_config)
 {

@@ -43,7 +43,7 @@ struct Scramble_data {
  *   @param alg_key: key of cryptography algorithm
  *
  * */
-void gst_task(string in_multicast, int port, string out_multicast, 
+void gst_mpegts_crypto(string in_multicast, int port, string out_multicast, 
         bool decrypt, string alg_name, string alg_key)
 {
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);

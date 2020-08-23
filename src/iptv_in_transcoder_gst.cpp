@@ -43,15 +43,15 @@ struct transcoder_data {
     bool audio_process;
     vector<GstPad*> mqueue_src_pads;
     atomic_int tsdemux_src_pads_num;
-    bool tsdemux_no_more_pad;
+    bool tsdemux_no_more_pad_t;
     mutex mqueue_src_pads_mutex;
 
     transcoder_data():video_process{false},audio_process{false},
-        mqueue_src_pads{},tsdemux_src_pads_num{0},tsdemux_no_more_pad{false}{}
+        mqueue_src_pads{},tsdemux_src_pads_num{0},tsdemux_no_more_pad_t{false}{}
 };
 
 
-void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data);
+void multiqueue_pad_added_t(GstElement* multiqueue, GstPad* pad, gpointer data);
 void to_multiqueue(GstPad* src_pad, transcoder_data* tdata);
 void video_transcode(GstPad* src_pad, GstStructure* caps_struct, 
                                         transcoder_data* tdata);
@@ -59,8 +59,8 @@ void audio_transcode(GstPad* src_pad, GstStructure* caps_struct,
                                         transcoder_data* tdata);
 void stream_passthrough(GstPad* src_pad, transcoder_data* tdata);
 void process_audio_pad(GstPad* pad, transcoder_data* tdata);
-void tsdemux_no_more_pad(GstElement* object, gpointer data);
-void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data);
+void tsdemux_no_more_pad_t(GstElement* object, gpointer data);
+void tsdemux_pad_added_t(GstElement* object, GstPad* pad, gpointer data);
 
 
 /*
@@ -73,7 +73,7 @@ void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data);
  *   @param profile: config of Ttranscoding 
  *
  * */
-void gst_task(string in_multicast, int port, string out_multicast, json& profile)
+void gst_transcode_of_stream(string in_multicast, int port, string out_multicast, json& profile)
 {
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);
     LOG(info) 
@@ -114,9 +114,9 @@ void gst_task(string in_multicast, int port, string out_multicast, json& profile
         gst_element_link_many(udpsrc, queue_src, tsdemux, nullptr);
         gst_element_link_many(mpegtsmux, queue_sink, udpsink, nullptr);
 
-        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added), &tdata);
-        g_signal_connect(tsdemux, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad), &tdata);
-        g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_pad_added), &tdata);
+        g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added_t), &tdata);
+        g_signal_connect(tsdemux, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad_t), &tdata);
+        g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_pad_added_t), &tdata);
         g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
         g_object_set(queue_sink,
                 "max-size-time", 2 * GST_SECOND,
@@ -146,7 +146,7 @@ void gst_task(string in_multicast, int port, string out_multicast, json& profile
     }
 }
 
-void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data)
+void multiqueue_pad_added_t(GstElement* multiqueue, GstPad* pad, gpointer data)
 {
     if(GST_PAD_IS_SRC(pad)){
         LOG(debug) << "Got src pad in multiqueue:" << Gst::pad_name(pad);
@@ -155,7 +155,7 @@ void multiqueue_pad_added(GstElement* multiqueue, GstPad* pad, gpointer data)
         
         tdata->mqueue_src_pads.push_back(pad);
 
-        if(tdata->tsdemux_no_more_pad &&
+        if(tdata->tsdemux_no_more_pad_t &&
            tdata->mqueue_src_pads.size() == (size_t)tdata->tsdemux_src_pads_num){
             auto mpegtsmux = gst_bin_get_by_name(GST_BIN(tdata->d.pipeline), "mpegtsmux");
             LOG(debug) << "Try to link all pads to mpegtsmux";
@@ -481,12 +481,12 @@ GstPadProbeReturn parser_caps_probe(
     }
     return GST_PAD_PROBE_OK;
 }
-void tsdemux_no_more_pad(GstElement* object, gpointer data)
+void tsdemux_no_more_pad_t(GstElement* object, gpointer data)
 {
     auto tdata = (transcoder_data *) data;
-    tdata->tsdemux_no_more_pad = true;
+    tdata->tsdemux_no_more_pad_t = true;
 }
-void tsdemux_pad_added(GstElement* object, GstPad* pad, gpointer data)
+void tsdemux_pad_added_t(GstElement* object, GstPad* pad, gpointer data)
 {
     auto tdata = (transcoder_data *) data;
 

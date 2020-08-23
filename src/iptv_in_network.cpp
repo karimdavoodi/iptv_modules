@@ -31,7 +31,7 @@
 
 using namespace std;
 
-void gst_task(string in_url, string out_multicast, int port);
+void gst_convert_stream_to_udp(string in_url, string out_multicast, int port);
 void start_channel(json channel, live_setting live_config);
 /*
  *   The main()
@@ -55,8 +55,6 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_network", 
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        IS_CHANNEL_VALID(chan);
-        
         if(chan["virtual"] || !chan["static"] || chan["webPage"] ) 
             continue;
 
@@ -66,7 +64,7 @@ int main()
     }
     for(auto& t : pool)
         t.join();
-    THE_END;
+    Util::wait_forever();
 } 
 /*
  *  The channel thread function
@@ -91,7 +89,7 @@ void start_channel(json channel, live_setting live_config)
         //url = "rtsp://192.168.56.12:554/iptv/239.1.1.2/3200"; 
         //url = "http://192.168.56.12:8001/34/hdd11.ts";   
         //url = "http://192.168.56.12/HLS/HLS/hdd11/p.m3u8";
-        gst_task(url, out_multicast, INPUT_PORT);
+        gst_convert_stream_to_udp(url, out_multicast, INPUT_PORT);
 #endif
         Util::wait(5000);
     }

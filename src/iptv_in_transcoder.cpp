@@ -32,7 +32,7 @@
 
 using namespace std;
 
-void gst_task(string in_multicast, int port, 
+void gst_transcode_of_stream(string in_multicast, int port, 
                     string out_multicast, json& profile);
 const string profile_resolution(const string p_vsize);
 void start_channel(json channel, live_setting live_config);
@@ -58,8 +58,6 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_transcode",
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        IS_CHANNEL_VALID(chan);
-        
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             pool.emplace_back(start_channel, chan, live_config);
             //break;
@@ -67,7 +65,7 @@ int main()
     }
     for(auto& t : pool)
         t.join();
-    THE_END;
+    Util::wait_forever();
 } 
 /*
  *  The channel thread function
@@ -132,7 +130,7 @@ void start_channel(json channel, live_setting live_config)
     Util::exec_shell_loop(cmd.str());
 #else
     while(true){
-        gst_task(in_multicast, INPUT_PORT, out_multicast, profile);
+        gst_transcode_of_stream(in_multicast, INPUT_PORT, out_multicast, profile);
         Util::wait(5000);
     }
 #endif

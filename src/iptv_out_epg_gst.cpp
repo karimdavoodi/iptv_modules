@@ -62,7 +62,7 @@ int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data);
  *   @param channel_id: Id of channel in DB 
  *
  * */
-void gst_task(Mongo& db, string in_multicast, int port, int channel_id)
+void gst_get_epg_of_stream(Mongo& db, string in_multicast, int port, int channel_id)
 {
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);
     LOG(info) << "Start in " << in_multicast;

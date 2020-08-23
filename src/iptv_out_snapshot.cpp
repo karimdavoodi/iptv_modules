@@ -31,7 +31,7 @@
 
 using namespace std;
 
-bool gst_task(string in_multicast, int port, const string pic_path);
+bool gst_capture_udp_in_jpg(string in_multicast, int port, const string pic_path);
 void start_snapshot(const json& channel, live_setting live_config);
 
 /*
@@ -73,7 +73,7 @@ int main()
             Util::wait((SNAPSHOT_PERIOD - duration) * 1000);
         } 
     }
-    THE_END;
+    Util::wait_forever();
 } 
 /*
  *  The channel thread function
@@ -91,7 +91,7 @@ void start_snapshot(const json& channel, live_setting live_config)
     auto pic_path = boost::format("%sSnapshot/%d.jpg")
         % MEDIA_ROOT % pic_id; 
     LOG(debug) << "Try to snapsot from " << channel["name"];
-    bool succesfull = gst_task(in_multicast, INPUT_PORT, pic_path.str());
+    bool succesfull = gst_capture_udp_in_jpg(in_multicast, INPUT_PORT, pic_path.str());
     if(succesfull){
         LOG(info) << "Capture " << channel["name"] << " in " << pic_path.str();
         string name = channel["name"].get<string>();
