@@ -31,8 +31,8 @@
 using namespace std;
 using nlohmann::json;
 
-void gst_mix_two_udp_stream(json config, string in_multicast1, string in_multicast2, 
-                                                    string out_multicast, int port);
+void gst_mix_two_udp_stream(string in_multicast1, string in_multicast2, 
+                            string out_multicast, int port, json config);
 void start_channel(json channel, live_setting live_config);
 
 /*
@@ -79,25 +79,6 @@ void start_channel(json channel, live_setting live_config)
 
     LOG(info) << "Start mixed Channel: " << channel["name"];
     auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
-#if 0 // TEST
-    channel["outputProfile"] = 100072;
-    channel["input1"]["input"] = 1000671;
-    channel["input1"]["inputType"] = 2;
-    channel["input1"]["useVideo"] = true;
-    channel["input1"]["useAudio"] = true;
-    channel["input1"]["audioNumber"] = 1;
-
-    channel["input2"]["input"] = 1000672;
-    channel["input2"]["inputType"] = 2;
-    channel["input2"]["useVideo"] = true;
-    channel["input2"]["useAudio"] = true;
-    channel["input2"]["audioNumber"] = 1;
-    channel["input2"]["whiteTransparent"] = true;
-    channel["input2"]["posX"] = 0;
-    channel["input2"]["posY"] = 0;
-    channel["input2"]["width"] = 400;
-    channel["input2"]["height"] = 400;
-#endif
     LOG(trace) << channel.dump(2);
     json profile = json::parse(db.find_id("live_profiles_mix", channel["profile"])); 
     if(profile.is_null() || profile["_id"].is_null()){
@@ -105,15 +86,13 @@ void start_channel(json channel, live_setting live_config)
         LOG(debug) << profile.dump(2);
         return;
     } 
-    channel["_profile"] = profile;
-
     live_config.type_id = channel["inputType1"];
     auto in_multicast1  = Util::get_multicast(live_config, channel["input1"]);
     live_config.type_id = channel["inputType2"];
     auto in_multicast2  = Util::get_multicast(live_config, channel["input2"]);
 
     while(true){
-        gst_mix_two_udp_stream(channel, in_multicast1, in_multicast2, out_multicast, INPUT_PORT);
+        gst_mix_two_udp_stream(in_multicast1, in_multicast2, out_multicast, INPUT_PORT, profile);
         Util::wait(5000);
     }
 }

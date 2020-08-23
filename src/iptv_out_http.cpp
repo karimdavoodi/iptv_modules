@@ -29,8 +29,7 @@
 #include "utils.hpp"
 using namespace std;
 
-void gst_convert_udp_to_http(string in_multicast, int in_port, int http_stream_port, 
-                                            const string ch_name);
+void gst_convert_udp_to_http(string in_multicast, int in_port, int http_stream_port);
 void start_channel(json channel, live_setting live_config);
 
 /*

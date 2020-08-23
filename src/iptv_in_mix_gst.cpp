@@ -84,8 +84,8 @@ void tsdemux_no_more_pad2(GstElement* object, gpointer data);
  *   @param port: multicast port numper of all stream
  *
  * */
-void gst_mix_two_udp_stream(json config, string in_multicast1, string in_multicast2, 
-                                                    string out_multicast, int port)
+void gst_mix_two_udp_stream(string in_multicast1, string in_multicast2, 
+                            string out_multicast, int port, json config)
 {
     in_multicast1 = "udp://" + in_multicast1 + ":" + to_string(port);
     in_multicast2 = "udp://" + in_multicast2 + ":" + to_string(port);
@@ -119,8 +119,8 @@ void gst_mix_two_udp_stream(json config, string in_multicast1, string in_multica
         g_signal_connect(tsdemux1, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad1), &mdata);
         g_signal_connect(tsdemux2, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad2), &mdata);
 
-        mdata.video1 = config["_profile"]["input1"]["useVideo"];
-        mdata.video2 = config["_profile"]["input2"]["useVideo"];
+        mdata.video1 = config["input1"]["useVideo"];
+        mdata.video2 = config["input2"]["useVideo"];
         if(mdata.video1 && mdata.video2 ){
             auto compositor   = Gst::add_element(mdata.d.pipeline, "compositor", "compositor"),
                  queue0       = Gst::add_element(mdata.d.pipeline, "queue"),
@@ -139,9 +139,9 @@ void gst_mix_two_udp_stream(json config, string in_multicast1, string in_multica
 
             string resize_caps_str = 
                     "video/x-raw, width=(int)" + 
-                    to_string(config["_profile"]["output"]["width"]) +
+                    to_string(config["output"]["width"]) +
                     " , height=(int)"+
-                    to_string(config["_profile"]["output"]["height"]) ;
+                    to_string(config["output"]["height"]) ;
             auto resize_caps = gst_caps_from_string(resize_caps_str.c_str());
             g_object_set(capsfilter, "caps", resize_caps, nullptr);
             gst_caps_unref(resize_caps);
@@ -232,7 +232,7 @@ void tsdemux1_pad_added(GstElement* object, GstPad* pad, gpointer data)
     LOG(debug) << "Elm:" << element_name << " type:" << pad_type;
     
     if(pad_type.find("audio") != string::npos){
-        if(d->config["_profile"]["input1"]["useAudio"] == false ){
+        if(d->config["input1"]["useAudio"] == false ){
             LOG(debug) << "Ignore Audio1";
             return ignore_pad_m(d, pad);
         }
@@ -271,7 +271,7 @@ void tsdemux2_pad_added(GstElement* object, GstPad* pad, gpointer data)
     LOG(debug) << "Elm:" << element_name << " type:" << pad_type;
     
     if(pad_type.find("audio") != string::npos){
-        if(d->config["_profile"]["input2"]["useAudio"] == false ){
+        if(d->config["input2"]["useAudio"] == false ){
             LOG(debug) << "Ignore Audio2";
             return ignore_pad_m(d, pad);
         }
@@ -296,12 +296,12 @@ void tsdemux2_pad_added(GstElement* object, GstPad* pad, gpointer data)
                 auto compositor_sink = gst_element_get_request_pad(compositor, "sink_%u");
                 g_object_set(compositor_sink,
                         "zorder", 10,
-                        "xpos",  d->config["_profile"]["input2"]["posX"].get<int>(),
-                        "ypos",  d->config["_profile"]["input2"]["posY"].get<int>(),
-                        "width", d->config["_profile"]["input2"]["width"].get<int>(),
-                        "height",d->config["_profile"]["input2"]["height"].get<int>(),
+                        "xpos",  d->config["input2"]["posX"].get<int>(),
+                        "ypos",  d->config["input2"]["posY"].get<int>(),
+                        "width", d->config["input2"]["width"].get<int>(),
+                        "height",d->config["input2"]["height"].get<int>(),
                         nullptr);
-                if(d->config["_profile"]["input2"]["whiteTransparent"]){
+                if(d->config["input2"]["whiteTransparent"]){
                     // Add alpha
                     auto alpha = Gst::add_element(d->d.pipeline, "alpha", "", true);
                     g_object_set(alpha,

@@ -17,20 +17,13 @@ FILE(GLOB GST_SRC ../src/*_gst.cpp)
 set( project_TESTS
      test_in_archive      
      test_in_network      
-#     test_in_transcoder  
+     test_in_transcoder  
      test_in_web          
-#     test_in_dvb          
      test_in_scramble   
-#     test_in_mix          
-#     test_out_hls      
-#     test_out_epg         
-#     test_out_multicast   
-#     test_out_record   
-#     test_out_rtsp    
-#     test_out_rf          
-#     test_out_http    
-#     test_out_snapshot    
-#     test_utils           
+     test_in_mix          
+     test_out_hls      
+     test_out_multicast   
+     test_out_http    
      )
 
 find_package(Boost COMPONENTS system log log_setup REQUIRED)

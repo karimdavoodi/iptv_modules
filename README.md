@@ -1,3 +1,2 @@
 # iptv_modules
-
-Implements of iptv modules by Gstreamer
+Sample Implements of iptv modules by Gstreamer
