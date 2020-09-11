@@ -24,6 +24,7 @@
 #include <ctime>
 #include <exception>
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <fstream>
 #include <thread>
@@ -32,12 +33,15 @@
 #include <boost/tokenizer.hpp>
 #include "utils.hpp"
 #define BY_DVBLAST 1
+#define MAX_IN_TUNER 32
+#define MAX_OUT_TUNER 32
 
 using namespace std;
 using nlohmann::json;
 
 void start_channel(json tuner, live_setting live_config);
 void report_tuners(Mongo& db);
+std::pair<int,int> extract_dvbs_parameters(string parameters);
 
 /*
  *   the main()
@@ -68,7 +72,7 @@ int main()
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             for(auto& tuner : tuners ){
                 int t_id = tuner["_id"];
-                int c_id = chan["dvb_id"];
+                int c_id = chan["dvbId"];
                 if(t_id == c_id){
                     if(tuner["channels"].is_null())
                         tuner["channels"] = json::array();
@@ -81,7 +85,7 @@ int main()
     }
     for(auto& tuner : tuners ){
         if(!tuner["channels"].is_null()){
-            string dvb_path = "/dev/dvb/adapter" + to_string(tuner["_id"]); 
+            string dvb_path = "/dev/dvb/adapter" + to_string(tuner["systemId"]); 
             if(boost::filesystem::exists(dvb_path)){
                 pool.emplace_back(start_channel, tuner, live_config);
             }else{
@@ -104,41 +108,65 @@ int main()
  * */
 void start_channel(json tuner, live_setting live_config)
 {
-    LOG(debug) << tuner.dump(4);
+    Mongo db;
+    try{
+
+    LOG(trace) << tuner.dump(4);
+    json filter;
+    filter["active"] = true;
+    filter["_id"] = tuner["frequencyId"];
+    json frequency = json::parse(db.find_one("live_satellites_frequencies", 
+                    filter.dump()));
+    if(frequency["_id"].is_null()){
+        LOG(error) << "Invalid frequency for tuner " << tuner["_id"];
+        return;
+    }
+    int freq = frequency["frequency"];
+    string parameters = frequency["parameters"];
 #if BY_DVBLAST
     string fromdvb_args = "";
-    if (tuner["is_dvbt"])   
-        fromdvb_args = "-f" + to_string(tuner["freq"]) + "000";
+    if (tuner["dvbt"])   
+        fromdvb_args = "-f" + to_string(freq);
     else{
-        int pol = tuner["pol"] == "H" ? 18 : 13;
-        auto args = boost::format("-f%d000 -s%d000 -v%d -S%d") 
-            % tuner["freq"].get<int>() 
-            % tuner["symrate"].get<int>() 
+        auto [pol, symbol_rate] = extract_dvbs_parameters(parameters);
+        auto args = boost::format("-f%d -s%d -v%d -S%d") 
+            % freq 
+            % symbol_rate 
             % pol 
-            % tuner["switch"].get<int>();
+            % tuner["diSEqC"].get<int>();
         fromdvb_args = args.str();
     }
-    string cfg_name = "/opt/sms/tmp/fromdvb_"+ to_string(tuner["_id"]);
+    string cfg_name = "/opt/sms/tmp/fromdvb_"+ to_string(tuner["systemId"]);
     ofstream cfg(cfg_name);
     if(!cfg.is_open()) LOG(error) << "Can't open fromdvb config file";
     for(auto& chan : tuner["channels"]){
+        json channel = json::parse(db.find_id("live_satellites_channels", 
+                    chan["channelId"] ));
+        if(channel["_id"].is_null()){
+            LOG(error) << "Invalid satellites_channels for chan " 
+                <<  chan["_id"];
+            continue;
+        } 
         auto multicast = Util::get_multicast(live_config, chan["_id"]);
 
-        int sid = chan["sid"].is_string() ? 
-            std::stol(string(chan["sid"])) : chan["sid"].get<int>();
+        int sid = channel["serviceId"];
         auto addr = boost::format("%s:%d@127.0.0.1  1   %d\n") 
             % multicast % INPUT_PORT % sid;
         cfg << addr.str(); 
-        LOG(info) << "DVB:" << tuner["_id"] << " chan:" 
-            << chan["name"]  << " -> " << multicast; 
+        LOG(info) << "Info:"<< tuner["_id"] 
+            << " DVB:" << tuner["systemId"] << " cfg:" 
+            << addr.str(); 
     }
     cfg.close();
     auto cmd = boost::format("/opt/sms/bin/fromdvb -WYCUlu -t0 -a%d -c%s %s")
-            % tuner["_id"] % cfg_name % fromdvb_args ; 
+            % tuner["systemId"] % cfg_name % fromdvb_args ; 
     Util::system(cmd.str());
 #else
     // TODO: do by Gstreamer
 #endif
+    }catch(std::exception& e){
+        LOG(error) << e.what();
+    }
 }
 /*
  *   Write status of input/output Tuners to DB
@@ -148,33 +176,51 @@ void report_tuners(Mongo& db)
 {
     while(true){
         json input_tuners = json::array();
-        for(size_t i=0; i<32; ++i){
+        for(size_t i=0; i<MAX_IN_TUNER; ++i){
             string file_path = "/tmp/dvbstat_"+to_string(i)+".txt";
             if(boost::filesystem::exists(file_path)){
+                json tuner_info = json::parse(db.find_one("live_tuners_info", 
+                        "{\"systemId\":" + to_string(i) + "}"));
+                if(tuner_info["_id"].is_null()) 
+                    continue;
                 string content = Util::get_file_content(file_path);
-                if(content.size() < 10) continue;
-                LOG(info) << content;
+                if(content.size() < 10) 
+                    continue;
+                LOG(debug) << "Content of " << file_path << " " << content;
                 boost::tokenizer<> tok(content);
                 // 30176 48544 0 lock 3474 S 1732207376
                 auto it = tok.begin();
                 int signal = stoi(*(it++));
                 int snr = stoi(*(it++));
                 json input_tuner;
-                input_tuner["tuner"] = i;
+                input_tuner["tuner"] = tuner_info["_id"];
+                input_tuner["systemId"] = i;
                 input_tuner["signal"] = signal;
                 input_tuner["snr"] = snr;
                 input_tuners.push_back(input_tuner);
             }
         }
         json output_tuners = json::array();
-        // FIXME: add real data ...
-        for(size_t i=0; i<4; ++i){
+        for(size_t i=0; i<MAX_OUT_TUNER; ++i){
+            string file_path = "/tmp/padding_" + to_string(i) + ".txt";
+            if(boost::filesystem::exists(file_path)){
+                /*
+                TODO: find systemId in tuner_info > 1000
+                json tuner_info = json::parse(db.find_one("live_tuners_info", 
+                        "{\"systemId\":" + to_string(i) + "}"));
+                if(tuner_info["_id"].is_null()) 
+                    continue;
+                */
+                string content = Util::get_file_content(file_path);
+                if(content.size() < 10) 
+                    continue;
+                LOG(debug) << "Content of " << file_path << " " << content;
                 json output_tuner;
                 output_tuner["tuner"] = i;
-                output_tuner["capacity"] = 100;
+                output_tuner["capacity"] = stoi(content);
                 output_tuners.push_back(output_tuner);
+            }
         }
-        
         json report_tuners;
         long now = time(nullptr);
         report_tuners["_id"] = now;
@@ -187,4 +233,16 @@ void report_tuners(Mongo& db)
         Util::wait(1000 * 60);
     }
 
+}
+std::pair<int,int> extract_dvbs_parameters(string parameters)
+{
+    string type, freq, polarization, symbol_rate;
+    istringstream in {parameters};
+    in >> type;
+    if(type != "S" && type != "S2") 
+        throw runtime_error("invalid DVBS parameters");
+    in >> freq >> polarization >> symbol_rate;
+    int sym = stoi(symbol_rate);
+    int pol = polarization == "H" ? 18 : 13; 
+    return std::make_pair(pol, sym);
 }

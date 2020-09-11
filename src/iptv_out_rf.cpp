@@ -31,8 +31,6 @@
 #include <boost/filesystem/operations.hpp>
 #include "utils.hpp"
 using namespace std;
-void gst_task(string in_multicast, string out_multicast);
-void start_channel(json channel, live_setting live_config);
 
 int main()
 {
@@ -54,41 +52,85 @@ int main()
         int dvbId = chan["dvbId"];
         chan_by_dvbId[dvbId].push_back(chan); 
     }
+    LOG(debug) << "dvb map size " << chan_by_dvbId.size();
+    auto epg_file = "/tmp/mts_epg.conf";
+    ofstream epg(epg_file);
+    if(epg.is_open()){
+        epg << endl;
+        epg.close();
+    }
     int tid = 1, i = 1;
     for(const auto& [dvbId, chans] : chan_by_dvbId){
+
+        LOG(debug) << "DVB " << dvbId << " Chan number " << chans.size();
+        if(!chans.size()){
+            LOG(error) << "Not found channel for tuner id " << dvbId;
+            continue;
+        }    
         json tuner = json::parse(db.find_id("live_tuners_info", dvbId));
-        if(tuner["_id"].is_null()) continue;
+        if(tuner["_id"].is_null() || tuner["frequencyId"].is_null()){
+            LOG(error) << "Tuner not found " << dvbId;
+            continue;
+        }
+        if(tuner["active"] == false || tuner["frequencyId"].is_null()){
+            LOG(error) << "Tuner is inactive or invalid " << dvbId;
+            continue;
+        }
         json frequency = json::parse(db.find_id("live_satellites_frequencies", 
                     tuner["frequencyId"]));
-        if(frequency["_id"].is_null()) continue;
+        if(frequency["_id"].is_null()){
+            LOG(error) << "Frequency not found " << tuner["frequencyId"];
+            continue;
+        }
         int systemId = tuner["systemId"];
-        // TODO: work only with it950
-        if(!boost::filesystem::exists("/dev/usb-it950x"+to_string(systemId))){
-            LOG(error) << "Output Tuner not found: " << systemId;
+        string tuner_cmd  = "";
+        string tuner_path = "";
+        if(systemId >= 2000){
+            systemId -= 2000;
+            tuner_path = "/dev/usb-it950x" + to_string(systemId);
+            tuner_cmd  = "/opt/sms/bin/torft_it950";
+        }else if(systemId >= 1000){
+            systemId -= 1000;
+            auto dev_major = to_string(systemId / 100);
+            auto dev_minor = to_string(systemId % 10 );
+            tuner_path = "/dev/tbsmod" + dev_major + "/mod" + dev_minor;
+            tuner_cmd  = "/opt/sms/bin/torft_tbs";
+        }else{
+            LOG(error) << "invalid system tuner id " << systemId;
             continue;
         }
-        ofstream cfg("/opt/sms/tmp/mts_chan"+to_string(tid)+".conf");
+        if(!boost::filesystem::exists(tuner_path)){
+            LOG(error) << "Output Tuner not found: " << tuner_path;
+            continue;
+        }
+        auto cfg_file = "/tmp/mts_chan"+to_string(tid)+".conf";
+        ofstream cfg(cfg_file);
         if(!cfg.is_open()){
-            LOG(error) << "Can't open tomts cfg file!";
+            LOG(error) << "Can't open tomts cfg file! " << cfg_file;
             continue;
         }
+        LOG(debug) << "Fill  " << cfg_file;
         cfg << "[Global]\n"
             "provider_name = MoojAfzar\n"
-            "transport_stream_id = "  << tid << "\n\n";
+            "transport_stream_id = "  << tid << "\n" << endl;
         i = 1;
         for(const auto& chan: chans){
+            auto chan_name = Util::get_channel_name(chan["input"], chan["inputType"]);
             live_config.type_id = chan["inputType"];
             auto in_multicast = Util::get_multicast(live_config, chan["input"]);
-            cfg << "\n[Channel" << i << "]\n"
-                << "\nservice_id = " << chan["sid"] 
-                << "\nid = "<< chan["sid"] 
-                << "\nname = " << chan["name"] 
+            cfg << "\n[Channel" << i << "]"
+                << "\nservice_id = " << chan["serviceId"] 
+                << "\nid = "<< chan["serviceId"] 
+                << "\nname = " << chan_name 
                 << "\nradio = no"
                 << "\nlive = 1"
-                << "\nsource = udp://" << in_multicast <<  ":" << INPUT_PORT << '\n'; 
-            cfg.close();
-            i++;
+                << "\nsource = udp://" << in_multicast <<  ":" << INPUT_PORT << endl; 
+            i++; 
+            LOG(debug) << "Add " << chan_name 
+                << " sid:" << chan["serviceId"] << " to " << cfg_file;
         }
+        cfg.flush();
+        cfg.close();
         
         int freq = frequency["frequency"];
         float bandwidth = 31.7; // TODO : calc from frequency["parameters"]
@@ -96,23 +138,15 @@ int main()
 
         int port = 1200 + tid;
         std::ostringstream tomts; 
-        tomts << "/opt/sms/bin/tomts -q -c " << tid 
+        tomts << "/opt/sms/bin/tomts -q -c " << cfg_file 
             << " -B " << bandwidth << " -t0 -O 127.0.0.1 "
             << " -m " << pcr << " -P " << port << " &";
         std::ostringstream torf;
-        torf << "/opt/sms/bin/torft "
+        torf << tuner_cmd << " "
             << systemId << " " << freq << " " << port << " &";
-        LOG(info) << tomts.str();
-        LOG(info) << torf.str();
         Util::system(tomts.str());
         Util::system(torf.str());
         tid++;
     }
     Util::wait_forever();
 } 
-void start_channel(json channel, live_setting live_config)
-{
-    live_config.type_id = channel["inputType"];
-    auto in_multicast = Util::get_multicast(live_config, channel["input"]);
-    LOG(error) << "TODO: implement RF ...";
-}

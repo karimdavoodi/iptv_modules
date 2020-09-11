@@ -74,7 +74,8 @@ void start_channel(json channel, live_setting live_config)
 {
     live_config.type_id = channel["inputType"];
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
-    string hls_root = string(HLS_ROOT) + channel["name"].get<string>();
+    string chan_name = Util::get_channel_name(channel["input"], channel["inputType"]);
+    string hls_root = string(HLS_ROOT) + chan_name;
     Util::check_path(hls_root);
 #if BY_FFMPEG
     auto cmd = boost::format("%s -i 'udp://%s:%d' "

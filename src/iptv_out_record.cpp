@@ -94,7 +94,6 @@ void start_channel(json channel, int maxPerChannel, live_setting live_config)
     live_config.type_id = channel["inputType"];
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
 
-    in_multicast = "229.2.68.223";
     try{
 #if BY_FFMPEG
         uint64_t id = std::chrono::system_clock::now().time_since_epoch().count();
@@ -105,6 +104,7 @@ void start_channel(json channel, int maxPerChannel, live_setting live_config)
             % FFMPEG % in_multicast % INPUT_PORT % FFMPEG_REC_OPTS % file_path;
         Util::system(cmd.str());
 #else
+        channel["name"] = Util::get_channel_name(channel["input"], channel["inputType"]);
         gst_convert_udp_to_mp4(channel, in_multicast, INPUT_PORT, maxPerChannel); 
 #endif
 

@@ -134,6 +134,14 @@ void typefind_have_type_n(GstElement* typefind,
             gst_element_link_many(typefind, rtpmp2tdepay, demux, nullptr);
             g_signal_connect(demux, "pad-added", G_CALLBACK(demux_padd_added_n), d);
             return;
+        }else if(!strncmp(encodin_name, "H264", 4)){
+            auto rtph264depay = Gst::add_element(d->pipeline, "rtph264depay", "", true);
+            auto h264parse = Gst::add_element(d->pipeline, "h264parse", "", true);
+            gst_element_link_many(typefind, rtph264depay, h264parse, nullptr);
+            auto mpegtsmux = gst_bin_get_by_name(GST_BIN(d->pipeline), "mpegtsmux");
+            Gst::element_link_request(h264parse, "src", mpegtsmux, "sink_%d");
+            gst_object_unref(mpegtsmux);
+            return;
         }else{
             // TODO: check other types ... 
             LOG(error) << "Not support rtp type " << encodin_name;

@@ -87,18 +87,23 @@ void gst_transcode_of_stream(string in_multicast, int port, string out_multicast
     try{
         tdata.target.preset     = profile["preset"].is_null()? "" :
                                   profile["preset"];
-        tdata.target.videoCodec = profile["videoCodec"].is_null()? "" :
-                                  profile["videoCodec"];
-        tdata.target.videoSize  = profile["videoSize"].is_null()? "" :
-                                  profile["videoSize"];
+        tdata.target.videoCodec = profile["videoCodec"].is_null() || 
+                                  profile["videoCodec"] == "No Change" 
+                                  ? "" : profile["videoCodec"];
+        tdata.target.videoSize  = profile["videoSize"].is_null() ||
+                                  profile["videoSize"] == "No Change" 
+                                  ? "" : profile["videoSize"];
         tdata.target.videoFps   = !profile["videoFps"].is_number()? 0 :
                                   profile["videoFps"].get<int>();
         tdata.target.videoRate  = !profile["videoRate"].is_number()? 0 :
                                   profile["videoRate"].get<int>();
         tdata.target.videoProfile  = profile["videoProfile"].is_null()? "" :
                                   profile["videoProfile"];
-        tdata.target.audioCodec = profile["audioCodec"].is_null()? "" :
-                                  profile["audioCodec"];
+
+        tdata.target.audioCodec = profile["audioCodec"].is_null() || 
+                                  profile["audioCodec"] == "No Change" 
+                                  ? "" : profile["audioCodec"];
+
         tdata.target.audioRate  = !profile["audioRate"].is_number()? 0 :
                                   profile["audioRate"].get<int>();
 

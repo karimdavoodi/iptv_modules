@@ -38,13 +38,15 @@ int check_license_db(Mongo& db);
 int main()
 {
     Mongo db;
+    int check;
+
     if( geteuid() != 0 ){
         LOG(error) << "Must run by root";
         return -1;
     }
     Util::boost_log_init(db);
     Util::system("rm -f /run/sms/*");
-    CHECK_LICENSE;
+    license_capability_bool("GB_EPG", &check);
     // Report system usage
     int systemId = check_license_db(db);
     SysUsage usage;
@@ -52,6 +54,11 @@ int main()
         std::this_thread::sleep_for(chrono::seconds(60));
         string usage_json = usage.getUsageJson(systemId);
         db.insert("report_system_usage", usage_json);
+
+        if(!license_capability_bool("GB_EPG", &check)){
+            LOG(error) << "INVALID LICENSE!";
+            Util::system("/opt/sms/bin/sms s");
+        }
     }
     return 0;
 } 

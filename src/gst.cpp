@@ -168,8 +168,10 @@ namespace Gst {
         
         bool ret = gst_pad_link(pad, element_pad);
         if(ret != GST_PAD_LINK_OK){
-            LOG(trace) << "Can't link " << pad_name(pad) << " to " << element_name(element) 
-                << ":" << pad_name(element_pad);
+            LOG(error) << "Can't link " << pad_name(pad) 
+                << " to " << element_name(element) 
+                << ":" << pad_name(element_pad)
+                << " SRC PAD CAPS:" << pad_caps_string(pad);
             gst_object_unref(element_pad);
             return false;
         }else{
@@ -190,7 +192,9 @@ namespace Gst {
         bool ret = gst_pad_link(pad, element_pad);
         gst_object_unref(element_pad);
         if(ret != GST_PAD_LINK_OK){
-            LOG(error) << "Can'n link " << pad_name(pad) << " to " << element_name(element);
+            LOG(error) << "Can'n link " << pad_name(pad) 
+                << " to " << element_name(element)
+                << " SRC PAD CAPS:" << pad_caps_string(pad);
             return false;
         }
         LOG(trace) << "Link " << pad_name(pad) << " to " << element_name(element);
@@ -203,15 +207,26 @@ namespace Gst {
         CHECK_NULL_RET(sink, "Sink Element", false);
 
         auto pad_sink = gst_element_get_request_pad(sink, sink_name);
-        CHECK_NULL_RET(pad_sink, "Can't get sink request pad", false);
+        if(!pad_sink){
+            LOG(error) << "Can't get request sink pad from " 
+                << element_name(sink) 
+                << " by name " << sink_name;
+            return false;
+        }
 
         auto pad_src  = gst_element_get_static_pad(src, src_name);
-        CHECK_NULL_RET(pad_src, "Can't get request pad", false);
+        if(!pad_src){
+            LOG(error) << "Can't get static src pad from " 
+                << element_name(src) 
+                << " by name " << src_name;
+            return false;
+        }
 
         if(gst_pad_link(pad_src, pad_sink) != GST_PAD_LINK_OK){
             LOG(error) << "Can'n link " << 
                 element_name(src) << ":" << src_name << " to " << 
-                element_name(sink) << ":" << sink_name; 
+                element_name(sink) << ":" << sink_name
+                << " SRC PAD CAPS:" << pad_caps_string(pad_src);
             gst_object_unref(pad_sink);
             gst_object_unref(pad_src);
             return false;
@@ -344,7 +359,7 @@ namespace Gst {
                 pad_type.find("audio/ac3") != string::npos){
             audioparse = Gst::add_element(pipeline, "ac3parse", "", true);
         }else{
-            LOG(warning) << "Not support:" << pad_type;
+            LOG(error) << "Not support:" << pad_type;
             gst_caps_unref(caps);
             return false;
         }
@@ -357,7 +372,8 @@ namespace Gst {
             auto queue = Gst::add_element(pipeline, "queue", "", true);
             Gst::zero_queue_buffer(queue);
             if(!Gst::pad_link_element_static(pad, queue, "sink")){
-                LOG(error) << "Can't link typefind to queue";
+                LOG(error) << "Can't link typefind to queue, SRC PAD CAPS:"
+                    << Gst::pad_caps_string(pad);
             }
             if(audiodecoder){
                 gst_element_link(queue, audiodecoder);

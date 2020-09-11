@@ -76,11 +76,10 @@ void start_channel(json channel, live_setting live_config)
         auto in_multicast = Util::get_multicast(live_config, channel["input"]);
         // TODO: find better way to calculate channel's port
         int tcpserver_port = 4000 + (channel["_id"].get<long>() % 6000);
-        LOG(info) << "Start channle " << channel["name"] << " id:" << channel["_id"]
+        LOG(debug) << "Start channle id:" << channel["_id"]
             << " on Port:" << tcpserver_port;
         while(true){
-            gst_convert_udp_to_http(in_multicast, INPUT_PORT, tcpserver_port, 
-                    channel["name"].get<string>()); 
+            gst_convert_udp_to_http(in_multicast, INPUT_PORT, tcpserver_port); 
             Util::wait(5000);
         }
 

@@ -53,10 +53,12 @@ int main()
 
     CHECK_LICENSE;
     Util::init(db);
+
     if(!Util::get_live_config(db, live_config, "archive")){
         LOG(error) << "Error in live config! Exit.";
         return -1;
     }
+
     json channels = json::parse(db.find_mony("live_inputs_archive", 
                 "{\"active\":true}"));
     for(auto& chan : channels ){
@@ -131,18 +133,28 @@ void start_channel(json channel, live_setting live_config)
  * */
 bool time_to_play(Mongo& db, json& media)
 {
-    int start = media["startDate"];
-    int end = media["endDate"];
+    try{
+        if( media["startDate"].is_null() || 
+            media["endDate"].is_null() || 
+            media["weektime"].is_null() ){
+            LOG(debug) << "Content " << media["content"] << " dosn't have time. play it";
+            return true;
+        }
+        int start = media["startDate"];
+        int end = media["endDate"];
 
-    auto now = time(nullptr);
-    if(now > end || now < start){
-        LOG(debug) << "Content " << media["content"] << " not play, due to time period.";
-        return false;
-    } 
+        auto now = time(nullptr);
+        if(now > end || now < start){
+            LOG(debug) << "Content " << media["content"] << " not play, due to time period.";
+            return false;
+        } 
 
-    if(Util::check_weektime(db, media["weektime"] )) 
-        return true;
-    LOG(debug) << "Content " << media["content"] << " not play, due to weektime.";
+        if(Util::check_weektime(db, media["weektime"] )) 
+            return true;
+        LOG(debug) << "Content " << media["content"] << " not play, due to weektime.";
+    }catch(std::exception& e){
+        LOG(error) << "Exception:" << e.what();
+    }
     return false;
 }
 /*

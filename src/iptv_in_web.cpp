@@ -64,6 +64,10 @@ int main(int argc, char** argv)
     json channels = json::parse(db.find_mony("live_inputs_network",
                 "{\"active\":true}"));
     for(auto& chan : channels ){
+        if(chan["virtual"].is_null() || chan["webPage"].is_null() ){
+            LOG(error) << "Some fields not found";
+            continue;
+        } 
         if(chan["virtual"] || !chan["webPage"] ) 
             continue;
 

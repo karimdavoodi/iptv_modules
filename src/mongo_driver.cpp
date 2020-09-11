@@ -227,7 +227,14 @@ int64_t Mongo::get_uniq_id()
                 options);
         if (result && !(result->view().empty())) {
             bsoncxx::document::view  v(result->view());
-            auto newId = v["count"].get_int64(); 
+            auto type =  v["count"].type();
+            int64_t newId = 0;
+            if(type == bsoncxx::type::k_double)      newId = v["count"].get_double();
+            else if(type == bsoncxx::type::k_int64)  newId = v["count"].get_int64();
+            else if(type == bsoncxx::type::k_int32)  newId = v["count"].get_int32();
+            else{
+                LOG(error) << "Invalid type of 'count': " << bsoncxx::to_string(type);
+            }
             return newId; 
         }
         return 1; 

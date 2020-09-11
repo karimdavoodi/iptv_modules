@@ -97,7 +97,7 @@ void tsdemux_pad_added_r(GstElement* object, GstPad* pad, gpointer data)
 {
     auto rdata = (Record_data *) data;
     Gst::demux_pad_link_to_muxer(rdata->d.pipeline, pad, 
-            "mux", "video", "audio_%u");
+            "mux", "audio_%u", "video");
 }
 gchararray splitmuxsink_location_cb(GstElement*  splitmux,
         guint fragment_id, gpointer data)
@@ -123,7 +123,7 @@ void remove_old_timeshift(Mongo& db, int maxPerChannel, const string channel_nam
 {
     json filter;
     filter["name"] = channel_name;
-    filter["type"] = TIME_SHIFT_TYPE;
+    filter["type"] = CONTENT_TYPE_TIME_SHIFT;
     long now = time(nullptr);
 
     LOG(debug) << "Remove old timeShift media before " << maxPerChannel;

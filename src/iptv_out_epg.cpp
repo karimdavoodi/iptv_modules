@@ -56,7 +56,8 @@ int main()
     json channels = json::parse(db.find_mony("live_output_network", 
                 filter.dump()));
     for(auto& chan : channels ){
-        pool.emplace_back(start_channel, chan, live_config);
+        if(Util::chan_in_output(db, chan["input"], chan["inputType"]))
+            pool.emplace_back(start_channel, chan, live_config);
         //break;
     }
     for(auto& t : pool)
@@ -76,6 +77,6 @@ void start_channel(json channel, live_setting live_config)
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
     while(true){
         gst_get_epg_of_stream(db, in_multicast, INPUT_PORT, channel["_id"]); 
-        Util::wait(5000);
+        Util::wait(50000);
     }
 }

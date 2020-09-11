@@ -22,12 +22,15 @@
 #include <boost/log/core/record_view.hpp>
 #include <exception>    
 #include <iostream>
+#include <string>
 #include <fstream>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <thread>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <boost/filesystem.hpp>
 #include <boost/log/core.hpp>
@@ -49,7 +52,11 @@ namespace Util {
             json license = json::parse(db.find_id("system_license", 1));
             if(license["license"].is_null()) return 0;
             if(license["license"]["General"]["MMK_ID"].is_null()) return 0;
-            systemId = license["license"]["General"]["MMK_ID"];
+            if(license["license"]["General"]["MMK_ID"].is_number()){
+                systemId = license["license"]["General"]["MMK_ID"];
+            }else{
+                systemId = std::stoi(license["license"]["General"]["MMK_ID"].get<std::string>());
+            }
             return systemId;
         }catch(std::exception& e){
             LOG(error) << e.what();
@@ -172,6 +179,15 @@ namespace Util {
                 LOG(debug) << "Found local multicast route, not add it";
         }
     }
+    void _set_max_open_file(int max)
+    {
+        struct rlimit rlp;
+        rlp.rlim_cur = max;
+        rlp.rlim_max = max;
+        if(setrlimit(RLIMIT_NOFILE, &rlp)){
+            LOG(error) << "Not set max open file:" << strerror(errno);
+        }
+    }
     void init(Mongo& db)
     {
         try{
@@ -179,6 +195,7 @@ namespace Util {
             gst_init(nullptr, nullptr);
             _set_gst_debug_level();
             _set_internal_multicat_route();
+            _set_max_open_file(50000);
         }catch(std::exception& e){
             LOG(error) << e.what();
         }
@@ -263,12 +280,18 @@ namespace Util {
             }
             json content_type = json::parse(db.find_id("storage_contents_types",
                         content_info["type"]));
+            json content_format = json::parse(db.find_id("storage_contents_formats",
+                        content_info["format"]));
+            if(content_type["name"].is_null() || content_format["name"].is_null()){
+                LOG(error) << "Invalid contents 'type' or 'format'";
+                return "";
+            }
             string path = string(MEDIA_ROOT);
             path += content_type["name"];
             path +=  "/";
             path += to_string(id);
             path += ".";
-            path += content_info["format"].is_null() ? "" : content_info["format"];
+            path += content_format["name"];
             LOG(trace) << "Media Path:" << path;
             return path;
         }catch(std::exception& e){
@@ -346,30 +369,29 @@ namespace Util {
         }
         return false;
     }
-    bool chan_in_input(Mongo &db, int chan_id, int chan_type)
+    bool chan_in_input(Mongo &db, int input, int input_type)
     {
         try{
+            json type = json::parse(db.find_id("live_inputs_types", input_type));
+            if(type.is_null()){
+                LOG(error) << "invaild inputType " << input_type;
+                return false;
+            } 
+            string input_col = "live_inputs_" + type["name"].get<string>();
+
             json filter;
             filter["active"] = true;
-            filter["_id"] = chan_id;
-            json in_network = json::parse(db.find_mony("live_inputs_network", filter.dump()));
-            for(auto& chan : in_network){
-                if(!chan["virtual"])
-                    return true;
+            filter["_id"] = input;
+            json input_chan = json::parse(db.find_one( input_col, filter.dump()));
+            if(input_chan["_id"].is_null()){
+                LOG(error) << "Not found ACTIVE channel id:" << input 
+                    << " in " << input_col; 
+                return false;
             }
-            json in_dvb = json::parse(db.find_mony("live_inputs_dvb", filter.dump()));
-            if(in_dvb.size() > 0)
-                return true;
-
-            json in_hdd = json::parse(db.find_mony("live_inputs_archive", filter.dump()));
-            if(in_hdd.size() > 0)
-                return true;
-
-        }catch(std::exception const& e){
+        }catch(std::exception& e){
             LOG(error)  <<  e.what();
         }
-        LOG(info) << "Not found channel id:" << chan_id << " in outputs"; 
-        return false;
+        return true;
     }
     bool chan_in_output(Mongo &db, int chan_id, int chan_type)
     {
@@ -404,8 +426,8 @@ namespace Util {
         string name = channel["name"];
         json media = json::object();
         media["_id"] = id;
-        media["format"] = MP4_FORMAT;
-        media["type"] = TIME_SHIFT_TYPE;
+        media["format"] = CONTENT_FORMAT_MP4;
+        media["type"] =   CONTENT_TYPE_TIME_SHIFT;
         media["price"] = 0;
         media["date"] = time(nullptr);
         media["languages"] = json::array();
@@ -430,5 +452,39 @@ namespace Util {
         db.insert("storage_contents_info", media.dump());
         LOG(info) << "Record " << channel["name"] << ":" << name;
 
+    }
+    const std::string get_channel_name(int64_t input_id, int input_type)
+    {   
+        Mongo db;
+        json type_name = json::parse(db.find_id("live_inputs_types",input_type)); 
+        if(type_name["name"].is_null()){
+            LOG(error) << "Invalid input type by id  " << input_type;
+            return "";
+        }
+        string input_rec_name = "live_inputs_" + type_name["name"].get<string>();
+        json input_chan = json::parse(db.find_id(input_rec_name, input_id)); 
+        if(input_chan["_id"].is_null()){
+            LOG(error) << "Invalid input chan by id  " << input_id 
+                       << " in " << type_name["name"];
+            return "";
+        }
+        if(input_chan["name"].is_string()){
+            return input_chan["name"];
+        }
+        // try to find 'name' from input channels
+        string input_type_name = type_name["name"];
+        if(input_type_name == "dvb"){
+            json channel = json::parse(db.find_id("live_satellites_channels", 
+                        input_chan["channelId"])); 
+            if(channel["name"].is_string()) 
+                return channel["name"];
+        }
+        else if(input_type_name == "network"){
+            json channel = json::parse(db.find_id("live_network_channels", 
+                        input_chan["channelId"])); 
+            if(channel["name"].is_string()) 
+                return channel["name"];
+        }
+        return "";
     }
 }

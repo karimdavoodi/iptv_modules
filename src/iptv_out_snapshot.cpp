@@ -58,6 +58,12 @@ int main()
                 "{\"active\":true}"));
     json channels_dvb = json::parse(db.find_mony("live_output_dvb", 
                 "{\"active\":true}"));
+    for(auto& chan : channels_net ){
+        chan["name"] = Util::get_channel_name(chan["input"], chan["inputType"]);
+    }
+    for(auto& chan : channels_dvb ){
+        chan["name"] = Util::get_channel_name(chan["input"], chan["inputType"]);
+    }
     while(true){
         auto start = time(nullptr);
         for(auto& chan : channels_net ){
@@ -92,17 +98,17 @@ void start_snapshot(const json& channel, live_setting live_config)
         % MEDIA_ROOT % pic_id; 
     LOG(debug) << "Try to snapsot from " << channel["name"];
     bool succesfull = gst_capture_udp_in_jpg(in_multicast, INPUT_PORT, pic_path.str());
+
     if(succesfull){
-        LOG(info) << "Capture " << channel["name"] << " in " << pic_path.str();
         string name = channel["name"].get<string>();
+        LOG(info) << "Capture " << name << " in " << pic_path.str();
         json media = json::object();
         media["_id"] = pic_id;
-        media["format"] = 10;  // jpg
-        media["type"] = 10;    // Snapshot
+        media["format"] = CONTENT_FORMAT_JPG; 
+        media["type"] = CONTENT_TYPE_SNAPSHOT;
         media["price"] = 0;
         media["date"] = time(nullptr);
         media["languages"] = json::array();
-        media["permission"] = channel["permission"];
         media["platform"] = json::array();
         media["category"] = channel["category"];
         media["description"] = {
@@ -129,6 +135,7 @@ void start_snapshot(const json& channel, live_setting live_config)
     report["inputId"] = channel["input"];
     report["inputType"] = channel["inputType"];
     report["status"] = succesfull ? 100 : 0;
+    report["snapshot"] = succesfull ?  pic_id : 0;
     db.insert("report_channels", report.dump());
     Util::wait(1000);
 }
