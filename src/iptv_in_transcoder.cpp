@@ -57,7 +57,7 @@ int main()
     }
     json channels = json::parse(db.find_mony("live_inputs_transcode",
                 "{\"active\":true}"));
-    for(auto& chan : channels ){
+    for(const auto& chan : channels ){
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             pool.emplace_back(start_channel, chan, live_config);
             //break;
@@ -77,7 +77,8 @@ int main()
 void start_channel(json channel, live_setting live_config)
 {
     Mongo db;
-    LOG(info) << "Start Channel: " << channel["name"];
+    LOG(info) << "Start transcoding of " << channel["name"] 
+                  << " from input " << channel["input"];
     json profile = json::parse(db.find_id("live_profiles_transcode",channel["profile"])); 
     if(profile.is_null() || profile["_id"].is_null()){
         LOG(error) << "Invalid transcode profile!";
@@ -130,6 +131,8 @@ void start_channel(json channel, live_setting live_config)
     Util::exec_shell_loop(cmd.str());
 #else
     while(true){
+        LOG(info) << "Start transcoding of " << channel["name"] 
+                  << " from input " << channel["input"];
         gst_transcode_of_stream(in_multicast, INPUT_PORT, out_multicast, profile);
         Util::wait(5000);
     }

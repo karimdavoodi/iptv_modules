@@ -68,12 +68,11 @@ bool Mongo::exists_id(const std::string col_name, int64_t id)
     if(result > 0) return true;
     return false;
 }
-long Mongo::count(const std::string col)
+long Mongo::count(const std::string col, const std::string filter)
 {
     LOG(trace) << "col:" << col; 
     try{
-        bsoncxx::document::view  v;
-        return db[col].count_documents(v);
+        return db[col].count_documents(bsoncxx::from_json(filter));
     }catch(std::exception& e){
         LOG(error) << "Exception " << e.what();
         return 0;

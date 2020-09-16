@@ -91,6 +91,8 @@ int main()
 void start_snapshot(const json& channel, live_setting live_config)
 {
     Mongo db;
+    auto now = time(nullptr);
+    auto now_tm = localtime(&now);
     live_config.type_id = channel["inputType"].get<int>();
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
     int pic_id = channel["_id"].get<int>();
@@ -107,7 +109,7 @@ void start_snapshot(const json& channel, live_setting live_config)
         media["format"] = CONTENT_FORMAT_JPG; 
         media["type"] = CONTENT_TYPE_SNAPSHOT;
         media["price"] = 0;
-        media["date"] = time(nullptr);
+        media["date"] = now_tm->tm_year;
         media["languages"] = json::array();
         media["platform"] = json::array();
         media["category"] = channel["category"];

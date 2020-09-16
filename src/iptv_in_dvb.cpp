@@ -175,61 +175,68 @@ void start_channel(json tuner, live_setting live_config)
 void report_tuners(Mongo& db)
 {
     while(true){
-        json input_tuners = json::array();
-        for(size_t i=0; i<MAX_IN_TUNER; ++i){
-            string file_path = "/tmp/dvbstat_"+to_string(i)+".txt";
-            if(boost::filesystem::exists(file_path)){
-                json tuner_info = json::parse(db.find_one("live_tuners_info", 
-                        "{\"systemId\":" + to_string(i) + "}"));
-                if(tuner_info["_id"].is_null()) 
-                    continue;
-                string content = Util::get_file_content(file_path);
-                if(content.size() < 10) 
-                    continue;
-                LOG(debug) << "Content of " << file_path << " " << content;
-                boost::tokenizer<> tok(content);
-                // 30176 48544 0 lock 3474 S 1732207376
-                auto it = tok.begin();
-                int signal = stoi(*(it++));
-                int snr = stoi(*(it++));
-                json input_tuner;
-                input_tuner["tuner"] = tuner_info["_id"];
-                input_tuner["systemId"] = i;
-                input_tuner["signal"] = signal;
-                input_tuner["snr"] = snr;
-                input_tuners.push_back(input_tuner);
+        try{
+            json input_tuners = json::array();
+            for(size_t i=0; i<MAX_IN_TUNER; ++i){
+                string file_path = "/tmp/dvbstat_"+to_string(i)+".txt";
+                if(boost::filesystem::exists(file_path)){
+                    json tuner_info = json::parse(db.find_one("live_tuners_info", 
+                                "{\"systemId\":" + to_string(i) + "}"));
+                    if(tuner_info["_id"].is_null()) 
+                        continue;
+                    string content = Util::get_file_content(file_path);
+                    if(content.size() < 10) 
+                        continue;
+                    LOG(debug) << "Content of " << file_path << " " << content;
+                    boost::tokenizer<> tok(content);
+                    // 30176 48544 0 lock 3474 S 1732207376
+                    auto it = tok.begin();
+                    int signal = stoi(*(it++));
+                    int snr = stoi(*(it++));
+
+                    signal = signal * 100 / 65000; 
+                    snr = snr * 100 / 65000; 
+
+                    json input_tuner;
+                    input_tuner["tuner"] = tuner_info["_id"];
+                    input_tuner["systemId"] = i;
+                    input_tuner["signal"] = signal;
+                    input_tuner["snr"] = snr;
+                    input_tuners.push_back(input_tuner);
+                }
             }
-        }
-        json output_tuners = json::array();
-        for(size_t i=0; i<MAX_OUT_TUNER; ++i){
-            string file_path = "/tmp/padding_" + to_string(i) + ".txt";
-            if(boost::filesystem::exists(file_path)){
-                /*
-                TODO: find systemId in tuner_info > 1000
-                json tuner_info = json::parse(db.find_one("live_tuners_info", 
-                        "{\"systemId\":" + to_string(i) + "}"));
-                if(tuner_info["_id"].is_null()) 
-                    continue;
-                */
-                string content = Util::get_file_content(file_path);
-                if(content.size() < 10) 
-                    continue;
-                LOG(debug) << "Content of " << file_path << " " << content;
-                json output_tuner;
-                output_tuner["tuner"] = i;
-                output_tuner["capacity"] = stoi(content);
-                output_tuners.push_back(output_tuner);
+            json output_tuners = json::array();
+            json tuner_infos = json::parse(db.find_mony("live_tuners_info", 
+                        "{\"active\": true }"));
+            for(const auto& tuner : tuner_infos){
+                int id = tuner["systemId"];
+                if(id >= 1000){
+                    id = id % 10; // TODO: for less than 9 tuner!
+                    string file_path = "/tmp/padding_" + to_string(id) + ".txt";
+                    if(boost::filesystem::exists(file_path)){
+                        string content = Util::get_file_content(file_path);
+                        if(content.size()) {
+                            LOG(debug) << "Content of " << file_path << " " << content;
+                            json output_tuner;
+                            output_tuner["tuner"] = tuner["_id"];
+                            output_tuner["capacity"] = stoi(content);
+                            output_tuners.push_back(output_tuner);
+                        }
+                    }
+                }
             }
+            json report_tuners;
+            long now = time(nullptr);
+            report_tuners["_id"] = now;
+            report_tuners["time"] = now;
+            report_tuners["systemId"] = Util::get_systemId(db);
+            report_tuners["input"] = input_tuners;
+            report_tuners["output"] = output_tuners;
+            db.insert("report_tuners", report_tuners.dump());
+            LOG(info) << "update tuners report";
+        }catch(std::exception& e){
+            LOG(error) << e.what();
         }
-        json report_tuners;
-        long now = time(nullptr);
-        report_tuners["_id"] = now;
-        report_tuners["time"] = now;
-        report_tuners["systemId"] = Util::get_systemId(db);
-        report_tuners["input"] = input_tuners;
-        report_tuners["output"] = output_tuners;
-        db.insert("report_tuners", report_tuners.dump());
-        LOG(info) << "update tuners report";
         Util::wait(1000 * 60);
     }
 

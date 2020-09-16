@@ -37,7 +37,7 @@ class Mongo {
                 db_mutex{}
                 { db = client[DB_NAME]; }
         void fill_defauls();
-        long count(const std::string col);
+        long count(const std::string col, const std::string filter);
         bool exists(const std::string col, const std::string filter);
         bool exists_id(const std::string col, int64_t id);
         bool insert(const std::string col, const std::string filter);

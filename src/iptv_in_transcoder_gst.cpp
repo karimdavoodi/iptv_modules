@@ -286,11 +286,25 @@ void video_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
     }
 
     g_object_set(encoder, "bitrate", (tdata->target.videoRate)/1000 , nullptr);  // in kbps
-    if(tdata->target.videoCodec == "h264" || tdata->target.videoCodec == "h265")
+    if(tdata->target.videoCodec == "h264" || tdata->target.videoCodec == "h265"){
         g_object_set(encoder, "speed-preset", preset_code, nullptr);
+        /*
+        // TODO: use user profile
+        auto capsfilter = Gst::add_element(tdata->d.pipeline, "capsfilter", "hevc_caps");
+        auto caps_str = (tdata->target.videoCodec == "h264") 
+            ? "video/x-h264, profile=(string)baseline" : "video/x-h265, profile=(string)main";
+        LOG(trace) << "Add caps for HEVC profile:" << caps_str;
+        auto profile_caps = gst_caps_from_string(caps_str);
+        g_object_set(capsfilter, "caps", profile_caps, nullptr);
+        gst_element_link_many(queue_res, encoder, capsfilter, parser, nullptr);
+        gst_caps_unref(profile_caps);
+        */
+        gst_element_link_many(queue_res, encoder, parser, nullptr);
+    }else{
+        gst_element_link_many(queue_res, encoder, parser, nullptr);
+    }
 
     gst_element_set_state(encoder, GST_STATE_PLAYING);
-    gst_element_link_many(queue_res, encoder, parser, nullptr);
 
     auto multiqueue = gst_bin_get_by_name(GST_BIN(tdata->d.pipeline), "multiqueue");
     Gst::element_link_request(parser, "src", multiqueue, "sink_%u");
@@ -360,7 +374,7 @@ void audio_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
     auto queue_raw = Gst::add_element(tdata->d.pipeline, "queue", "", true); 
     gst_element_link_many( decoder, queue_raw, audioconvert , encoder, parser, nullptr);
 
-    LOG(trace) << "set audio bitrate:" << bitrate;
+    LOG(trace) << "Set audio bitrate:" << bitrate;
     g_object_set(encoder, "bitrate", bitrate , nullptr);  
 
     auto multiqueue = gst_bin_get_by_name(GST_BIN(tdata->d.pipeline), "multiqueue");

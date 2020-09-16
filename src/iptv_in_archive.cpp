@@ -84,7 +84,7 @@ void start_channel(json channel, live_setting live_config)
     try{
         int64_t channel_id = channel["_id"];
         LOG(info) << "Start Channel: " << channel["name"];
-        LOG(info) <<  channel.dump(2);
+        LOG(trace) <<  channel.dump(2);
         auto multicast = Util::get_multicast(live_config, channel["_id"]);
         while(true){ 
             for(auto& media : channel["contents"]){
@@ -190,6 +190,6 @@ void update_epg(Mongo& db, int64_t silver_chan_id, int64_t content_id)
     epg["total"] = 1;
     epg["content"] = json::array();
     epg["content"].push_back(j);
-    db.insert_or_replace_id("live_output_silver_epg", silver_chan_id, epg.dump());
+    db.insert_or_replace_id("report_live_epg", silver_chan_id, epg.dump());
     LOG(info) << "Update EPG of channel_id:" << silver_chan_id;
 }

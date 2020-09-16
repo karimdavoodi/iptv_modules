@@ -48,19 +48,22 @@ int main()
     }
     json channels = json::parse(db.find_mony("live_output_dvb", 
                 "{\"active\":true}"));
-    for(auto& chan : channels ){
+    for(const auto& chan : channels ){
         int dvbId = chan["dvbId"];
         chan_by_dvbId[dvbId].push_back(chan); 
     }
-    LOG(debug) << "dvb map size " << chan_by_dvbId.size();
+    LOG(debug) << "Dvb map size " << chan_by_dvbId.size();
     auto epg_file = "/tmp/mts_epg.conf";
     ofstream epg(epg_file);
     if(epg.is_open()){
         epg << endl;
         epg.close();
     }
-    int tid = 1, i = 1;
-    for(const auto& [dvbId, chans] : chan_by_dvbId){
+    int tid = 1;
+    for(auto& iter : chan_by_dvbId){
+        
+        int dvbId = iter.first;
+        vector<json>& chans = iter.second;
 
         LOG(debug) << "DVB " << dvbId << " Chan number " << chans.size();
         if(!chans.size()){
@@ -113,24 +116,35 @@ int main()
         cfg << "[Global]\n"
             "provider_name = MoojAfzar\n"
             "transport_stream_id = "  << tid << "\n" << endl;
-        i = 1;
-        for(const auto& chan: chans){
+        int channel_number = 0;
+        for(auto& chan: chans){
+            if(chan["input"].is_null() || 
+                    chan["inputType"].is_null() || 
+                    chan["serviceId"].is_null()){
+                LOG(error) << "invalid channel in " << dvbId << ":" << chan.dump(2);
+                continue;
+            }
             auto chan_name = Util::get_channel_name(chan["input"], chan["inputType"]);
             live_config.type_id = chan["inputType"];
             auto in_multicast = Util::get_multicast(live_config, chan["input"]);
-            cfg << "\n[Channel" << i << "]"
+            cfg << "\n[Channel" << channel_number + 1 << "]"
                 << "\nservice_id = " << chan["serviceId"] 
                 << "\nid = "<< chan["serviceId"] 
                 << "\nname = " << chan_name 
                 << "\nradio = no"
                 << "\nlive = 1"
                 << "\nsource = udp://" << in_multicast <<  ":" << INPUT_PORT << endl; 
-            i++; 
+            channel_number++; 
             LOG(debug) << "Add " << chan_name 
                 << " sid:" << chan["serviceId"] << " to " << cfg_file;
         }
         cfg.flush();
         cfg.close();
+
+        if(channel_number == 0){
+            LOG(warning) << "Not add channel to " << dvbId;
+            continue;
+        }
         
         int freq = frequency["frequency"];
         float bandwidth = 31.7; // TODO : calc from frequency["parameters"]

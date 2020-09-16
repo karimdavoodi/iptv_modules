@@ -27,7 +27,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
-#define BY_FFMPEG 0
+#define BY_FFMPEG 1
 using namespace std;
 
 void gst_convert_udp_to_hls(string in_multicast, int in_port, string hls_root);

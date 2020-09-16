@@ -67,7 +67,7 @@ int main()
     if(maxPerChannel > 0){
         json channels = json::parse(db.find_mony("live_output_archive", 
                     "{\"active\":true}"));
-        for(auto& chan : channels ){
+        for(const auto& chan : channels ){
             if(chan["timeShift"] > 0 && !chan["virtual"]){
                 pool.emplace_back(start_channel, chan, maxPerChannel, live_config);
                 //break;

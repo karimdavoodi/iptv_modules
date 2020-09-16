@@ -59,6 +59,8 @@ int main()
             LOG(error) << "INVALID LICENSE!";
             Util::system("/opt/sms/bin/sms s");
         }
+        if(!systemId)
+            systemId = check_license_db(db);
     }
     return 0;
 } 

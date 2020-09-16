@@ -191,8 +191,13 @@ namespace Util {
     void init(Mongo& db)
     {
         try{
+            guint major, minor, micro, nano;
             boost_log_init(db);
             gst_init(nullptr, nullptr);
+            gst_version (&major, &minor, &micro, &nano);
+            LOG(debug) << "Gstreamer version:" 
+                << major << "." << minor << "." 
+                << micro << "." << nano; 
             _set_gst_debug_level();
             _set_internal_multicat_route();
             _set_max_open_file(50000);
@@ -406,8 +411,8 @@ namespace Util {
                 if(chan["udp"] || chan["http"] || chan["rtsp"] || chan["hls"])
                     return true;
             }
-            json out_dvb = json::parse(db.find_mony("live_output_dvb", filter.dump()));
-            if(out_dvb.size() > 0)
+            int out_dvb = db.count("live_output_dvb", filter.dump());
+            if(out_dvb > 0)
                 return true;
 
             json out_hdd = json::parse(db.find_mony("live_output_archive", filter.dump()));
@@ -415,43 +420,31 @@ namespace Util {
                 if(chan["timeShift"] > 0  || chan["programName"].size() > 0 )
                     return true;
             }
+            if(chan_type <= 3 ){
+                // Check processed inputs as dest of stream
+                if (db.count("live_inputs_transcode", filter.dump()) > 0)
+                    return true;
+                if (db.count("live_inputs_scramble", filter.dump()) > 0)
+                    return true;
+
+                json filter_mix1;
+                filter_mix1["active"] = true;
+                filter_mix1["input1"] = chan_id;
+                filter_mix1["inputType1"] = chan_type;
+                if (db.count("live_inputs_mix", filter_mix1.dump()) > 0)
+                    return true;
+                json filter_mix2;
+                filter_mix2["active"] = true;
+                filter_mix2["input2"] = chan_id;
+                filter_mix2["inputType2"] = chan_type;
+                if (db.count("live_inputs_mix", filter_mix2.dump()) > 0)
+                    return true;
+            }
         }catch(std::exception const& e){
             LOG(error)  <<  e.what();
         }
-        LOG(info) << "Not found channel id:" << chan_id << " in outputs"; 
+        LOG(debug) << "Not found channel id:" << chan_id << " in outputs"; 
         return false;
-    }
-    void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
-    {
-        string name = channel["name"];
-        json media = json::object();
-        media["_id"] = id;
-        media["format"] = CONTENT_FORMAT_MP4;
-        media["type"] =   CONTENT_TYPE_TIME_SHIFT;
-        media["price"] = 0;
-        media["date"] = time(nullptr);
-        media["languages"] = json::array();
-        media["permission"] = channel["permission"];
-        media["platform"] = json::array();
-        media["category"] = channel["category"];
-        media["description"] = {
-            {"en",{
-                      { "name" ,name },
-                      { "description" ,"" }
-                  }},
-            {"fa",{
-                      { "name" ,name },
-                      { "description" ,"" }
-                  }},
-            {"ar",{
-                      { "name" ,name },
-                      { "description" ,"" }
-                  }}
-        };
-        media["name"] = channel["name"];
-        db.insert("storage_contents_info", media.dump());
-        LOG(info) << "Record " << channel["name"] << ":" << name;
-
     }
     const std::string get_channel_name(int64_t input_id, int input_type)
     {   

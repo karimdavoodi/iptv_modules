@@ -99,17 +99,55 @@ void tsdemux_pad_added_r(GstElement* object, GstPad* pad, gpointer data)
     Gst::demux_pad_link_to_muxer(rdata->d.pipeline, pad, 
             "mux", "audio_%u", "video");
 }
+void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
+{
+    time_t now = time(nullptr);
+    auto now_tm = localtime(&now);
+    char buffer[100];
+    strftime(buffer,sizeof(buffer),"%Y-%m-%d %H:%M:%S",now_tm);
+    string name_date(buffer);
+
+    string name = channel["name"];
+    json media = json::object();
+    media["_id"] = id;
+    media["format"] = CONTENT_FORMAT_MP4;
+    media["type"] =   CONTENT_TYPE_TIME_SHIFT;
+    media["price"] = 0;
+    media["date"] = now_tm->tm_year;
+    media["languages"] = json::array();
+    media["permission"] = channel["permission"];
+    media["platform"] = json::array();
+    media["category"] = channel["category"];
+    media["description"] = {
+        {"en",{
+                  { "name" ,name_date },
+                  { "description" ,"" }
+              }},
+        {"fa",{
+                  { "name" ,name_date },
+                  { "description" ,"" }
+              }},
+        {"ar",{
+                  { "name" ,name_date },
+                  { "description" ,"" }
+              }}
+    };
+    media["name"] = name;
+    db.insert("storage_contents_info", media.dump());
+    LOG(info) << "Record " << name << ":" << name;
+
+}
 gchararray splitmuxsink_location_cb(GstElement*  splitmux,
         guint fragment_id, gpointer data)
 {
     Record_data* rdata = (Record_data *) data;
     int64_t id = std::chrono::system_clock::now().time_since_epoch().count();
-    Util::insert_content_info_db(rdata->db, rdata->channel, id);
+    insert_content_info_db(rdata->db, rdata->channel, id);
     remove_old_timeshift(rdata->db, rdata->maxPerChannel, rdata->channel["name"]);
 
     string file_path = MEDIA_ROOT "TimeShift/" + to_string(id) + ".mp4"; 
     LOG(trace) << "For " << rdata->channel["name"]
-               << " New file: " <<  file_path;
+        << " New file: " <<  file_path;
     return  g_strdup(file_path.c_str());
 }
 /*
@@ -138,7 +176,7 @@ void remove_old_timeshift(Mongo& db, int maxPerChannel, const string channel_nam
                 << " for time " << media_date;
             uint64_t media_id = media["_id"];
             auto media_path = MEDIA_ROOT "TimeShift/" + 
-                                                to_string(media_id) + ".mp4";
+                to_string(media_id) + ".mp4";
             db.remove_id("storage_contents_info", media_id);
             if(boost::filesystem::exists(media_path)){
                 boost::filesystem::remove(media_path);
@@ -149,3 +187,7 @@ void remove_old_timeshift(Mongo& db, int maxPerChannel, const string channel_nam
         }
     }
 }
+/*
+ *   2020-09-14 17:02:19.365075 iptv_out_record 0x00007fbde17dd700 error: [element_link_request:226] Can'n link mpegvparse0:src to mux:video SRC PAD CAPS:video/mpeg, mpegversion=(int)[ 1, 2 ], parsed=(boolean)true, systemstream=(boolean)false
+
+ * */

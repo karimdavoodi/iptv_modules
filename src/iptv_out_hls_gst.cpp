@@ -152,3 +152,7 @@ void tsdemux_pad_added_h(GstElement* object, GstPad* pad, gpointer data)
         gst_object_unref(hlssink);
     }
 }
+/*
+ *   2020-09-14 17:02:18.383436 iptv_out_hls 0x00007faf6a7fc700 error: [element_link_request:211] Can't get request sink pad from hlssink by name audio
+
+ * */

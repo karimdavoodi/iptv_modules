@@ -224,7 +224,7 @@ void channel_epg_update(Mongo& db, map<int, Event>& day_eit, int channel_id)
     epg["_id"] = channel_id;
     epg["total"] = eit.size();
     epg["content"] = eit;
-    db.insert_or_replace_id("live_output_epg", channel_id, epg.dump());
+    db.insert_or_replace_id("report_live_epg", channel_id, epg.dump());
     LOG(info) << "Update EPG of channel_id:" << channel_id;
 }
 int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data)

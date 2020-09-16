@@ -18,6 +18,7 @@ add_definitions(
 find_package(Boost COMPONENTS system log log_setup REQUIRED)
 
 #GSTREAMER
+set(CMAKE_MODULE_PATH /usr/local/lib/x86_64-linux-gnu/pkgconfig )
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GSTMM REQUIRED 
     gstreamer-1.0           # for all 
@@ -56,7 +57,7 @@ set( project_EXES
      iptv_in_archive       # TODO: fix ts file timestamp
      iptv_in_network       # TODO: test it
      iptv_in_transcoder    # TODO:l test it, memory leak
-     iptv_in_web           # TODO: test it
+     #iptv_in_web           # TODO: test it
      iptv_in_dvb           # TODO: do by Gst
      iptv_in_scramble      # TODO: test it. do only BISS
      iptv_in_mix           ##TODO: test it
