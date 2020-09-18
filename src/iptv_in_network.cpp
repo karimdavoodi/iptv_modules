@@ -27,6 +27,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
+#include "db_structure.hpp"
 #define TEST_BY_FFMPEG 0
 
 using namespace std;
@@ -55,10 +56,9 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_network", 
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        if(chan["virtual"].is_null() || chan["static"].is_null() || chan["webPage"].is_null() ){
-            LOG(error) << "Some fields not found";
+        if(!Util::check_json_validity("live_inputs_network", chan, 
+                json::parse( live_inputs_network))) 
             continue;
-        } 
         if(chan["virtual"] || !chan["static"] || chan["webPage"] ) 
             continue;
 

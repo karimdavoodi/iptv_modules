@@ -27,6 +27,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
+#include "db_structure.hpp"
 
 using namespace std;
 using nlohmann::json;
@@ -57,6 +58,9 @@ int main(int argc, char** argv)
     json channels = json::parse(db.find_mony("live_inputs_mix", 
                 "{\"active\":true}"));
     for(auto& chan : channels ){
+        if(!Util::check_json_validity("live_input_mix", chan, 
+                json::parse( live_inputs_mix))) 
+            continue;
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             pool.emplace_back(start_channel, chan, live_config);
             //break;
@@ -86,6 +90,9 @@ void start_channel(json channel, live_setting live_config)
         LOG(debug) << profile.dump(2);
         return;
     } 
+    if(!Util::check_json_validity("live_profiles_mix", profile, 
+                json::parse( live_profiles_mix))) 
+            return;
     live_config.type_id = channel["inputType1"];
     auto in_multicast1  = Util::get_multicast(live_config, channel["input1"]);
     live_config.type_id = channel["inputType2"];

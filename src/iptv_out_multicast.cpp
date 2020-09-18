@@ -26,6 +26,7 @@
 #include <vector>
 #include <thread>
 #include "utils.hpp"
+#include "db_structure.hpp"
 using namespace std;
 
 void gst_relay_udp_to_udp(string in_multicast, string out_multicast, int port);
@@ -53,6 +54,9 @@ int main()
     json channels = json::parse(db.find_mony("live_output_network", 
                 "{\"active\":true, \"udp\":true}"));
     for(auto& chan : channels ){
+        if(!Util::check_json_validity("live_output_network", chan, 
+                json::parse( live_output_network))) 
+            continue;
         if(Util::chan_in_input(db, chan["input"], chan["inputType"])){
             pool.emplace_back(start_channel, chan, live_config);
         }

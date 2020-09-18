@@ -51,7 +51,7 @@ EQUALS = =
 CMAKE_SOURCE_DIR = /s/iptv_modules
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /s/iptv_modules
+CMAKE_BINARY_DIR = /home/karim/src/iptv_modules
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /s/iptv_modules/CMakeFiles /s/iptv_modules/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/karim/src/iptv_modules/CMakeFiles /home/karim/src/iptv_modules/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /s/iptv_modules/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/karim/src/iptv_modules/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -176,6 +176,32 @@ iptv_in_archive/fast:
 .PHONY : iptv_in_archive/fast
 
 #=============================================================================
+# Target rules for targets named iptv_out_rf
+
+# Build rule for target.
+iptv_out_rf: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 iptv_out_rf
+.PHONY : iptv_out_rf
+
+# fast build rule for target.
+iptv_out_rf/fast:
+	$(MAKE) -f CMakeFiles/iptv_out_rf.dir/build.make CMakeFiles/iptv_out_rf.dir/build
+.PHONY : iptv_out_rf/fast
+
+#=============================================================================
+# Target rules for targets named iptv_in_network
+
+# Build rule for target.
+iptv_in_network: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 iptv_in_network
+.PHONY : iptv_in_network
+
+# fast build rule for target.
+iptv_in_network/fast:
+	$(MAKE) -f CMakeFiles/iptv_in_network.dir/build.make CMakeFiles/iptv_in_network.dir/build
+.PHONY : iptv_in_network/fast
+
+#=============================================================================
 # Target rules for targets named iptv_in_transcoder
 
 # Build rule for target.
@@ -254,6 +280,19 @@ iptv_in_mix/fast:
 .PHONY : iptv_in_mix/fast
 
 #=============================================================================
+# Target rules for targets named iptv_in_web
+
+# Build rule for target.
+iptv_in_web: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 iptv_in_web
+.PHONY : iptv_in_web
+
+# fast build rule for target.
+iptv_in_web/fast:
+	$(MAKE) -f CMakeFiles/iptv_in_web.dir/build.make CMakeFiles/iptv_in_web.dir/build
+.PHONY : iptv_in_web/fast
+
+#=============================================================================
 # Target rules for targets named iptv_out_multicast
 
 # Build rule for target.
@@ -278,32 +317,6 @@ iptv_out_epg: cmake_check_build_system
 iptv_out_epg/fast:
 	$(MAKE) -f CMakeFiles/iptv_out_epg.dir/build.make CMakeFiles/iptv_out_epg.dir/build
 .PHONY : iptv_out_epg/fast
-
-#=============================================================================
-# Target rules for targets named iptv_in_network
-
-# Build rule for target.
-iptv_in_network: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 iptv_in_network
-.PHONY : iptv_in_network
-
-# fast build rule for target.
-iptv_in_network/fast:
-	$(MAKE) -f CMakeFiles/iptv_in_network.dir/build.make CMakeFiles/iptv_in_network.dir/build
-.PHONY : iptv_in_network/fast
-
-#=============================================================================
-# Target rules for targets named iptv_out_rf
-
-# Build rule for target.
-iptv_out_rf: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 iptv_out_rf
-.PHONY : iptv_out_rf
-
-# fast build rule for target.
-iptv_out_rf/fast:
-	$(MAKE) -f CMakeFiles/iptv_out_rf.dir/build.make CMakeFiles/iptv_out_rf.dir/build
-.PHONY : iptv_out_rf/fast
 
 #=============================================================================
 # Target rules for targets named iptv_out_record
@@ -681,6 +694,60 @@ src/iptv_in_transcoder_gst.s: src/iptv_in_transcoder_gst.cpp.s
 src/iptv_in_transcoder_gst.cpp.s:
 	$(MAKE) -f CMakeFiles/iptv_in_transcoder.dir/build.make CMakeFiles/iptv_in_transcoder.dir/src/iptv_in_transcoder_gst.cpp.s
 .PHONY : src/iptv_in_transcoder_gst.cpp.s
+
+src/iptv_in_web.o: src/iptv_in_web.cpp.o
+
+.PHONY : src/iptv_in_web.o
+
+# target to build an object file
+src/iptv_in_web.cpp.o:
+	$(MAKE) -f CMakeFiles/iptv_in_web.dir/build.make CMakeFiles/iptv_in_web.dir/src/iptv_in_web.cpp.o
+.PHONY : src/iptv_in_web.cpp.o
+
+src/iptv_in_web.i: src/iptv_in_web.cpp.i
+
+.PHONY : src/iptv_in_web.i
+
+# target to preprocess a source file
+src/iptv_in_web.cpp.i:
+	$(MAKE) -f CMakeFiles/iptv_in_web.dir/build.make CMakeFiles/iptv_in_web.dir/src/iptv_in_web.cpp.i
+.PHONY : src/iptv_in_web.cpp.i
+
+src/iptv_in_web.s: src/iptv_in_web.cpp.s
+
+.PHONY : src/iptv_in_web.s
+
+# target to generate assembly for a file
+src/iptv_in_web.cpp.s:
+	$(MAKE) -f CMakeFiles/iptv_in_web.dir/build.make CMakeFiles/iptv_in_web.dir/src/iptv_in_web.cpp.s
+.PHONY : src/iptv_in_web.cpp.s
+
+src/iptv_in_web_gst.o: src/iptv_in_web_gst.cpp.o
+
+.PHONY : src/iptv_in_web_gst.o
+
+# target to build an object file
+src/iptv_in_web_gst.cpp.o:
+	$(MAKE) -f CMakeFiles/iptv_in_web.dir/build.make CMakeFiles/iptv_in_web.dir/src/iptv_in_web_gst.cpp.o
+.PHONY : src/iptv_in_web_gst.cpp.o
+
+src/iptv_in_web_gst.i: src/iptv_in_web_gst.cpp.i
+
+.PHONY : src/iptv_in_web_gst.i
+
+# target to preprocess a source file
+src/iptv_in_web_gst.cpp.i:
+	$(MAKE) -f CMakeFiles/iptv_in_web.dir/build.make CMakeFiles/iptv_in_web.dir/src/iptv_in_web_gst.cpp.i
+.PHONY : src/iptv_in_web_gst.cpp.i
+
+src/iptv_in_web_gst.s: src/iptv_in_web_gst.cpp.s
+
+.PHONY : src/iptv_in_web_gst.s
+
+# target to generate assembly for a file
+src/iptv_in_web_gst.cpp.s:
+	$(MAKE) -f CMakeFiles/iptv_in_web.dir/build.make CMakeFiles/iptv_in_web.dir/src/iptv_in_web_gst.cpp.s
+.PHONY : src/iptv_in_web_gst.cpp.s
 
 src/iptv_out_epg.o: src/iptv_out_epg.cpp.o
 
@@ -1235,16 +1302,17 @@ help:
 	@echo "... utils"
 	@echo "... iptv_out_snapshot"
 	@echo "... iptv_in_archive"
+	@echo "... iptv_out_rf"
+	@echo "... iptv_in_network"
 	@echo "... iptv_in_transcoder"
 	@echo "... copy"
 	@echo "... iptv_in_dvb"
 	@echo "... iptv_in_scramble"
 	@echo "... iptv_out_hls"
 	@echo "... iptv_in_mix"
+	@echo "... iptv_in_web"
 	@echo "... iptv_out_multicast"
 	@echo "... iptv_out_epg"
-	@echo "... iptv_in_network"
-	@echo "... iptv_out_rf"
 	@echo "... iptv_out_record"
 	@echo "... iptv_out_rtsp"
 	@echo "... src/gst.o"
@@ -1286,6 +1354,12 @@ help:
 	@echo "... src/iptv_in_transcoder_gst.o"
 	@echo "... src/iptv_in_transcoder_gst.i"
 	@echo "... src/iptv_in_transcoder_gst.s"
+	@echo "... src/iptv_in_web.o"
+	@echo "... src/iptv_in_web.i"
+	@echo "... src/iptv_in_web.s"
+	@echo "... src/iptv_in_web_gst.o"
+	@echo "... src/iptv_in_web_gst.i"
+	@echo "... src/iptv_in_web_gst.s"
 	@echo "... src/iptv_out_epg.o"
 	@echo "... src/iptv_out_epg.i"
 	@echo "... src/iptv_out_epg.s"

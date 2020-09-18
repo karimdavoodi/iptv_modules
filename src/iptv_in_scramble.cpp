@@ -27,6 +27,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
+#include "db_structure.hpp"
 
 using namespace std;
 using nlohmann::json;
@@ -56,9 +57,11 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_scramble",
                 "{\"active\":true}"));
     for(auto& chan : channels ){
+        if(!Util::check_json_validity("live_inputs_scramble", chan, 
+                json::parse( live_inputs_scramble))) 
+            continue;
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             pool.emplace_back(start_channel, chan, live_config);
-            //break;
         }
     }
     for(auto& t : pool)

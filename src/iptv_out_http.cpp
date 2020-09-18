@@ -27,6 +27,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
+#include "db_structure.hpp"
 using namespace std;
 
 void gst_convert_udp_to_http(string in_multicast, int in_port, int http_stream_port);
@@ -53,6 +54,9 @@ int main()
     json channels = json::parse(db.find_mony("live_output_network", 
                 "{\"active\":true, \"http\":true}"));
     for(auto& chan : channels ){
+        if(!Util::check_json_validity("live_output_network", chan, 
+                json::parse( live_output_network))) 
+            continue;
         if(Util::chan_in_input(db, chan["input"], chan["inputType"])){
             pool.emplace_back(start_channel, chan, live_config);
 

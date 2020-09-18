@@ -26,6 +26,7 @@
 #include <vector>
 #include <thread>
 #include "utils.hpp"
+#include "db_structure.hpp"
 using namespace std;
 
 void gst_get_epg_of_stream(Mongo& db, string in_multicast, int port, int chan_id);
@@ -56,9 +57,11 @@ int main()
     json channels = json::parse(db.find_mony("live_output_network", 
                 filter.dump()));
     for(auto& chan : channels ){
+        if(!Util::check_json_validity("live_output_network", chan, 
+                json::parse( live_output_network))) 
+            continue;
         if(Util::chan_in_output(db, chan["input"], chan["inputType"]))
             pool.emplace_back(start_channel, chan, live_config);
-        //break;
     }
     for(auto& t : pool)
         t.join();

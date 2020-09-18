@@ -86,4 +86,5 @@ namespace Util {
     bool chan_in_input(Mongo &db, int chan_id, int chan_type);
     void insert_content_info_db(Mongo &db,json& channel, uint64_t id);
     const std::string get_channel_name(int64_t input_id, int input_type);
+    bool check_json_validity(const std::string record_name,json& record, const json target);
 }

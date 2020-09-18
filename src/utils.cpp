@@ -480,4 +480,19 @@ namespace Util {
         }
         return "";
     }
+    bool check_json_validity(const string record_name,json& record, const json target)
+    {
+        bool result = true;
+        for(auto& [key, value]: target.items()){
+            if(value.is_array())
+                result = check_json_validity(record_name,record[key][0], value[0]);
+            else if(value.is_structured())
+                result = check_json_validity(record_name,record[key], value);
+            else if(!record.contains(key)){
+                LOG(error) << "In " << record_name << " not found the key:" << key;
+                return false;
+            }
+        }
+        return result;
+    }
 }

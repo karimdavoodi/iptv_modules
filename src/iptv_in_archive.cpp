@@ -28,7 +28,7 @@
 #include <boost/format.hpp>
 #include <boost/filesystem/operations.hpp>
 #include "utils.hpp"
-
+#include "db_structure.hpp"
 #define TEST_BY_FFMPEG 0
 
 using namespace std;
@@ -62,9 +62,11 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_archive", 
                 "{\"active\":true}"));
     for(auto& chan : channels ){
+        if(!Util::check_json_validity("live_input_archive", chan, 
+                json::parse( live_inputs_archive))) 
+            continue;
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             pool.emplace_back(start_channel, chan, live_config);
-            break;
         }
     }
     for(auto& t : pool)

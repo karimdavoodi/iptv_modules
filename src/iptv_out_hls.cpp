@@ -27,6 +27,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
+#include "db_structure.hpp"
 #define BY_FFMPEG 1
 using namespace std;
 
@@ -55,6 +56,9 @@ int main()
     json channels = json::parse(db.find_mony("live_output_network", 
                 "{\"active\":true, \"hls\":true}"));
     for(auto& chan : channels ){
+        if(!Util::check_json_validity("live_output_network", chan, 
+                json::parse( live_output_network))) 
+            continue;
         if(Util::chan_in_input(db, chan["input"], chan["inputType"])){
             pool.emplace_back(start_channel, chan, live_config);
         }

@@ -24,6 +24,7 @@ pkg_check_modules(GSTMM REQUIRED
     gstreamer-1.0           # for all 
     glib-2.0                # for all
     gstreamer-mpegts-1.0    # for iptv_out_epg
+    #gstreamer-transcoder-1.0
     gtk+-3.0                # for iptv_in_web
     webkit2gtk-4.0          # for iptv_in_web
     x11                     # for iptv_in_web
@@ -57,7 +58,7 @@ set( project_EXES
      iptv_in_archive       # TODO: fix ts file timestamp
      iptv_in_network       # TODO: test it
      iptv_in_transcoder    # TODO:l test it, memory leak
-     #iptv_in_web           # TODO: test it
+     iptv_in_web           # TODO: test it
      iptv_in_dvb           # TODO: do by Gst
      iptv_in_scramble      # TODO: test it. do only BISS
      iptv_in_mix           ##TODO: test it
@@ -77,7 +78,7 @@ set( project_EXES
 
 foreach( APP ${project_EXES} )
     add_executable(${APP} src/${APP}.cpp src/${APP}_gst.cpp)
-    target_link_libraries(${APP} utils ${ALL_LIBS} )
+    target_link_libraries(${APP} utils ${ALL_LIBS})
     target_include_directories(${APP} PUBLIC ${ALL_INCS})
 endforeach()
 

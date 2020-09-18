@@ -28,6 +28,7 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
+#include "db_structure.hpp"
 #define TEST_BY_FFMPEG 0
 
 using namespace std;
@@ -57,10 +58,12 @@ int main()
     }
     json channels = json::parse(db.find_mony("live_inputs_transcode",
                 "{\"active\":true}"));
-    for(const auto& chan : channels ){
+    for(auto& chan : channels ){
+        if(!Util::check_json_validity("live_inputs_transcode", chan, 
+                json::parse( live_inputs_transcode))) 
+            continue;
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             pool.emplace_back(start_channel, chan, live_config);
-            //break;
         }
     }
     for(auto& t : pool)
@@ -86,6 +89,9 @@ void start_channel(json channel, live_setting live_config)
         return;
     } 
 
+    if(!Util::check_json_validity("live_profiles_transcode", profile, 
+                json::parse( live_profiles_transcode))) 
+        return;
     auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
     live_config.type_id = channel["inputType"];
     auto in_multicast  = Util::get_multicast(live_config, channel["input"]);
@@ -118,24 +124,24 @@ void start_channel(json channel, live_setting live_config)
         return;
     }
     auto opts = boost::format(" -preset %s -s %s -r %s -g %s -b:v %s -b:a %s   ")
-            % profile["preset"] % vsize % profile["videoFps"] 
-            % profile["videoFps"] % profile["videoRate"] % profile["audioRate"];
+        % profile["preset"] % vsize % profile["videoFps"] 
+        % profile["videoFps"] % profile["videoRate"] % profile["audioRate"];
     string extra = profile["extra"];
     auto codecs = boost::format("-vcodec %s -acodec %s %s") 
-            % vcodec % acodec % extra ;
+        % vcodec % acodec % extra ;
     auto cmd = boost::format("%s -i 'udp://%s:%d?reuse=1' "
             " %s %s -f mpegts 'udp://%s:%d?pkt_size=1316' ")
         % FFMPEG % in_multicast % INPUT_PORT % codecs.str() 
         % opts.str() % out_multicast % INPUT_PORT;
-    
+
     Util::exec_shell_loop(cmd.str());
 #else
     while(true){
         LOG(info) << "Start transcoding of " << channel["name"] 
-                  << " from input " << channel["input"];
+            << " from input " << channel["input"];
         gst_transcode_of_stream(in_multicast, INPUT_PORT, out_multicast, profile);
         Util::wait(5000);
     }
 #endif
-    
+
 }

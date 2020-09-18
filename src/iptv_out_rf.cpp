@@ -30,6 +30,7 @@
 #include <thread>
 #include <boost/filesystem/operations.hpp>
 #include "utils.hpp"
+#include "db_structure.hpp"
 using namespace std;
 
 int main()
@@ -48,7 +49,10 @@ int main()
     }
     json channels = json::parse(db.find_mony("live_output_dvb", 
                 "{\"active\":true}"));
-    for(const auto& chan : channels ){
+    for(auto& chan : channels ){
+        if(!Util::check_json_validity("live_output_dvb", chan, 
+                json::parse( live_output_dvb))) 
+            continue;
         int dvbId = chan["dvbId"];
         chan_by_dvbId[dvbId].push_back(chan); 
     }
