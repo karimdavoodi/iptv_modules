@@ -74,7 +74,6 @@ int main()
                 continue;
             if(chan["timeShift"] > 0 && !chan["virtual"]){
                 pool.emplace_back(start_channel, chan, maxPerChannel, live_config);
-                Util::wait(100);
             }
         }
         for(auto& t : pool)
@@ -94,25 +93,27 @@ int main()
  * */
 void start_channel(json channel, int maxPerChannel, live_setting live_config)
 {
+    Util::wait(100);
     live_config.type_id = channel["inputType"];
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
+    channel["name"] = Util::get_channel_name(channel["input"], channel["inputType"]);
 
-    try{
+    while(true){ // loop for retry only
+        try{
 #if BY_FFMPEG
-        uint64_t id = std::chrono::system_clock::now().time_since_epoch().count();
-        auto file_path = boost::format("%s%s/%lld.mp4") 
-            % MEDIA_ROOT % "TimeShift" % id ; 
-#define FFMPEG_REC_OPTS  " -bsf:a aac_adtstoasc -movflags empty_moov -y -f mp4 "
-        auto cmd = boost::format("%s -i udp://%s:%d -t 3600 -codec copy %s '%s'")
-            % FFMPEG % in_multicast % INPUT_PORT % FFMPEG_REC_OPTS % file_path;
-        Util::system(cmd.str());
+            uint64_t id = std::chrono::system_clock::now().time_since_epoch().count();
+            auto file_path = boost::format("%s%s/%lld.mp4") 
+                % MEDIA_ROOT % "TimeShift" % id ; 
+            const char* FFMPEG_REC_OPTS = " -bsf:a aac_adtstoasc -movflags empty_moov -y -f mp4 ";
+            auto cmd = boost::format("%s -i udp://%s:%d -t 3600 -codec copy %s '%s'")
+                % FFMPEG % in_multicast % INPUT_PORT % FFMPEG_REC_OPTS % file_path;
+            Util::system(cmd.str());
 #else
-        channel["name"] = Util::get_channel_name(channel["input"], channel["inputType"]);
-        gst_convert_udp_to_mp4(channel, in_multicast, INPUT_PORT, maxPerChannel); 
+            gst_convert_udp_to_mp4(channel, in_multicast, INPUT_PORT, maxPerChannel); 
 #endif
-
-    }catch(std::exception& e){
-        LOG(error) << e.what();
+        }catch(std::exception& e){
+            LOG(error) << e.what();
+        }
+        Util::wait(5000);
     }
-    Util::wait(5000);
 }

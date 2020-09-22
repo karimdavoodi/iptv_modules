@@ -60,6 +60,12 @@ void gst_convert_udp_to_http(string in_multicast, int port, int http_stream_port
                 "host",         "0.0.0.0",
                 "port",         http_stream_port,
                 nullptr);
+        g_signal_connect(tcpserversink, "client-added",G_CALLBACK([](){
+                    LOG(debug) << "Client Add";
+                }), nullptr); 
+        g_signal_connect(tcpserversink, "client-removed",G_CALLBACK([](){
+                    LOG(debug) << "Client Removed";
+                }), nullptr); 
         Gst::add_bus_watch(d);
         //Gst::dot_file(d.pipeline, "iptv_http", 5);
         gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
@@ -68,3 +74,14 @@ void gst_convert_udp_to_http(string in_multicast, int port, int http_stream_port
         LOG(error) << "Exception:" << e.what();
     }
 }
+/*
+void client_added(GstElement* object, GObject* arg0, gpointer user_data)
+{
+
+}
+void client_removed (GstElement* object, gpointer arg0,
+        gpointer arg1, gpointer user_data)
+{
+
+}
+*/

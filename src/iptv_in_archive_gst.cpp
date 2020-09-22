@@ -133,7 +133,7 @@ void typefind_have_type_a(GstElement* typefind,
         return;
     }
     if(demux != nullptr){
-        LOG(info) << "Add demux";
+        LOG(trace) << "Add demux";
         gst_element_link(typefind, demux);
         gst_element_set_state(demux, GST_STATE_PLAYING);
         if(is_mp3){

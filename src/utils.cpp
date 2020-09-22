@@ -484,13 +484,19 @@ namespace Util {
     {
         bool result = true;
         for(auto& [key, value]: target.items()){
+            if(!key.size()) continue;
             if(value.is_array())
                 result = check_json_validity(record_name,record[key][0], value[0]);
             else if(value.is_structured())
                 result = check_json_validity(record_name,record[key], value);
             else if(!record.contains(key)){
-                LOG(error) << "In " << record_name << " not found the key:" << key;
-                return false;
+                if(key == "description" || key == "tv" || key == "logo"){
+                    LOG(warning) << "In " << record_name << " not found the key:" << key;
+                    return true; // TODO: Ignore this fields
+                }else{
+                    LOG(error) << "In " << record_name << " not found the key:" << key;
+                    return false;
+                }
             }
         }
         return result;

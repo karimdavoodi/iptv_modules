@@ -135,7 +135,6 @@ void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
     media["name"] = name;
     db.insert("storage_contents_info", media.dump());
     LOG(info) << "Record " << name << ":" << name;
-
 }
 gchararray splitmuxsink_location_cb(GstElement*  splitmux,
         guint fragment_id, gpointer data)
@@ -146,7 +145,7 @@ gchararray splitmuxsink_location_cb(GstElement*  splitmux,
     remove_old_timeshift(rdata->db, rdata->maxPerChannel, rdata->channel["name"]);
 
     string file_path = MEDIA_ROOT "TimeShift/" + to_string(id) + ".mp4"; 
-    LOG(trace) << "For " << rdata->channel["name"]
+    LOG(info) << "For " << rdata->channel["name"]
         << " New file: " <<  file_path;
     return  g_strdup(file_path.c_str());
 }

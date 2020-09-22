@@ -37,9 +37,12 @@ struct Event {
     int start;
     int duration;
 };
-map<int, Event> day_eit;
 struct DayTime {
     int hour, minute, second;
+};
+struct Edata {
+    Gst::Data d;
+    map<int, Event> day_eit;
 };
 
 int gst_date_to_int(GstDateTime* date);
@@ -47,8 +50,8 @@ void gst_date_to_day_time(GstDateTime* date, DayTime& d);
 string gst_date_to_str(GstDateTime* date);
 void dump_tdt (GstMpegtsSection * section);
 void dump_tot (GstMpegtsSection * section);
-void dump_descriptors (GstMpegtsEITEvent *event);
-void dump_eit(GstMpegtsSection *sec);
+void dump_descriptors (GstMpegtsEITEvent *event, map<int, Event>& day_eit);
+void dump_eit(GstMpegtsSection *sec, map<int, Event>& day_eit);
 void channel_epg_update(Mongo& db, map<int, Event>& day_eit, int channel_id);
 int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data);
 
@@ -67,28 +70,32 @@ void gst_get_epg_of_stream(Mongo& db, string in_multicast, int port, int channel
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);
     LOG(info) << "Start in " << in_multicast;
 
-    Gst::Data d;
-    d.loop      = g_main_loop_new(nullptr, false);
-    d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
+    Edata edata;
+    edata.d.loop      = g_main_loop_new(nullptr, false);
+    edata.d.pipeline  = GST_PIPELINE(gst_element_factory_make("pipeline", nullptr));
 
     try{
-        auto udpsrc     = Gst::add_element(d.pipeline, "udpsrc"),
-             tsparse    = Gst::add_element(d.pipeline, "tsparse"),
-             fakesink   = Gst::add_element(d.pipeline, "fakesink");
+        auto udpsrc     = Gst::add_element(edata.d.pipeline, "udpsrc"),
+             tsparse    = Gst::add_element(edata.d.pipeline, "tsparse"),
+             fakesink   = Gst::add_element(edata.d.pipeline, "fakesink");
 
         gst_element_link_many(udpsrc, tsparse, fakesink, nullptr);
 
         g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
-        d.bus = gst_pipeline_get_bus(d.pipeline);
-        d.watch_id = gst_bus_add_watch(d.bus, bus_on_message, &d); 
+        edata.d.bus = gst_pipeline_get_bus(edata.d.pipeline);
+        edata.d.watch_id = gst_bus_add_watch(edata.d.bus, bus_on_message, &edata); 
         bool thread_running = true;
         std::thread t([&](){
                 while(thread_running){
                     int wait = EPG_UPDATE_TIME;
                     while(thread_running && wait--) Util::wait(1000);
                     try{
+                    if(edata.day_eit.size()){
                         LOG(info) << "Try to save EPG in DB";
-                        channel_epg_update(db, day_eit, channel_id);
+                        channel_epg_update(db, edata.day_eit, channel_id);
+                    }else{
+                        LOG(debug) << "The channel id " << channel_id << " dosn't have EPG";
+                    }
                     }catch(std::exception& e){
                         LOG(error) << "Exception:" << e.what();
                     }
@@ -96,8 +103,8 @@ void gst_get_epg_of_stream(Mongo& db, string in_multicast, int port, int channel
                 });
         t.detach();
 
-        gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
-        g_main_loop_run(d.loop);
+        gst_element_set_state(GST_ELEMENT(edata.d.pipeline), GST_STATE_PLAYING);
+        g_main_loop_run(edata.d.loop);
         thread_running = false;
     }catch(std::exception& e){
         LOG(error) << "Exception:" << e.what();
@@ -148,7 +155,7 @@ void dump_tot (GstMpegtsSection * section)
 }
 */
 #endif
-void dump_descriptors (GstMpegtsEITEvent *event)
+void dump_descriptors (GstMpegtsEITEvent *event, map<int, Event>& day_eit)
 {
     GPtrArray *descriptors = event->descriptors;
     for (int i = 0; i < (int)descriptors->len; i++) {
@@ -171,7 +178,7 @@ void dump_descriptors (GstMpegtsEITEvent *event)
         }
     }
 }
-void dump_eit(GstMpegtsSection *sec)
+void dump_eit(GstMpegtsSection *sec, map<int, Event>& day_eit)
 {
     const GstMpegtsEIT *eit = gst_mpegts_section_get_eit(sec);
     if(eit == nullptr){
@@ -197,7 +204,7 @@ void dump_eit(GstMpegtsSection *sec)
             << " event_id:" << event->event_id
             << " start_time:" << gst_date_to_str(event->start_time)
             << " duration:" << event->duration;
-        dump_descriptors (event);
+        dump_descriptors(event, day_eit);
     }
     //g_object_unref(GST_OBJECT(eit));
     
@@ -229,7 +236,7 @@ void channel_epg_update(Mongo& db, map<int, Event>& day_eit, int channel_id)
 }
 int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data)
 {
-    auto d = (Gst::Data*) user_data;
+    auto edata = (Edata*) user_data;
 
     switch (GST_MESSAGE_TYPE (message)) {
         case GST_MESSAGE_ELEMENT:
@@ -241,7 +248,7 @@ int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data)
                 }
                 if(sec->section_type == GST_MPEGTS_SECTION_EIT){
                     LOG(debug) << "Got EIT";
-                    dump_eit(sec); 
+                    dump_eit(sec, edata->day_eit); 
                 }
                 gst_mpegts_section_unref (sec);
 #if 0
@@ -259,12 +266,12 @@ int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data)
                 LOG(error) <<  err->message << " debug:" << debug;
                 g_error_free (err);
                 g_free (debug);
-                g_main_loop_quit (d->loop);
+                g_main_loop_quit (edata->d.loop);
                 break;
                 }
         case GST_MESSAGE_EOS:
                 LOG(error) <<  "Got EOS";    
-                g_main_loop_quit(d->loop);
+                g_main_loop_quit(edata->d.loop);
                 break;
         default: ;
     }

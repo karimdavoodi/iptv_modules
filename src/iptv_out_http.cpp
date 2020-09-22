@@ -59,7 +59,7 @@ int main()
             continue;
         if(Util::chan_in_input(db, chan["input"], chan["inputType"])){
             pool.emplace_back(start_channel, chan, live_config);
-
+            //break;
         }
     }
     for(auto& t : pool)
@@ -83,6 +83,7 @@ void start_channel(json channel, live_setting live_config)
         LOG(debug) << "Start channle id:" << channel["_id"]
             << " on Port:" << tcpserver_port;
         while(true){
+            //in_multicast = "229.3.229.201";
             gst_convert_udp_to_http(in_multicast, INPUT_PORT, tcpserver_port); 
             Util::wait(5000);
         }

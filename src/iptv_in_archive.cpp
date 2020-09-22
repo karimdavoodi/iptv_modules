@@ -137,8 +137,8 @@ bool time_to_play(Mongo& db, json& media)
 {
     try{
         if( media["startDate"].is_null() || 
-            media["endDate"].is_null() || 
-            media["weektime"].is_null() ){
+                media["endDate"].is_null() || 
+                media["weektime"].is_null() ){
             LOG(debug) << "Content " << media["content"] << " dosn't have time. play it";
             return true;
         }
@@ -193,5 +193,5 @@ void update_epg(Mongo& db, int64_t silver_chan_id, int64_t content_id)
     epg["content"] = json::array();
     epg["content"].push_back(j);
     db.insert_or_replace_id("report_live_epg", silver_chan_id, epg.dump());
-    LOG(info) << "Update EPG of channel_id:" << silver_chan_id;
+    LOG(debug) << "Update EPG of channel_id:" << silver_chan_id;
 }
