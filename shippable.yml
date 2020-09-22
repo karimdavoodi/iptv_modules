@@ -1,0 +1,26 @@
+language: c++
+
+branches:
+  only:
+    - master
+
+env:
+  global:
+    - BUILD=$SHIPPABLE_REPO_DIR/build
+
+build:
+  ci:
+    - mkdir -p $BUILD
+    - cd $BUILD
+    - cmake ..
+    - cmake --build 
+    - make test
+
+
+integrations:
+  notifications:
+    - integrationName: email
+      type: email
+      on_success: change
+      on_failure: always
+      on_pull_request: never
