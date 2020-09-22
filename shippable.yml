@@ -1,18 +1,15 @@
-language: c++
+language: c
 
+comoiler:
+    - gcc
+      
 branches:
   only:
     - master
 
-env:
-  global:
-    - BUILD=$SHIPPABLE_REPO_DIR/build
-
 build:
   ci:
-    - mkdir -p $BUILD
-    - cd $BUILD
-    - cmake ..
+    - cmake .
     - cmake --build 
     - make test
 
