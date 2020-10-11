@@ -93,6 +93,6 @@ void gst_mpegts_crypto(string in_multicast, int port, string out_multicast,
         Gst::dot_file(tdata.d.pipeline, "iptv_scramble", 9);
         g_main_loop_run(tdata.d.loop);
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
     }
 }

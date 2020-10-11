@@ -59,7 +59,7 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_transcode",
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        if(!Util::check_json_validity("live_inputs_transcode", chan, 
+        if(!Util::check_json_validity(db, "live_inputs_transcode", chan, 
                 json::parse( live_inputs_transcode))) 
             continue;
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
@@ -80,68 +80,69 @@ int main()
 void start_channel(json channel, live_setting live_config)
 {
     Mongo db;
-    LOG(info) << "Start transcoding of " << channel["name"] 
-                  << " from input " << channel["input"];
-    json profile = json::parse(db.find_id("live_profiles_transcode",channel["profile"])); 
-    if(profile.is_null() || profile["_id"].is_null()){
-        LOG(error) << "Invalid transcode profile!";
-        LOG(debug) << profile.dump(2);
-        return;
-    } 
+    try{
 
-    if(!Util::check_json_validity("live_profiles_transcode", profile, 
-                json::parse( live_profiles_transcode))) 
-        return;
-    auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
-    live_config.type_id = channel["inputType"];
-    auto in_multicast  = Util::get_multicast(live_config, channel["input"]);
-    LOG(trace) << profile.dump(2);
-#if TEST_BY_FFMPEG 
-    // TODO: apply  videoProfile and extra
-    string vcodec = "copy" ,acodec = "copy", vsize = "720x576";
-    string p_vcodec = profile["videoCodec"].get<string>();
-    string p_acodec = profile["audioCodec"].get<string>();
-    string p_vsize = profile["videoSize"].get<string>();
-    if(p_vcodec.find("264") != string::npos)         vcodec = "libx264";
-    else if(p_vcodec.find("mpeg2") != string::npos)  vcodec = "mpeg2video";
-    else{
-        LOG(error) << "Vicedo Codec not support " << p_vcodec 
-            << " for channel " << channel["name"];
-        return;
-    }
-    if(p_acodec.find("mp3") != string::npos)         acodec = "libmp3lame";
-    else if(p_acodec.find("mp2") != string::npos)    acodec = "mp2";
-    else if(p_acodec.find("aac") != string::npos)    acodec = "aac";
-    else{
-        LOG(error) << "Audio Codec not support " << p_acodec 
-            << " for channel " << channel["name"];
-        return;
-    }
-    vsize = profile_resolution(p_vsize);
-    if(!vsize.size()){
-        LOG(error) << "Video size not support " << p_vsize 
-            << " for channel " << channel["name"];
-        return;
-    }
-    auto opts = boost::format(" -preset %s -s %s -r %s -g %s -b:v %s -b:a %s   ")
-        % profile["preset"] % vsize % profile["videoFps"] 
-        % profile["videoFps"] % profile["videoRate"] % profile["audioRate"];
-    string extra = profile["extra"];
-    auto codecs = boost::format("-vcodec %s -acodec %s %s") 
-        % vcodec % acodec % extra ;
-    auto cmd = boost::format("%s -i 'udp://%s:%d?reuse=1' "
-            " %s %s -f mpegts 'udp://%s:%d?pkt_size=1316' ")
-        % FFMPEG % in_multicast % INPUT_PORT % codecs.str() 
-        % opts.str() % out_multicast % INPUT_PORT;
-
-    Util::exec_shell_loop(cmd.str());
-#else
-    while(true){
         LOG(info) << "Start transcoding of " << channel["name"] 
             << " from input " << channel["input"];
-        gst_transcode_of_stream(in_multicast, INPUT_PORT, out_multicast, profile);
-        Util::wait(5000);
-    }
+        json profile = json::parse(db.find_id("live_profiles_transcode",channel["profile"])); 
+
+        if(!Util::check_json_validity(db, "live_profiles_transcode", profile, 
+                    json::parse( live_profiles_transcode))) 
+            return;
+
+        auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
+        live_config.type_id = channel["inputType"];
+        auto in_multicast  = Util::get_multicast(live_config, channel["input"]);
+        LOG(trace) << profile.dump(2);
+#if TEST_BY_FFMPEG 
+        // TODO: apply  videoProfile and extra
+        string vcodec = "copy" ,acodec = "copy", vsize = "720x576";
+        string p_vcodec = profile["videoCodec"].get<string>();
+        string p_acodec = profile["audioCodec"].get<string>();
+        string p_vsize = profile["videoSize"].get<string>();
+        if(p_vcodec.find("264") != string::npos)         vcodec = "libx264";
+        else if(p_vcodec.find("mpeg2") != string::npos)  vcodec = "mpeg2video";
+        else{
+            LOG(error) << "Vicedo Codec not support " << p_vcodec 
+                << " for channel " << channel["name"];
+            return;
+        }
+        if(p_acodec.find("mp3") != string::npos)         acodec = "libmp3lame";
+        else if(p_acodec.find("mp2") != string::npos)    acodec = "mp2";
+        else if(p_acodec.find("aac") != string::npos)    acodec = "aac";
+        else{
+            LOG(error) << "Audio Codec not support " << p_acodec 
+                << " for channel " << channel["name"];
+            return;
+        }
+        vsize = profile_resolution(p_vsize);
+        if(!vsize.size()){
+            LOG(error) << "Video size not support " << p_vsize 
+                << " for channel " << channel["name"];
+            return;
+        }
+        auto opts = boost::format(" -preset %s -s %s -r %s -g %s -b:v %s -b:a %s   ")
+            % profile["preset"] % vsize % profile["videoFps"] 
+            % profile["videoFps"] % profile["videoRate"] % profile["audioRate"];
+        string extra = profile["extra"];
+        auto codecs = boost::format("-vcodec %s -acodec %s %s") 
+            % vcodec % acodec % extra ;
+        auto cmd = boost::format("%s -i 'udp://%s:%d?reuse=1' "
+                " %s %s -f mpegts 'udp://%s:%d?pkt_size=1316' ")
+            % FFMPEG % in_multicast % INPUT_PORT % codecs.str() 
+            % opts.str() % out_multicast % INPUT_PORT;
+
+        Util::exec_shell_loop(cmd.str());
+#else
+        while(true){
+            LOG(info) << "Start transcoding of " << channel["name"] 
+                << " from input " << channel["input"];
+            gst_transcode_of_stream(in_multicast, INPUT_PORT, out_multicast, profile);
+            Util::wait(5000);
+        }
 #endif
+    }catch(std::exception& e){
+        LOG(error) << e.what();
+    }
 
 }

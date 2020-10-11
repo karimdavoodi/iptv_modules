@@ -77,7 +77,7 @@ void gst_convert_stream_to_udp(string url, string out_multicast, int port)
         gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
         g_main_loop_run(d.loop);
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
     }
 }
 void urisourcebin_pad_added(GstElement* urisourcebin, GstPad* pad, gpointer data)

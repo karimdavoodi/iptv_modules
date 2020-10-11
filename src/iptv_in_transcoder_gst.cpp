@@ -147,7 +147,7 @@ void gst_transcode_of_stream(string in_multicast, int port, string out_multicast
         g_main_loop_run(tdata.d.loop);
         //Gst::dot_file(tdata.d.pipeline, "iptv_transcoder", 0);
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
     }
 }
 
@@ -287,7 +287,10 @@ void video_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
 
     g_object_set(encoder, "bitrate", (tdata->target.videoRate)/1000 , nullptr);  // in kbps
     if(tdata->target.videoCodec == "h264" || tdata->target.videoCodec == "h265"){
-        g_object_set(encoder, "speed-preset", preset_code, nullptr);
+        g_object_set(encoder, 
+                "speed-preset", preset_code, 
+                "key-int-max", 30, 
+                nullptr);
         /*
         // TODO: use user profile
         auto capsfilter = Gst::add_element(tdata->d.pipeline, "capsfilter", "hevc_caps");
@@ -422,14 +425,14 @@ void process_audio_pad(GstPad* pad, transcoder_data* tdata)
         transcode_audio = true;
     }
     if(transcode_audio && tdata->target.audioCodec.size()){
-        LOG(warning) << "Transcode audio due to codec name:" << tdata->target.audioCodec;
+        LOG(info) << "Transcode audio due to codec name:" << tdata->target.audioCodec;
         audio_transcode(pad, caps_struct, tdata);
         return;
     }
     // TODO: check other parameters 
 
     //passthrough audio
-    LOG(warning) << "Passthrough Audio due to same name:" << tdata->target.audioCodec;
+    LOG(info) << "Passthrough Audio due to same name:" << tdata->target.audioCodec;
     stream_passthrough(pad, tdata);
     return;
 }
@@ -465,21 +468,21 @@ GstPadProbeReturn parser_caps_probe(
         //transcode if codec name is diffirent
                 
         if(name.find(tdata->target.videoCodec) == string::npos){
-            LOG(warning) << "Transcode Video due to codec name:" << tdata->target.videoCodec;
+            LOG(info) << "Transcode Video due to codec name:" << tdata->target.videoCodec;
             transcode_video = true;
         }         
         //transcode if frame dimension is diffirent
         auto dst_resulotion   = Util::profile_resolution(tdata->target.videoSize);
         string src_resolution = to_string(width) + "x" + to_string(height);
         if(dst_resulotion.size() &&  src_resolution != dst_resulotion){
-            LOG(warning) << "Transcode Video due to frame size:" << dst_resulotion;
+            LOG(info) << "Transcode Video due to frame size:" << dst_resulotion;
             transcode_video = true;
         }
         // TODO: check other parameters 
         if(tdata->target.videoCodec.size() && transcode_video){
             video_transcode(pad, caps_struct, tdata);
         }else{
-            LOG(warning) << "Passthrough Video due to same name and frame size";
+            LOG(info) << "Passthrough Video due to same name and frame size";
             stream_passthrough(pad, tdata);
         }
         return GST_PAD_PROBE_OK;

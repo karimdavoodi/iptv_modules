@@ -101,7 +101,7 @@ const string SysUsage::getUsageJson(int systemId)
             usage["diskPartitions"].push_back(part);
         }
         json contents = json::object();
-        for(const auto content : current.contents){
+        for(const auto& content : current.contents){
             contents[content.first] = content.second; 
         }
         usage["contents"] = contents;

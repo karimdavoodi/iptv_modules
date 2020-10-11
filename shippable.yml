@@ -9,11 +9,11 @@ branches:
 
 build:
   ci:
-    - apt-get update
-    - apt-get install cmake make g++ libboost-all-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev
-    - cmake .
-    - cmake --build 
-    - make test
+      #- apt-get update
+      #- apt-get install cmake make g++ libboost-all-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev
+      #- cmake .
+      #- cmake --build 
+      #- make test
 
 
 integrations:

@@ -168,7 +168,7 @@ void gst_mix_two_udp_stream(string in_multicast1, string in_multicast2,
         g_main_loop_run(mdata.d.loop);
 
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
     }
 }
 void connect_to_tsmux_mqueue_m(Mix_data* d, GstPad* pad)

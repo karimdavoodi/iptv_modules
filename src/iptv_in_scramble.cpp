@@ -57,7 +57,7 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_scramble",
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        if(!Util::check_json_validity("live_inputs_scramble", chan, 
+        if(!Util::check_json_validity(db, "live_inputs_scramble", chan, 
                 json::parse( live_inputs_scramble))) 
             continue;
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
@@ -79,25 +79,29 @@ void start_channel(json channel, live_setting live_config)
 {
     Mongo db;
 
-    LOG(info) << "Start scramble Channel: " << channel["name"];
+    try{
+        LOG(info) << "Start scramble Channel: " << channel["name"];
+        auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
+        live_config.type_id = channel["inputType"];
+        auto in_multicast  = Util::get_multicast(live_config, channel["input"]);
 
-    auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
-    live_config.type_id = channel["inputType"];
-    auto in_multicast  = Util::get_multicast(live_config, channel["input"]);
+        json profile = json::parse(db.find_id("live_profiles_scramble", channel["profile"])); 
 
-    json profile = json::parse(db.find_id("live_profiles_scramble", channel["profile"])); 
-    if(profile.is_null() || profile["_id"].is_null()){
-        LOG(error) << "Invalid scramble profile!";
-        LOG(debug) << profile.dump(2);
-        return;
-    } 
-    string algorithm_name = profile["offline"]["algorithm"];
-    string algorithm_key  = profile["offline"]["key"];
-    if(algorithm_name.size() > 0 && algorithm_key.size() > 0){
-        gst_mpegts_crypto(in_multicast, INPUT_PORT, out_multicast, channel["decrypt"], 
-                algorithm_name, algorithm_key);
-    }else{
-        LOG(warning) << "Only support offline scrambling!";
+        if(!Util::check_json_validity(db, "live_profiles_scramble", profile, 
+                    json::parse( live_profiles_scramble))){
+            return;
+        } 
+        string algorithm_name = profile["offline"]["algorithm"];
+        string algorithm_key  = profile["offline"]["key"];
+        if(algorithm_name.size() > 0 && algorithm_key.size() > 0){
+            gst_mpegts_crypto(in_multicast, INPUT_PORT, out_multicast, channel["decrypt"], 
+                    algorithm_name, algorithm_key);
+        }else{
+            // TODO: support CCCAM 
+            LOG(error) << "CCCAM not support, Only support offline scrambling!";
+        }
+    }catch(std::exception& e){
+        LOG(error) << e.what();
     }
-    
+
 }

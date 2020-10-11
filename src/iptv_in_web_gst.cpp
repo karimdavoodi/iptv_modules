@@ -151,7 +151,7 @@ void gst_convert_web_to_stream(string web_url, string out_multicast, int port)
         free(frame);
 
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
     }
 }
 void init_display(int display_id)

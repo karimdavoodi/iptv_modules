@@ -14,6 +14,7 @@ void gst_transcode_of_stream(string in_multicast, int port,
 
 
 TEST_CASE("transcode: change by profile"){
+    cout << "------------------------------------------ IN TRANSCODE\n";
     gst_init(NULL, NULL);
     // Generate Stream by file
     std::thread stream_archive([](){

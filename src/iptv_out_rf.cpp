@@ -50,7 +50,7 @@ int main()
     json channels = json::parse(db.find_mony("live_output_dvb", 
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        if(!Util::check_json_validity("live_output_dvb", chan, 
+        if(!Util::check_json_validity(db, "live_output_dvb", chan, 
                 json::parse( live_output_dvb))) 
             continue;
         int dvbId = chan["dvbId"];
@@ -71,22 +71,22 @@ int main()
 
         LOG(debug) << "DVB " << dvbId << " Chan number " << chans.size();
         if(!chans.size()){
-            LOG(error) << "Not found channel for tuner id " << dvbId;
+            DB_ERROR(db, 2) << "Not found channel for tuner id " << dvbId;
             continue;
         }    
         json tuner = json::parse(db.find_id("live_tuners_info", dvbId));
         if(tuner["_id"].is_null() || tuner["frequencyId"].is_null()){
-            LOG(error) << "Tuner not found " << dvbId;
+            DB_ERROR(db, 2) << "Tuner not found " << dvbId;
             continue;
         }
         if(tuner["active"] == false || tuner["frequencyId"].is_null()){
-            LOG(error) << "Tuner is inactive or invalid " << dvbId;
+            DB_ERROR(db, 2) << "Tuner is inactive or invalid " << dvbId;
             continue;
         }
         json frequency = json::parse(db.find_id("live_satellites_frequencies", 
                     tuner["frequencyId"]));
         if(frequency["_id"].is_null()){
-            LOG(error) << "Frequency not found " << tuner["frequencyId"];
+            DB_ERROR(db, 2) << "Frequency not found " << tuner["frequencyId"].get<int64_t>();
             continue;
         }
         int systemId = tuner["systemId"];
@@ -103,17 +103,17 @@ int main()
             tuner_path = "/dev/tbsmod" + dev_major + "/mod" + dev_minor;
             tuner_cmd  = "/opt/sms/bin/torft_tbs";
         }else{
-            LOG(error) << "invalid system tuner id " << systemId;
+            DB_ERROR(db, 2) << "invalid system tuner id " << systemId;
             continue;
         }
         if(!boost::filesystem::exists(tuner_path)){
-            LOG(error) << "Output Tuner not found: " << tuner_path;
+            DB_ERROR(db, 2) << "Output Tuner not found: " << tuner_path;
             continue;
         }
         auto cfg_file = "/tmp/mts_chan"+to_string(tid)+".conf";
         ofstream cfg(cfg_file);
         if(!cfg.is_open()){
-            LOG(error) << "Can't open tomts cfg file! " << cfg_file;
+            DB_ERROR(db, 2) << "Can't open tomts cfg file! " << cfg_file;
             continue;
         }
         LOG(debug) << "Fill  " << cfg_file;
@@ -125,7 +125,7 @@ int main()
             if(chan["input"].is_null() || 
                     chan["inputType"].is_null() || 
                     chan["serviceId"].is_null()){
-                LOG(error) << "invalid channel in " << dvbId << ":" << chan.dump(2);
+                DB_ERROR(db, 2) << "Invalid channel in " << dvbId << ":" << chan["_id"].get<int64_t>();
                 continue;
             }
             auto chan_name = Util::get_channel_name(chan["input"], chan["inputType"]);

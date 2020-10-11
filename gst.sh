@@ -7,6 +7,13 @@ TTS=/home/karim/Music/test_h264_aac.ts
 TMP1=/home/karim/Music/test_mpeg1_mp2.mpeg
 TMP2=/home/karim/Music/test_mpeg2_mp2.mpeg
 TMKV=/home/karim/Music/test_h264_mp2.mkv
+######## iptv_in_archive  ##########################################
+gst-launch-1.0 --gst-debug-level=3  \
+	dvbbasebin adapter=5 frequency=11996000 \
+	program-numbers=32:22:23:24:25 polarity=H symbol-rate=27500  \
+	delsys=dvb-s diseqc-source=1  \
+	! filesink location=1.ts
+	#modulation=qpsk \
 
 ######## iptv_in_archive  ##########################################
 gst-launch-1.0 $D  \

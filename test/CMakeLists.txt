@@ -13,18 +13,7 @@ add_definitions(
     -Wall
     )
 FILE(GLOB GST_SRC ../src/*_gst.cpp)
-
-set( project_TESTS
-     test_in_archive      
-     test_in_network      
-     test_in_transcoder  
-     test_in_web          
-     test_in_scramble   
-     test_in_mix          
-     test_out_hls      
-     test_out_multicast   
-     test_out_http    
-     )
+FILE(GLOB TEST_SRC src/*.cpp)
 
 find_package(Boost COMPONENTS system log log_setup REQUIRED)
 
@@ -40,17 +29,16 @@ pkg_check_modules(GST REQUIRED
 set(CMAKE_MODULE_PATH /usr/local/lib/cmake )
 find_package(LIBMONGOCXX REQUIRED)
 
-foreach( APP ${project_TESTS} )
-    add_executable(${APP} 
-        src/main.cpp 
-        src/${APP}.cpp 
-        src/test_util.cpp 
+add_executable(${PROJECT_NAME}
+        ${TEST_SRC}
         ../src/mongo_driver.cpp 
         ../src/utils.cpp 
         ../src/gst.cpp
         ${GST_SRC})
-    target_include_directories(${APP} PUBLIC ${GST_INCLUDE_DIRS} ${LIBMONGOCXX_INCLUDE_DIRS})
-    target_link_libraries(${APP} 
+target_include_directories(${PROJECT_NAME} PUBLIC 
+        ${GST_INCLUDE_DIRS} 
+        ${LIBMONGOCXX_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} 
         ${GST_LIBRARIES} 
         ${LIBMONGOCXX_LIBRARIES}
         ${Boost_LIBRARIES}
@@ -59,5 +47,4 @@ foreach( APP ${project_TESTS} )
     #    COMMAND ./${APP}
     #    COMMENT "Run it"
     #    )
-endforeach()
 

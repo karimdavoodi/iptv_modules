@@ -35,7 +35,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
+//#include <boost/log/expressions.hpp>
 #include <boost/log/sinks/text_file_backend.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
@@ -246,7 +246,7 @@ namespace Util {
                 << " type_id:" << cfg.type_id;
             if(cfg.type_id < 1 || 
                     cfg.multicast_iface.size() < 1){
-                LOG(error)  << "invalid config";
+                DB_ERROR(db, 1) << "Invalid system_network!";
                 return false;
             } 
             return true;
@@ -311,20 +311,6 @@ namespace Util {
             boost::filesystem::create_directories(path);
         }
     }
-    void report_error(Mongo& db, const std::string msg, int level)
-    {
-        try{
-            json j = json::object();
-            j["_id"] = chrono::system_clock::now().time_since_epoch().count();
-            j["time"] = long(time(nullptr));
-            j["message"] = msg;
-            j["message"] = "iptv_modules";
-            j["level"] = level;
-            db.insert("report_error", j.dump());
-        }catch(std::exception const& e){
-            LOG(error)  <<  e.what();
-        }
-    }
     const std::string get_file_content(const std::string name)
     {
         if(boost::filesystem::exists(name)){
@@ -379,7 +365,7 @@ namespace Util {
         try{
             json type = json::parse(db.find_id("live_inputs_types", input_type));
             if(type.is_null()){
-                LOG(error) << "invaild inputType " << input_type;
+                DB_ERROR(db, 2) << "In the live_inputs_types not found inputType:" << input_type;
                 return false;
             } 
             string input_col = "live_inputs_" + type["name"].get<string>();
@@ -387,16 +373,16 @@ namespace Util {
             json filter;
             filter["active"] = true;
             filter["_id"] = input;
-            json input_chan = json::parse(db.find_one( input_col, filter.dump()));
-            if(input_chan["_id"].is_null()){
-                LOG(error) << "Not found ACTIVE channel id:" << input 
+            if(db.count(input_col, filter.dump()) == 0){
+                DB_ERROR(db, 2) << "Not found ACTIVE channel id:" << input 
                     << " in " << input_col; 
                 return false;
             }
+            return true;
         }catch(std::exception& e){
             LOG(error)  <<  e.what();
         }
-        return true;
+        return false;
     }
     bool chan_in_output(Mongo &db, int chan_id, int chan_type)
     {
@@ -443,62 +429,125 @@ namespace Util {
         }catch(std::exception const& e){
             LOG(error)  <<  e.what();
         }
-        LOG(debug) << "Not found channel id:" << chan_id << " in outputs"; 
+        LOG(info) << "The channel id:" << chan_id << " not used!"; 
+        return false;
+    }
+    bool is_channel_tv(int64_t input_id, int input_type)
+    {   
+        try{
+            Mongo db;
+            json type_name = json::parse(db.find_id("live_inputs_types",input_type)); 
+            if(type_name["name"].is_null()){
+                DB_ERROR(db, 2) << "In the live_inputs_types not found inputType:" << input_type;
+                return false;
+            }
+            string input_rec_name = "live_inputs_" + type_name["name"].get<string>();
+            json input_chan = json::parse(db.find_id(input_rec_name, input_id)); 
+            if(input_chan["tv"].is_boolean()){
+                return input_chan["tv"];
+            }
+        }catch(std::exception const& e){
+            LOG(error)  <<  e.what();
+        }
         return false;
     }
     const std::string get_channel_name(int64_t input_id, int input_type)
     {   
-        Mongo db;
-        json type_name = json::parse(db.find_id("live_inputs_types",input_type)); 
-        if(type_name["name"].is_null()){
-            LOG(error) << "Invalid input type by id  " << input_type;
-            return "";
-        }
-        string input_rec_name = "live_inputs_" + type_name["name"].get<string>();
-        json input_chan = json::parse(db.find_id(input_rec_name, input_id)); 
-        if(input_chan["_id"].is_null()){
-            LOG(error) << "Invalid input chan by id  " << input_id 
-                       << " in " << type_name["name"];
-            return "";
-        }
-        if(input_chan["name"].is_string()){
-            return input_chan["name"];
-        }
-        // try to find 'name' from input channels
-        string input_type_name = type_name["name"];
-        if(input_type_name == "dvb"){
-            json channel = json::parse(db.find_id("live_satellites_channels", 
-                        input_chan["channelId"])); 
-            if(channel["name"].is_string()) 
-                return channel["name"];
-        }
-        else if(input_type_name == "network"){
-            json channel = json::parse(db.find_id("live_network_channels", 
-                        input_chan["channelId"])); 
-            if(channel["name"].is_string()) 
-                return channel["name"];
+        try{
+            Mongo db;
+            json type_name = json::parse(db.find_id("live_inputs_types",input_type)); 
+            if(type_name["name"].is_null()){
+                DB_ERROR(db, 2) << "In the live_inputs_types not found inputType:" << input_type;
+                return "";
+            }
+            string input_rec_name = "live_inputs_" + type_name["name"].get<string>();
+            json input_chan = json::parse(db.find_id(input_rec_name, input_id)); 
+            if(input_chan["_id"].is_null()){
+                DB_ERROR(db, 2) << "Invalid input chan by id  " << input_id 
+                    << " in " << type_name["name"].get<string>();
+                return "";
+            }
+            if(input_chan["name"].is_string()){
+                return input_chan["name"];
+            }
+            // try to find 'name' from input channels
+            string input_type_name = type_name["name"];
+            if(input_type_name == "dvb"){
+                json channel = json::parse(db.find_id("live_satellites_channels", 
+                            input_chan["channelId"])); 
+                if(channel["name"].is_string()) 
+                    return channel["name"];
+            }
+            else if(input_type_name == "network"){
+                json channel = json::parse(db.find_id("live_network_channels", 
+                            input_chan["channelId"])); 
+                if(channel["name"].is_string()) 
+                    return channel["name"];
+            }
+        }catch(std::exception const& e){
+            LOG(error)  <<  e.what();
         }
         return "";
     }
-    bool check_json_validity(const string record_name,json& record, const json target)
+    bool check_json_validity(Mongo& db, const string record_name,json& record, const json target)
     {
         bool result = true;
         for(auto& [key, value]: target.items()){
             if(!key.size()) continue;
-            if(value.is_array())
-                result = check_json_validity(record_name,record[key][0], value[0]);
-            else if(value.is_structured())
-                result = check_json_validity(record_name,record[key], value);
-            else if(!record.contains(key)){
-                if(key == "description" || key == "tv" || key == "logo"){
+            if(value.is_array()){
+                result = result && check_json_validity(db, record_name,record[key][0], value[0]);
+            } else if(value.is_structured()){
+                result = result && check_json_validity(db, record_name,record[key], value);
+            } else if(record.is_null() || !record.contains(key)){
+                if(key == "description" || 
+                        key == "programName" ||     // in output/archive
+                        key == "diSEqC" ||          // in tuner info for dvbt
+                        key == "extra" ||           // in profile/transcode
+                        key == "tv" || 
+                        key == "logo"){
                     LOG(warning) << "In " << record_name << " not found the key:" << key;
-                    return true; // TODO: Ignore this fields
+                    result = result && true; // TODO: Ignore this fields
                 }else{
-                    LOG(error) << "In " << record_name << " not found the key:" << key;
-                    return false;
+                    DB_ERROR(db, 1) << "Problem in " << record_name << " with " << key;
+                    result = result && false;
                 }
             }
         }
         return result;
+    }
+    void create_directory(const std::string path)
+    {
+        try{
+            if(!boost::filesystem::exists(path)){
+                LOG(info) << "Create " << path;
+                boost::filesystem::create_directory(path);
+            }
+        }catch(std::exception const& e){
+            LOG(error)  <<  e.what();
+        }
+
+    }
+}
+void Error::report_error()
+{
+    try{
+        if(auto pos = file.find_last_of("/"); pos != string::npos) 
+            file = file.substr(pos+1);
+        if(auto pos = file.find_last_of("."); pos != string::npos) 
+            file = file.substr(0, pos);
+
+        BOOST_LOG_TRIVIAL(error) << "\033[0;32m[" << file << ":" << func << ":" << line 
+            << "]\033[0m " << message;
+
+        json j = json::object();
+        j["_id"] = chrono::system_clock::now().time_since_epoch().count();
+        j["time"] = long(time(nullptr));
+        j["process"] = file;
+        j["message"] = message;
+        j["level"] = level;
+        db.insert("report_error", j.dump());
+
+    }catch(std::exception const& e){
+        LOG(error)  <<  e.what();
     }
 }

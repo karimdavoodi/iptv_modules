@@ -21,7 +21,9 @@
  */
 #pragma once
 #include <iostream>
+#include <string>
 #include <boost/log/trivial.hpp>
+#include <string_view>
 #include "../third_party/json.hpp"
 #include "mongo_driver.hpp"
 #include "config.hpp"
@@ -61,22 +63,57 @@ class config_error : public std::exception {
         virtual const char* what() const noexcept { return msg.c_str(); }
 }; 
 
+class Error {
+    private:
+        Mongo& db;
+        std::string message;
+        std::string file;
+        std::string func;
+        int line;
+        int level;
+    public:
+        Error(Mongo& db, 
+                const char* file,
+                const char* func,
+                int line,
+                int level)
+             :db(db),file(file),func(func),line(line),level(level){}
+
+        template<typename T>
+        Error& operator<<(T msg){
+            message = message + std::to_string(msg);
+            return *this;
+        }
+        Error& operator<<(const std::string msg){
+            message = message + msg;
+            return *this;
+        }
+        Error& operator<< (const char* msg){
+            message = message + msg;
+            return *this;
+        }
+        void report_error();
+        ~Error() { report_error(); }
+};
+
 namespace Util {
 
     void wait_forever();
+    void create_directory(const std::string path);
     int get_systemId(Mongo& db);
     void system(const std::string cmd);
     void wait(int millisecond);
     void boost_log_init(Mongo& db);
     const std::string shell_out(const std::string cmd);
     void exec_shell_loop(const std::string cmd);
-    void report_error(Mongo& db, const std::string, int level = 1);
+    void report_error(Mongo& db, const std::string process, const std::string msg, int level = 1);
     bool get_live_config(Mongo& db, live_setting& cfg, std::string type);
     const std::string get_multicast(const live_setting& config, int channel_id, 
             bool out_multicast=false);
     const std::string get_content_path(Mongo& db, int id);
     void add_route_by_mask8(int multicast_class, std::string nic);
     void init(Mongo& db);
+    bool is_channel_tv(int64_t input_id, int input_type);
     void check_path(const std::string path);
     const std::string get_file_content(const std::string name);
     const std::pair<int,int> profile_resolution_pair(const std::string p_vsize);
@@ -86,5 +123,5 @@ namespace Util {
     bool chan_in_input(Mongo &db, int chan_id, int chan_type);
     void insert_content_info_db(Mongo &db,json& channel, uint64_t id);
     const std::string get_channel_name(int64_t input_id, int input_type);
-    bool check_json_validity(const std::string record_name,json& record, const json target);
+    bool check_json_validity(Mongo &db, const std::string record_name,json& record, const json target);
 }

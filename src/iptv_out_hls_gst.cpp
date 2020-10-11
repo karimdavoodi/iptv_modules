@@ -54,15 +54,15 @@ void gst_convert_udp_to_hls(string in_multicast, int port, string hls_root)
 
         g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added_h), &d);
         g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
-        string segment_location = hls_root + "/s__%05d.ts";
+        string segment_location = hls_root + "/s_%d.ts";
         string playlist_location = hls_root + "/p.m3u8";
         g_object_set(hlssink, 
-                "max-files", 14,
+                "max-files", 8,
                 "playlist-length", 5,
                 "playlist-location", playlist_location.c_str(),
                 "location", segment_location.c_str(),
                 "message-forward", true,
-                "target-duration", 5,
+                "target-duration", 6,
                 nullptr);
 
         Gst::add_bus_watch(d);
@@ -70,7 +70,7 @@ void gst_convert_udp_to_hls(string in_multicast, int port, string hls_root)
         gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
         g_main_loop_run(d.loop);
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
     }
 }
 void tsdemux_pad_added_h(GstElement* object, GstPad* pad, gpointer data)

@@ -9,7 +9,8 @@ bool gst_capture_udp_in_jpg(string in_multicast, int port, const string pic_path
 void init_display(int display_id);
 void gst_convert_web_to_stream(string web_url, string out_multicast, int port);
 
-TEST_CASE("relay udp to udp"){
+TEST_CASE("in web"){
+    cout << "------------------------------------------ IN WEB\n";
     gst_init(NULL, NULL);
     init_display(1);
     // Generate Stream by site

@@ -28,7 +28,7 @@
 #include <boost/format.hpp>
 #include "utils.hpp"
 #include "db_structure.hpp"
-#define BY_FFMPEG 1
+#define BY_FFMPEG 0
 using namespace std;
 
 void gst_convert_udp_to_hls(string in_multicast, int in_port, string hls_root);
@@ -52,11 +52,13 @@ int main()
         LOG(info) << "Error in live config! Exit.";
         return -1;
     }
+    Util::system("rm -rf /opt/sms/tmp/HLS/*");
     Util::check_path(HLS_ROOT);
+
     json channels = json::parse(db.find_mony("live_output_network", 
                 "{\"active\":true, \"hls\":true}"));
     for(auto& chan : channels ){
-        if(!Util::check_json_validity("live_output_network", chan, 
+        if(!Util::check_json_validity(db, "live_output_network", chan, 
                 json::parse( live_output_network))) 
             continue;
         if(Util::chan_in_input(db, chan["input"], chan["inputType"])){

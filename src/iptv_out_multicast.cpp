@@ -54,7 +54,7 @@ int main()
     json channels = json::parse(db.find_mony("live_output_network", 
                 "{\"active\":true, \"udp\":true}"));
     for(auto& chan : channels ){
-        if(!Util::check_json_validity("live_output_network", chan, 
+        if(!Util::check_json_validity(db, "live_output_network", chan, 
                 json::parse( live_output_network))) 
             continue;
         if(Util::chan_in_input(db, chan["input"], chan["inputType"])){

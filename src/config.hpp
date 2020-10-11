@@ -27,6 +27,8 @@
 #define LOG(level) BOOST_LOG_TRIVIAL(level) << \
                     "\033[0;32m[" << __func__ << ":" <<__LINE__ << "]\033[0m "
 
+#define DB_ERROR(db, level) Error(db, __FILE__, __func__, __LINE__, level)
+
 const bool ENABLE_LICENSE = true;
 const int  PKT_SIZE = 1316;
 const int  INPUT_PORT = 3200;
@@ -35,7 +37,10 @@ const int  EPG_UPDATE_TIME = 15*60;    // for iptv_out_epg (second)
 const int  SNAPSHOT_TIMEOUT = 30;      // for iptv_out_snapshot (second)
 const int  RECORD_DURATION = 3600;     // for iptv_out_record (second)
 
+const int CONTENT_TYPE_LIVE_VIDEO = 1;
+const int CONTENT_TYPE_LIVE_AUDIO = 2;
 const int CONTENT_TYPE_TIME_SHIFT = 9;
 const int CONTENT_TYPE_SNAPSHOT = 10;
 const int CONTENT_FORMAT_MP4 = 2;
+const int CONTENT_FORMAT_MKV = 3;
 const int CONTENT_FORMAT_JPG = 10;

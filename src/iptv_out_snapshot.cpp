@@ -27,7 +27,8 @@
 #include <thread>
 #include <boost/format.hpp>
 #include "utils.hpp"
-#define SNAPSHOT_PERIOD 120
+
+#define SNAPSHOT_PERIOD (60*10)
 
 using namespace std;
 
@@ -74,8 +75,7 @@ int main()
         }
         auto duration = time(nullptr) - start;
         if(duration < SNAPSHOT_PERIOD){
-            LOG(info) << "Wait for next snapshot for " 
-                << SNAPSHOT_PERIOD - duration;
+            LOG(info) << "Wait for next snapshot for " << SNAPSHOT_PERIOD - duration;
             Util::wait((SNAPSHOT_PERIOD - duration) * 1000);
         } 
     }

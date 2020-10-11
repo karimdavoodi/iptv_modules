@@ -56,7 +56,7 @@ int main()
         db.insert("report_system_usage", usage_json);
 
         if(!license_capability_bool("GB_EPG", &check)){
-            LOG(error) << "INVALID LICENSE!";
+            DB_ERROR(db, 1) << "INVALID LICENSE!";
             Util::system("/opt/sms/bin/sms s");
         }
         if(!systemId)

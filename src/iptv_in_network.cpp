@@ -56,7 +56,7 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_network", 
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        if(!Util::check_json_validity("live_inputs_network", chan, 
+        if(!Util::check_json_validity(db, "live_inputs_network", chan, 
                 json::parse( live_inputs_network))) 
             continue;
         if(chan["virtual"] || !chan["static"] || chan["webPage"] ) 

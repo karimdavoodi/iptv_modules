@@ -9,7 +9,8 @@ using namespace std;
 void gst_stream_media_file(string media_path, string multicast_addr, int port);
 void gst_convert_udp_to_hls(string in_multicast, int in_port, string hls_root);
 
-TEST_CASE("convert udp to hls"){
+TEST_CASE("udp to hls"){
+    cout << "------------------------------------------ OUT HLS\n";
     gst_init(NULL, NULL);
     // Generate Stream by file
     std::thread stream_archive([](){

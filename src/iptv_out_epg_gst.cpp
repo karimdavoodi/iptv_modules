@@ -97,7 +97,7 @@ void gst_get_epg_of_stream(Mongo& db, string in_multicast, int port, int channel
                         LOG(debug) << "The channel id " << channel_id << " dosn't have EPG";
                     }
                     }catch(std::exception& e){
-                        LOG(error) << "Exception:" << e.what();
+                        LOG(error) << e.what();
                     }
                 }
                 });
@@ -107,7 +107,7 @@ void gst_get_epg_of_stream(Mongo& db, string in_multicast, int port, int channel
         g_main_loop_run(edata.d.loop);
         thread_running = false;
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
     }
 }
 int gst_date_to_int(GstDateTime* date)
@@ -263,7 +263,7 @@ int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data)
                 gchar *debug;
                 GError *err;
                 gst_message_parse_error (message, &err, &debug);
-                LOG(error) <<  err->message << " debug:" << debug;
+                LOG(warning) <<  err->message << " debug:" << debug;
                 g_error_free (err);
                 g_free (debug);
                 g_main_loop_quit (edata->d.loop);

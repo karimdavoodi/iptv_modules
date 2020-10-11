@@ -37,7 +37,7 @@ int main()
     Util::init(db);
     json license = json::parse(db.find_id("system_license", 1));
     if(license["license"].is_null()){
-        LOG(error) << "License in empty!";
+        DB_ERROR(db, 1) << "License in empty!";
         return -1;
     }
     if(license["license"]["LiveStreamer"]["LVS_Output_RTSP"] > 0){
@@ -54,7 +54,7 @@ int main()
             string cmd = "/opt/sms/bin/iptv2rtsp-proxy -l 10016 -s " + nic_ip;
             Util::system(cmd);
         }else{
-            LOG(error) << "Main NIC IP not found";
+            DB_ERROR(db, 1) << "Media NIC " << m_id << " dosn't have IP";
         }
     }else{
         LOG(info) << "Dosen't have license for RTSP";

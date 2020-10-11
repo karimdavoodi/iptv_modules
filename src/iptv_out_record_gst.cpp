@@ -19,6 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#include <exception>
 #include <thread>
 #include <signal.h>
 #include <boost/filesystem.hpp>
@@ -35,15 +36,14 @@ struct Record_data {
     Record_data(){}
 };
 
-void remove_old_timeshift(Mongo& db, int maxPerChannel, 
-                                            const string channel_name);
+void remove_old_timeshift(Mongo& db, int maxPerChannel, const json& channel);
 gchararray splitmuxsink_location_cb(GstElement*  splitmux,
         guint fragment_id, gpointer data);
 void tsdemux_pad_added_r(GstElement* object, GstPad* pad, gpointer data);
 
 /*
  *   The Gstreamer main function
- *   Record udp:://in_multicast:port in storage as mp4
+ *   Record udp:://in_multicast:port in storage as mkv
  *   
  *   @param channel: config of channel
  *   @param in_multicast : multicast of input stream
@@ -51,10 +51,11 @@ void tsdemux_pad_added_r(GstElement* object, GstPad* pad, gpointer data);
  *   @param maxPerChannel: expire time of recorded files 
  *
  * */
-bool gst_convert_udp_to_mp4(json channel, string in_multicast, int port, int maxPerChannel)
+bool gst_convert_udp_to_mkv(json channel, string in_multicast, int port, int maxPerChannel)
 {
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);
-    LOG(info) << "Start recode " << in_multicast 
+    LOG(info) << "Start recode channel " << channel["name"] 
+        << ": " << in_multicast 
         << " for " << maxPerChannel << " hour(s)"; 
 
     Record_data rdata;
@@ -77,19 +78,20 @@ bool gst_convert_udp_to_mp4(json channel, string in_multicast, int port, int max
 
         g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
         g_object_set(splitmuxsink, 
+                "async-finalize", true,
                 "max-size-time", RECORD_DURATION * GST_SECOND,   
-                "muxer-factory", "qtmux",
+                "muxer-factory", "matroskamux", 
                 nullptr);
 
         Gst::add_bus_watch(rdata.d);
 
-        //Gst::dot_file(rdata.d.pipeline, "iptv_network", 5);
+        Gst::dot_file(rdata.d.pipeline, "iptv_record", 5);
         gst_element_set_state(GST_ELEMENT(rdata.d.pipeline), GST_STATE_PLAYING);
         g_main_loop_run(rdata.d.loop);
         return true;
 
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
         return false;
     }
 }
@@ -110,10 +112,12 @@ void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
     string name = channel["name"];
     json media = json::object();
     media["_id"] = id;
-    media["format"] = CONTENT_FORMAT_MP4;
-    media["type"] =   CONTENT_TYPE_TIME_SHIFT;
+    media["format"] = CONTENT_FORMAT_MKV;
+    media["type"] = channel["tv"].get<bool>() ?  
+        CONTENT_TYPE_LIVE_VIDEO : CONTENT_TYPE_LIVE_AUDIO;
     media["price"] = 0;
-    media["date"] = now_tm->tm_year;
+    media["date"] = 1900 + now_tm->tm_year;
+    media["time"] = now;
     media["languages"] = json::array();
     media["permission"] = channel["permission"];
     media["platform"] = json::array();
@@ -136,17 +140,29 @@ void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
     db.insert("storage_contents_info", media.dump());
     LOG(info) << "Record " << name << ":" << name;
 }
+const string get_media_path(bool is_tv, int64_t id)
+{
+    string file_path {MEDIA_ROOT};
+    if(is_tv){
+        file_path += "LiveVideo/" + to_string(id) + ".mkv"; 
+    }else{
+        file_path += "LiveAudio/" + to_string(id) + ".mp3"; 
+    }
+    return file_path;
+}
 gchararray splitmuxsink_location_cb(GstElement*  splitmux,
         guint fragment_id, gpointer data)
 {
     Record_data* rdata = (Record_data *) data;
     int64_t id = std::chrono::system_clock::now().time_since_epoch().count();
-    insert_content_info_db(rdata->db, rdata->channel, id);
-    remove_old_timeshift(rdata->db, rdata->maxPerChannel, rdata->channel["name"]);
-
-    string file_path = MEDIA_ROOT "TimeShift/" + to_string(id) + ".mp4"; 
-    LOG(info) << "For " << rdata->channel["name"]
-        << " New file: " <<  file_path;
+    try{
+        insert_content_info_db(rdata->db, rdata->channel, id);
+        remove_old_timeshift(rdata->db, rdata->maxPerChannel, rdata->channel);
+    }catch(std::exception& e){
+        LOG(error) << e.what();
+    }
+    string file_path = get_media_path(rdata->channel["tv"], id);
+    LOG(info) << "For " << rdata->channel["name"] << " New file: " <<  file_path;
     return  g_strdup(file_path.c_str());
 }
 /*
@@ -156,11 +172,13 @@ gchararray splitmuxsink_location_cb(GstElement*  splitmux,
  *   @param channel_name: name of channel
  *
  * */
-void remove_old_timeshift(Mongo& db, int maxPerChannel, const string channel_name)
+void remove_old_timeshift(Mongo& db, int maxPerChannel, const json& channel)
 {
     json filter;
-    filter["name"] = channel_name;
-    filter["type"] = CONTENT_TYPE_TIME_SHIFT;
+    filter["name"] = channel["name"];
+    filter["type"] = channel["tv"].get<bool>() 
+        ? CONTENT_TYPE_LIVE_VIDEO 
+        : CONTENT_TYPE_LIVE_AUDIO;
     long now = time(nullptr);
 
     LOG(debug) << "Remove old timeShift media before " << maxPerChannel;
@@ -168,14 +186,13 @@ void remove_old_timeshift(Mongo& db, int maxPerChannel, const string channel_nam
 
     LOG(trace) << "Filter:" << filter.dump(2) << " result count:" << channel_media.size();
     for(auto& media : channel_media){
-        long media_date = media["date"];
+        long media_date = (!media["time"].is_null() ? media["time"].get<long>() : 0);
         long late = now - media_date;
         if(late > maxPerChannel * RECORD_DURATION ){
-            LOG(warning) << "Remove " << media["name"] << " of channel " << channel_name 
+            LOG(warning) << "Remove " << media["name"] << " of channel " << channel["name"] 
                 << " for time " << media_date;
             uint64_t media_id = media["_id"];
-            auto media_path = MEDIA_ROOT "TimeShift/" + 
-                to_string(media_id) + ".mp4";
+            auto media_path = get_media_path(channel["tv"], media_id);   
             db.remove_id("storage_contents_info", media_id);
             if(boost::filesystem::exists(media_path)){
                 boost::filesystem::remove(media_path);

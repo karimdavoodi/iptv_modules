@@ -9,7 +9,7 @@ using namespace std;
 using nlohmann::json;
 
 void gst_stream_media_file(string media_path, string multicast_addr, int port);
-bool gst_convert_udp_to_mp4(json, string in_multicast, int port, int maxPerChannel);
+bool gst_convert_udp_to_mkv(json, string in_multicast, int port, int maxPerChannel);
 
 TEST_CASE("convert udp to hls"){
     gst_init(NULL, NULL);
@@ -22,7 +22,7 @@ TEST_CASE("convert udp to hls"){
     std::thread stream_network([path](){
             json channel;
             channel["name"] = "test";
-            gst_convert_udp_to_mp4(channel, "229.1.1.2", 3300, 10);
+            gst_convert_udp_to_mkv(channel, "229.1.1.2", 3300, 10);
             });
     wait(10000);
     REQUIRE( std::filesystem::exists(path + "/p.m3u8") );

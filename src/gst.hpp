@@ -77,6 +77,7 @@ namespace Gst {
             GstPad* pad,
             const std::string_view muxer_element_name,
             const std::string_view muxer_audio_pad_name,
-            const std::string_view muxer_video_pad_name);
+            const std::string_view muxer_video_pad_name,
+            bool queue_buffer_zero = true);
 
 }

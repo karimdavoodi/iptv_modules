@@ -11,6 +11,7 @@ void gst_mpegts_crypto(string in_multicast, int port, string out_multicast,
         bool decrypt, string alg_name, string alg_key);
 
 TEST_CASE("encrypt/decrypt stream"){
+    cout << "------------------------------------------ IN SCRAMBLE\n";
     gst_init(NULL, NULL);
     // Generate Stream by file
     std::thread stream_archive([](){

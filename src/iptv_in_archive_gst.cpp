@@ -40,6 +40,7 @@ void typefind_have_type_a(GstElement* typefind,
  * */
 void gst_stream_media_file(string media_path, string out_multicast, int port)
 {
+    //media_path = "/home/karim/Videos/in.ts";
     LOG(info) 
         << "Start " << media_path 
         << " --> udp://" << out_multicast << ":" << port;
@@ -60,16 +61,17 @@ void gst_stream_media_file(string media_path, string out_multicast, int port)
 
         gst_element_link_many(filesrc, queue_src, identity, typefind, nullptr);
         gst_element_link_many(mpegtsmux, tsparse, queue ,udpsink, nullptr);
-    
         g_signal_connect(typefind, "have-type", G_CALLBACK(typefind_have_type_a), &d);
         g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_padd_added_a), &d);
         g_object_set(filesrc, 
                 "location", media_path.c_str(), 
+        //        "do-timestamp" , true, // not work for mp4 that dosn't have moov at first
                 nullptr);
         g_object_set(udpsink, 
                 "multicast_iface", "lo", 
                 "host", out_multicast.c_str() ,
                 "port", port,
+                "max-bitrate", 20000000,
                 "sync", true, nullptr);
         g_object_set(mpegtsmux, "alignment", 7, nullptr);
         g_object_set(tsparse, "set-timestamps", true, nullptr);
@@ -81,7 +83,7 @@ void gst_stream_media_file(string media_path, string out_multicast, int port)
         g_main_loop_run(d.loop);
         
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
     }
 }
 void multiqueue_padd_added_a(GstElement* object, GstPad* pad, gpointer data)
@@ -102,7 +104,11 @@ void multiqueue_padd_added_a(GstElement* object, GstPad* pad, gpointer data)
 void demux_padd_added_a(GstElement* object, GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
-    Gst::demux_pad_link_to_muxer(d->pipeline, pad, "multiqueue", "sink_%u", "sink_%u");
+    Gst::demux_pad_link_to_muxer(d->pipeline, pad, 
+            "multiqueue", 
+            "sink_%u", 
+            "sink_%u",
+            false);
 }
 void typefind_have_type_a(GstElement* typefind,
                                      guint arg0,
@@ -139,7 +145,7 @@ void typefind_have_type_a(GstElement* typefind,
         if(is_mp3){
             auto audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", "", true);
             auto queue = Gst::add_element(d->pipeline, "queue", "queue_mp3", true);
-            Gst::zero_queue_buffer(queue);
+            //Gst::zero_queue_buffer(queue);
             if(!gst_element_link_many(demux, audioparse, queue, nullptr)){
                 LOG(error) << "Can't link demux-->audioparse-->queue";
                 g_main_loop_quit(d->loop);

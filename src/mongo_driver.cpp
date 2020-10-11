@@ -74,7 +74,7 @@ long Mongo::count(const std::string col, const std::string filter)
     try{
         return db[col].count_documents(bsoncxx::from_json(filter));
     }catch(std::exception& e){
-        LOG(error) << "Exception " << e.what();
+        LOG(error) << e.what();
         return 0;
     }
 }
@@ -85,7 +85,7 @@ bool Mongo::insert(const std::string col, const std::string doc)
         auto ret = db[col].insert_one(bsoncxx::from_json(doc));
         return ret.value().inserted_id().get_int64() >= 0;
     }catch(std::exception& e){
-        LOG(error) << "Exception " << e.what();
+        LOG(error) << e.what();
         return false;
     }
 }
@@ -96,7 +96,7 @@ bool Mongo::remove_mony(const std::string col, const std::string doc)
         auto ret = db[col].delete_many(bsoncxx::from_json(doc));
         return ret.value().deleted_count() > 0;
     }catch(std::exception& e){
-        LOG(error) << "Exception "<< e.what();
+        LOG(error) << e.what();
         return false;
     }
 }
@@ -107,7 +107,7 @@ bool Mongo::remove_id(const std::string col, int64_t id)
         auto ret = db[col].delete_one(make_document(kvp("_id", id)));
         return ret.value().deleted_count() > 0;
     }catch(std::exception& e){
-        LOG(error) << "Exception " << e.what();
+        LOG(error) << e.what();
         return false;
     }
 }
@@ -119,7 +119,7 @@ bool Mongo::replace(const std::string col, const std::string filter, const std::
                 bsoncxx::from_json(doc));
         return ret.value().modified_count() > 0;
     }catch(std::exception& e){
-        LOG(error) << "Exception " << e.what();
+        LOG(error) << e.what();
         return false;
     }
 }
@@ -135,7 +135,7 @@ bool Mongo::insert_or_replace_filter(const std::string col, const std::string fi
                 options);
         return ret.value().modified_count() > 0;
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what() ;
+        LOG(error) << e.what() ;
     }
     return false;
 }
@@ -152,7 +152,7 @@ bool Mongo::insert_or_replace_id(const std::string col, int64_t id,
                 options);
         return ret.value().modified_count() > 0;
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what() ;
+        LOG(error) << e.what() ;
     }
     return false;
 }
@@ -164,7 +164,7 @@ bool Mongo::replace_id(const std::string col, int64_t id, const std::string doc)
                 bsoncxx::from_json(doc));
         return ret.value().modified_count() > 0;
     }catch(std::exception& e){
-        LOG(error) << "Exception " << e.what();
+        LOG(error) << e.what();
         return false;
     }
     return false;
@@ -181,7 +181,7 @@ const std::string Mongo::find_mony( const std::string col, const std::string doc
         if(result_str.size() > 0) result_str.pop_back();
         return "[" + result_str + "]";
     }catch(std::exception& e){
-        LOG(error) << "Exception"<< e.what();
+        LOG(error) << e.what();
     }
     return "[]";
 }
@@ -195,7 +195,7 @@ const std::string Mongo:: find_one( const std::string col, const std::string doc
             return bsoncxx::to_json(v); 
         }
     }catch(std::exception& e){
-        LOG(error) << "Exception " << e.what();
+        LOG(error) << e.what();
     }
     return "{}";
 }
@@ -209,7 +209,7 @@ const std::string Mongo:: find_id(const std::string col, int64_t id)
             return bsoncxx::to_json(v); 
         }
     }catch(std::exception& e){
-        LOG(error) << "Exception" << e.what();
+        LOG(error)  << e.what();
     }
     return "{}";
 }
@@ -238,7 +238,7 @@ int64_t Mongo::get_uniq_id()
         }
         return 1; 
     }catch(std::exception& e){
-        LOG(error) << "Exception "<< e.what();
+        LOG(error) << e.what();
         return 1;
     }
 }
@@ -261,7 +261,7 @@ const std::string Mongo:: find_range(const std::string col, long begin, long end
             ", \"content\":[" + result_str + "] }";
         return result_str;
     }catch(std::exception& e){
-        LOG(error) << "Exception " << e.what();
+        LOG(error) << e.what();
         return "{ \"total\": 0, \"content\":[] }";
     }
 }
@@ -286,7 +286,7 @@ const std::string Mongo:: find_filter_range(const std::string col,
         return "{ \"total\": " + std::to_string(total) + 
             ", \"content\":[" + result_str + "] }";
     }catch(std::exception& e){
-        LOG(error) << "Exception" << e.what();
+        LOG(error) << e.what();
         return "{ \"total\": 0, \"content\":[] }";
     }
 }

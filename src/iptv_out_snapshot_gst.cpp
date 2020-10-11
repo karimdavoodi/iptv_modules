@@ -100,7 +100,7 @@ bool gst_capture_udp_in_jpg(string in_multicast, int port, const string pic_path
         gst_object_unref(filesink_pad);
         return pd.buffer_count > 1 ;
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
         return false;
     }
 }

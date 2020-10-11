@@ -63,6 +63,6 @@ void gst_relay_udp_to_udp(string  in_multicast, string out_multicast, int port)
         gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
         g_main_loop_run(d.loop);
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
     }
 }

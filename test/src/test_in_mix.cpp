@@ -14,6 +14,7 @@ void gst_mix_two_udp_stream(string in_multicast1, string in_multicast2,
 
 
 TEST_CASE("mix two sttream"){
+    cout << "------------------------------------------ IN MIX\n";
     gst_init(NULL, NULL);
     // Generate 2 Stream by file
     std::thread stream_archive([](){

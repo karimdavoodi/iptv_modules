@@ -53,6 +53,7 @@ int main()
 
     CHECK_LICENSE;
     Util::init(db);
+    
 
     if(!Util::get_live_config(db, live_config, "archive")){
         LOG(error) << "Error in live config! Exit.";
@@ -62,9 +63,10 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_archive", 
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        if(!Util::check_json_validity("live_input_archive", chan, 
-                json::parse( live_inputs_archive))) 
+        if(!Util::check_json_validity(db, "live_input_archive", chan, 
+                    json::parse( live_inputs_archive))){
             continue;
+        } 
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             pool.emplace_back(start_channel, chan, live_config);
         }
@@ -94,13 +96,17 @@ void start_channel(json channel, live_setting live_config)
                     LOG(debug) << "Play media id: " << media["content"];
                     auto media_path = Util::get_content_path(db, media["content"]);
                     if(media_path.size() == 0){
-                        LOG(error) << "Invalid media path";
-                        Util::wait(50000);
+                          DB_ERROR(db, 1) 
+                              << "Invalid media path for content " << media["content"].get<int64_t>()
+                              << " in channel " << channel["name"].get<string>();
+                        Util::wait(1000);
                         continue;
                     } 
                     if(!boost::filesystem::exists(media_path)){
-                        LOG(error) << "Media not exists:" << media_path;
-                        Util::wait(50000);
+                          DB_ERROR(db, 1) 
+                            << "Media not exists:" << media_path
+                            << " in channel " << channel["name"].get<string>();
+                        Util::wait(1000);
                         continue;
                     }
                     update_epg(db, channel_id, media["content"]);
@@ -124,7 +130,7 @@ void start_channel(json channel, live_setting live_config)
             Util::wait(5000);
         }
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
     }
 
 }
@@ -155,7 +161,7 @@ bool time_to_play(Mongo& db, json& media)
             return true;
         LOG(debug) << "Content " << media["content"] << " not play, due to weektime.";
     }catch(std::exception& e){
-        LOG(error) << "Exception:" << e.what();
+        LOG(error) << e.what();
     }
     return false;
 }

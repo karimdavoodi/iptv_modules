@@ -69,13 +69,14 @@ int main()
      
     json channels = json::parse(db.find_mony("live_inputs_dvb", 
                     "{\"active\":true}"));
+    // Group channels in Tuners
     for(auto& chan : channels ){
-        if(!Util::check_json_validity("live_input_dvb", chan, 
+        if(!Util::check_json_validity(db, "live_input_dvb", chan, 
                 json::parse( live_inputs_dvb))) 
             continue;
         if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
             for(auto& tuner : tuners ){
-                if(!Util::check_json_validity("live_tuners_info", tuner, 
+                if(!Util::check_json_validity(db, "live_tuners_info", tuner, 
                             json::parse( live_tuners_info))) 
                     continue;
                 int t_id = tuner["_id"];
@@ -91,12 +92,12 @@ int main()
         }
     }
     for(auto& tuner : tuners ){
-        if(!tuner["channels"].is_null()){
+        if(!tuner["channels"].is_null() && tuner["channels"].size()){
             string dvb_path = "/dev/dvb/adapter" + to_string(tuner["systemId"]); 
             if(boost::filesystem::exists(dvb_path)){
                 pool.emplace_back(start_channel, tuner, live_config);
             }else{
-                LOG(error) << "DVB Not found: "<< dvb_path;
+                DB_ERROR(db, 1) << "DVB Not found: "<< dvb_path;
             }
         }
     }
@@ -117,7 +118,6 @@ void start_channel(json tuner, live_setting live_config)
 {
     Mongo db;
     try{
-
         LOG(trace) << tuner.dump(4);
         json filter;
         filter["active"] = true;
@@ -125,7 +125,7 @@ void start_channel(json tuner, live_setting live_config)
         json frequency = json::parse(db.find_one("live_satellites_frequencies", 
                     filter.dump()));
         if(frequency["_id"].is_null()){
-            LOG(error) << "Invalid frequency for tuner " << tuner["_id"];
+            DB_ERROR(db, 1) << "Invalid frequency for tuner " << tuner["_id"].get<int64_t>();
             return;
         }
         int freq = frequency["frequency"];
@@ -145,13 +145,17 @@ void start_channel(json tuner, live_setting live_config)
         }
         string cfg_name = "/opt/sms/tmp/fromdvb_"+ to_string(tuner["systemId"]);
         ofstream cfg(cfg_name);
-        if(!cfg.is_open()) LOG(error) << "Can't open fromdvb config file";
+        if(!cfg.is_open()){
+            DB_ERROR(db, 1) << "Can't open fromdvb config file";
+            return;
+        }
+
         for(auto& chan : tuner["channels"]){
             json channel = json::parse(db.find_id("live_satellites_channels", 
                         chan["channelId"] ));
             if(channel["_id"].is_null()){
-                LOG(error) << "Invalid satellites_channels for chan " 
-                    <<  chan["_id"];
+                DB_ERROR(db, 2) << "Invalid satellites_channels for chan " 
+                    <<  chan["_id"].get<int64_t>();
                 continue;
             } 
             auto multicast = Util::get_multicast(live_config, chan["_id"]);
@@ -165,9 +169,9 @@ void start_channel(json tuner, live_setting live_config)
                 << addr.str(); 
         }
         cfg.close();
-        auto cmd = boost::format("/opt/sms/bin/fromdvb -WYCUlu -t0 -a%d -c%s %s")
+        auto cmd = boost::format("/opt/sms/bin/fromdvb -WYCUlu -t0 -a%d -c %s %s")
             % tuner["systemId"] % cfg_name % fromdvb_args ; 
-        Util::system(cmd.str());
+        Util::exec_shell_loop(cmd.str());
 #else
         // TODO: do by Gstreamer
 #endif
@@ -219,6 +223,7 @@ void report_tuners(Mongo& db)
                 int id = tuner["systemId"];
                 if(id >= 1000){
                     id = id % 10; // TODO: for less than 9 tuner!
+                    id += 1201; 
                     string file_path = "/tmp/padding_" + to_string(id) + ".txt";
                     if(boost::filesystem::exists(file_path)){
                         string content = Util::get_file_content(file_path);

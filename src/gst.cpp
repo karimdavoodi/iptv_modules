@@ -305,7 +305,8 @@ namespace Gst {
             GstPad* pad,
             const std::string_view muxer_element_name,
             const std::string_view muxer_audio_pad_name,
-            const std::string_view muxer_video_pad_name
+            const std::string_view muxer_video_pad_name,
+            bool queue_buffer_zero
             ){
         auto caps = gst_pad_query_caps(pad, gst_caps_new_any());
         auto caps_struct = gst_caps_get_structure(caps, 0);
@@ -370,7 +371,9 @@ namespace Gst {
         if(parse != nullptr){
             g_object_set(parse, "disable-passthrough", true, nullptr);
             auto queue = Gst::add_element(pipeline, "queue", "", true);
-            Gst::zero_queue_buffer(queue);
+            if(queue_buffer_zero){
+                Gst::zero_queue_buffer(queue);  // effect on iptv_in_archive memory consume 
+            } 
             if(!Gst::pad_link_element_static(pad, queue, "sink")){
                 LOG(error) << "Can't link typefind to queue, SRC PAD CAPS:"
                     << Gst::pad_caps_string(pad);

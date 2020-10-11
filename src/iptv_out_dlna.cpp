@@ -38,7 +38,7 @@ int main()
     Util::init(db);
     json license = json::parse(db.find_id("system_license", 1));
     if(license["license"].is_null()){
-        LOG(error) << "License in empty!";
+        DB_ERROR(db, 1) << "License is empty!";
         return -1;
     }
     if(license["license"]["Global"]["GB_DLNA"] == true){
