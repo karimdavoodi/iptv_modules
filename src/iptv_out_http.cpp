@@ -19,10 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <chrono>
-#include <ctime>
 #include <exception>
-#include <iostream>
 #include <vector>
 #include <thread>
 #include <boost/format.hpp>
@@ -52,7 +49,7 @@ int main()
         return -1;
     }
     json channels = json::parse(db.find_mony("live_output_network", 
-                "{\"active\":true, \"http\":true}"));
+                R"({"active":true, "http":true})"));
     for(auto& chan : channels ){
         if(!Util::check_json_validity(db, "live_output_network", chan, 
                 json::parse( live_output_network))) 
@@ -79,7 +76,7 @@ void start_channel(json channel, live_setting live_config)
         live_config.type_id = channel["inputType"];
         auto in_multicast = Util::get_multicast(live_config, channel["input"]);
         // TODO: find better way to calculate channel's port
-        int tcpserver_port = 4000 + (channel["_id"].get<long>() % 6000);
+        int tcpserver_port = 4000 + (channel["_id"].get<int64_t>() % 6000);
         LOG(debug) << "Start channle id:" << channel["_id"]
             << " on Port:" << tcpserver_port;
         while(true){

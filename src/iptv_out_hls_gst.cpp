@@ -73,7 +73,7 @@ void gst_convert_udp_to_hls(string in_multicast, int port, string hls_root)
         LOG(error) << e.what();
     }
 }
-void tsdemux_pad_added_h(GstElement* object, GstPad* pad, gpointer data)
+void tsdemux_pad_added_h(GstElement* /*object*/, GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
     auto caps = gst_pad_query_caps(pad, nullptr);

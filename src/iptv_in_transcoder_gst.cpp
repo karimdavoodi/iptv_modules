@@ -30,11 +30,11 @@ struct profile {
     string preset;
     string videoCodec;
     string videoSize;
-    int videoRate;
-    int videoFps;
+    int videoRate = 0;
+    int videoFps = 0;
     string videoProfile;  // TODO: apply it
     string audioCodec;
-    int audioRate;
+    int audioRate = 0;
 };
 struct transcoder_data {
     Gst::Data d;
@@ -151,7 +151,7 @@ void gst_transcode_of_stream(string in_multicast, int port, string out_multicast
     }
 }
 
-void multiqueue_pad_added_t(GstElement* multiqueue, GstPad* pad, gpointer data)
+void multiqueue_pad_added_t(GstElement* /*multiqueue*/, GstPad* pad, gpointer data)
 {
     if(GST_PAD_IS_SRC(pad)){
         LOG(debug) << "Got src pad in multiqueue:" << Gst::pad_name(pad);
@@ -190,7 +190,7 @@ void video_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
 
     // Decode ...  
     string type = gst_structure_get_name(caps_struct);
-    string decoder_name = "";
+    string decoder_name;
     LOG(debug) << "Input video type:" << type;
 
     if(type.find("video/x-h264") != string::npos){
@@ -206,7 +206,7 @@ void video_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
             decoder_name = "avdec_mpeg2video";
         }
     }
-    if(decoder_name == ""){
+    if(decoder_name.empty()){
         LOG(error) << "Decoder not find for " << type;
         g_main_loop_quit(tdata->d.loop);
         return;
@@ -322,7 +322,7 @@ void audio_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
     gst_structure_get_int(caps_struct, "layer", &layer);
     string type = gst_structure_get_name(caps_struct);
     string caps_str = gst_structure_to_string(caps_struct);
-    string decoder_name = "";
+    string decoder_name;
     
 
     if(mpegversion == 1 && layer == 2){
@@ -337,7 +337,7 @@ void audio_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
     }else if(type.find("video/x-ac3")){
         decoder_name = "avdec_ac3";
     }
-    if(decoder_name == ""){
+    if(decoder_name.empty()){
         LOG(error) << "Decoder not find for " << type;
         g_main_loop_quit(tdata->d.loop);
         return;
@@ -424,7 +424,7 @@ void process_audio_pad(GstPad* pad, transcoder_data* tdata)
     if(mpegversion == 4 && caps_str.find("loas") != string::npos){
         transcode_audio = true;
     }
-    if(transcode_audio && tdata->target.audioCodec.size()){
+    if(transcode_audio && !tdata->target.audioCodec.empty()){
         LOG(info) << "Transcode audio due to codec name:" << tdata->target.audioCodec;
         audio_transcode(pad, caps_struct, tdata);
         return;
@@ -434,7 +434,6 @@ void process_audio_pad(GstPad* pad, transcoder_data* tdata)
     //passthrough audio
     LOG(info) << "Passthrough Audio due to same name:" << tdata->target.audioCodec;
     stream_passthrough(pad, tdata);
-    return;
 }
 GstPadProbeReturn parser_caps_probe(
         GstPad * pad, 
@@ -474,12 +473,12 @@ GstPadProbeReturn parser_caps_probe(
         //transcode if frame dimension is diffirent
         auto dst_resulotion   = Util::profile_resolution(tdata->target.videoSize);
         string src_resolution = to_string(width) + "x" + to_string(height);
-        if(dst_resulotion.size() &&  src_resolution != dst_resulotion){
+        if(!dst_resulotion.empty() &&  src_resolution != dst_resulotion){
             LOG(info) << "Transcode Video due to frame size:" << dst_resulotion;
             transcode_video = true;
         }
         // TODO: check other parameters 
-        if(tdata->target.videoCodec.size() && transcode_video){
+        if(!tdata->target.videoCodec.empty() && transcode_video){
             video_transcode(pad, caps_struct, tdata);
         }else{
             LOG(info) << "Passthrough Video due to same name and frame size";
@@ -503,12 +502,12 @@ GstPadProbeReturn parser_caps_probe(
     }
     return GST_PAD_PROBE_OK;
 }
-void tsdemux_no_more_pad_t(GstElement* object, gpointer data)
+void tsdemux_no_more_pad_t(GstElement* /*object*/, gpointer data)
 {
     auto tdata = (transcoder_data *) data;
     tdata->tsdemux_no_more_pad_t = true;
 }
-void tsdemux_pad_added_t(GstElement* object, GstPad* pad, gpointer data)
+void tsdemux_pad_added_t(GstElement* /*object*/, GstPad* pad, gpointer data)
 {
     auto tdata = (transcoder_data *) data;
 

@@ -51,17 +51,9 @@ struct live_setting {
     live_setting():
         type_id(0),
         multicast_class(239),
-        multicast_iface("lo"),
-        main_iface("")
+        multicast_iface("lo")
     {}
 };
-class config_error : public std::exception {
-    private:
-        std::string msg;
-    public:
-        config_error(const char* _msg):msg(_msg){}
-        virtual const char* what() const noexcept { return msg.c_str(); }
-}; 
 
 class Error {
     private:
@@ -84,7 +76,7 @@ class Error {
             message = message + std::to_string(msg);
             return *this;
         }
-        Error& operator<<(const std::string msg){
+        Error& operator<<(const std::string& msg){
             message = message + msg;
             return *this;
         }
@@ -106,7 +98,6 @@ namespace Util {
     void boost_log_init(Mongo& db);
     const std::string shell_out(const std::string cmd);
     void exec_shell_loop(const std::string cmd);
-    void report_error(Mongo& db, const std::string process, const std::string msg, int level = 1);
     bool get_live_config(Mongo& db, live_setting& cfg, std::string type);
     const std::string get_multicast(const live_setting& config, int channel_id, 
             bool out_multicast=false);

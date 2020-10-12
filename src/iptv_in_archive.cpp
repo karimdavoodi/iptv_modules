@@ -22,13 +22,13 @@
 #include <chrono>
 #include <ctime>
 #include <exception>
-#include <iostream>
 #include <vector>
 #include <thread>
 #include <boost/format.hpp>
 #include <boost/filesystem/operations.hpp>
 #include "utils.hpp"
 #include "db_structure.hpp"
+
 #define TEST_BY_FFMPEG 0
 
 using namespace std;
@@ -90,12 +90,13 @@ void start_channel(json channel, live_setting live_config)
         LOG(info) << "Start Channel: " << channel["name"];
         LOG(trace) <<  channel.dump(2);
         auto multicast = Util::get_multicast(live_config, channel["_id"]);
-        while(true){ 
+        while(true){
+
             for(auto& media : channel["contents"]){
                 if(time_to_play(db, media)){
                     LOG(debug) << "Play media id: " << media["content"];
                     auto media_path = Util::get_content_path(db, media["content"]);
-                    if(media_path.size() == 0){
+                    if(media_path.empty()){
                           DB_ERROR(db, 1) 
                               << "Invalid media path for content " << media["content"].get<int64_t>()
                               << " in channel " << channel["name"].get<string>();
@@ -172,7 +173,7 @@ int current_time()
 {
     auto now = time(nullptr);
     auto tm = localtime(&now);
-    int  start = 0;
+    int  start;
     start = 3600 * tm->tm_hour;
     start += 60 * tm->tm_min;
     start += tm->tm_sec;

@@ -19,10 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <boost/filesystem/operations.hpp>
 #include <boost/format.hpp>
 #include <chrono>
-#include <ctime>
 #include <exception>
 #include <iostream>
 #include <vector>
@@ -66,7 +64,7 @@ int main()
 
     if(maxPerChannel > 0){
         json channels = json::parse(db.find_mony("live_output_archive", 
-                    "{\"active\":true, \"virtual\":false}"));
+                    R"({"active":true, "virtual":false})"));
         for(auto& chan : channels ){
             if(!Util::check_json_validity(db, "live_output_archive", chan, 
                         json::parse( live_output_archive))) 

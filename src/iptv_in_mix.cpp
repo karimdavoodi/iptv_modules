@@ -19,10 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <chrono>
-#include <ctime>
 #include <exception>
-#include <iostream>
 #include <vector>
 #include <thread>
 #include <boost/format.hpp>
@@ -43,7 +40,7 @@ void start_channel(json channel, live_setting live_config);
  *      - start thread for each active channel
  *      - wait to join
  * */
-int main(int argc, char** argv)
+int main()
 {
     Mongo db;
     vector<thread> pool;

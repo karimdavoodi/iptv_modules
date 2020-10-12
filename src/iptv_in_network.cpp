@@ -19,10 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <chrono>
-#include <ctime>
-#include <exception>
-#include <iostream>
 #include <vector>
 #include <thread>
 #include <boost/format.hpp>
@@ -77,7 +73,7 @@ int main()
  *  @param live_config : general live streamer config
  *
  * */
-void start_channel(json channel, live_setting live_config)
+void start_channel(json channel,  live_setting live_config)
 {
     LOG(info) << "Start Channel: " << channel["name"];
     auto out_multicast = Util::get_multicast(live_config, channel["_id"]);

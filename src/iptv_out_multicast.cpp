@@ -19,10 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <chrono>
-#include <ctime>
-#include <exception>
-#include <iostream>
 #include <vector>
 #include <thread>
 #include "utils.hpp"
@@ -52,7 +48,7 @@ int main()
     Util::add_route_by_mask8(live_config.multicast_class, 
                                 live_config.multicast_iface);
     json channels = json::parse(db.find_mony("live_output_network", 
-                "{\"active\":true, \"udp\":true}"));
+                R"({"active":true, "udp":true})"));
     for(auto& chan : channels ){
         if(!Util::check_json_validity(db, "live_output_network", chan, 
                 json::parse( live_output_network))) 

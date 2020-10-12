@@ -23,7 +23,6 @@
 #include "gst.hpp"
 #include <thread>
 #include <mutex>
-#include <iostream>
 #include "../third_party/json.hpp"
 #define WAIT_MILISECOND(x) std::this_thread::sleep_for(std::chrono::milliseconds(x))
 
@@ -33,8 +32,6 @@ using nlohmann::json;
 struct Mix_data {
     Gst::Data d;
     json config;
-    int video1_width;
-    int video1_height;
     bool video1, video2;
     vector<GstPad*> mqueue_src_pads;
     atomic_int tsdemux_src_pads_num;
@@ -42,7 +39,6 @@ struct Mix_data {
     mutex mqueue_src_pads_mutex;
 
     Mix_data():d{},config{},
-            video1_width{0},video1_height{0},
             video1{false},video2{false},mqueue_src_pads{},
             tsdemux_src_pads_num{0},tsdemux_no_more_pad{0}{}
 };
@@ -179,8 +175,7 @@ void connect_to_tsmux_mqueue_m(Mix_data* d, GstPad* pad)
     Gst::element_link_request(parser, "src", mqueue, "sink_%u");
     gst_object_unref(mqueue);
 }
-GstElement* connect_to_parser_decoder_queue(Mix_data* d, GstPad* pad, string pad_type,
-        bool detect_dimension = false)
+GstElement* connect_to_parser_decoder_queue(Mix_data* d, GstPad* pad, string pad_type)
 {
     string decoder_name;
     auto caps = gst_pad_query_caps(pad, nullptr);
@@ -243,17 +238,17 @@ void tsdemux1_pad_added(GstElement* object, GstPad* pad, gpointer data)
         d->tsdemux_src_pads_num++; 
 
     }else if(pad_type.find("video") != string::npos){
-        if(d->video1 == false ){
+        if(!d->video1){
             LOG(debug) << "Ignore Video1";
             return ignore_pad_m(d, pad);
         }
         d->tsdemux_src_pads_num++; 
-        if(d->video2 == false ){
+        if(!d->video2){
             LOG(debug) << "it's only video1 stream, connect pad to tsmux_mqueue";
             connect_to_tsmux_mqueue_m(d, pad);
         }else{
             LOG(debug) << "Connect to video1 -> decoder -> compositor ";  
-            auto queue = connect_to_parser_decoder_queue(d, pad, pad_type, true);
+            auto queue = connect_to_parser_decoder_queue(d, pad, pad_type);
             if(queue){
                 auto compositor = gst_bin_get_by_name(GST_BIN(d->d.pipeline), "compositor");
                 Gst::element_link_request(queue, "src", compositor, "sink_%u");
@@ -280,12 +275,12 @@ void tsdemux2_pad_added(GstElement* object, GstPad* pad, gpointer data)
         d->tsdemux_src_pads_num++; 
 
     }else if(pad_type.find("video") != string::npos){
-        if(d->video2 == false ){
+        if(!d->video2){
             LOG(debug) << "Ignore Video2";
             return ignore_pad_m(d, pad);
         }
         d->tsdemux_src_pads_num++; 
-        if(d->video1 == false ){
+        if(!d->video1){
             LOG(debug) << "it's only video2 stream, connect pad to tsmux_mqueue";
             connect_to_tsmux_mqueue_m(d, pad);
         }else{
@@ -361,7 +356,7 @@ void add_all_pads_to_mpegtsmux(Mix_data* tdata)
     }
 
 }
-void multiqueue_pad_added_m(GstElement* multiqueue, GstPad* pad, gpointer data)
+void multiqueue_pad_added_m(GstElement* , GstPad* pad, gpointer data)
 {
     if(GST_PAD_IS_SRC(pad)){
         LOG(debug) << "Got src pad in multiqueue:" << Gst::pad_name(pad);
@@ -373,14 +368,14 @@ void multiqueue_pad_added_m(GstElement* multiqueue, GstPad* pad, gpointer data)
         add_all_pads_to_mpegtsmux(tdata);
     }
 }
-void tsdemux_no_more_pad1(GstElement* object, gpointer data)
+void tsdemux_no_more_pad1(GstElement* , gpointer data)
 {
     auto tdata = (Mix_data *) data;
     tdata->tsdemux_no_more_pad += 1;
     LOG(debug) << "no more pad";
     add_all_pads_to_mpegtsmux(tdata);
 }
-void tsdemux_no_more_pad2(GstElement* object, gpointer data)
+void tsdemux_no_more_pad2(GstElement* , gpointer data)
 {
     auto tdata = (Mix_data *) data;
     tdata->tsdemux_no_more_pad += 1;

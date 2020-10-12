@@ -80,7 +80,7 @@ void gst_convert_stream_to_udp(string url, string out_multicast, int port)
         LOG(error) << e.what();
     }
 }
-void urisourcebin_pad_added(GstElement* urisourcebin, GstPad* pad, gpointer data)
+void urisourcebin_pad_added(GstElement* , GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
     LOG(debug) << "Caps:" << Gst::pad_caps_string(pad);
@@ -92,13 +92,13 @@ void urisourcebin_pad_added(GstElement* urisourcebin, GstPad* pad, gpointer data
     }
     gst_object_unref(queue);
 }
-void demux_padd_added_n(GstElement* object, GstPad* pad, gpointer data)
+void demux_padd_added_n(GstElement* , GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
     Gst::demux_pad_link_to_muxer(d->pipeline, pad, "mpegtsmux", "sink_%d", "sink_%d");
 }
 void typefind_have_type_n(GstElement* typefind,
-                                     guint arg0,
+                                     guint /*arg0*/,
                                      GstCaps* caps,
                                      gpointer user_data)
 {
@@ -109,7 +109,7 @@ void typefind_have_type_n(GstElement* typefind,
     LOG(debug) << "Typefind:" << struct_str;
     g_free(struct_str);
 
-    GstElement* demux = nullptr;
+    GstElement* demux;
     bool is_mp3 = false;
     if(pad_type.find("video/mpegts") != string::npos){
         demux = Gst::add_element(d->pipeline, "tsdemux", "", true);

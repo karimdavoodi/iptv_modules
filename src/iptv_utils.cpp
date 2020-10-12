@@ -20,20 +20,15 @@
  * SOFTWARE.
  */
 #include <chrono>
-#include <ctime>
 #include <exception>
 #include <iostream>
-#include <vector>
 #include <thread>
-#include <fstream>
 #include <boost/filesystem.hpp>
 #include "utils.hpp"
 #include "iptv_utils_gst.hpp"
 using namespace std;
 
-const string system_usages();
 int check_license_db(Mongo& db);
-
 
 int main()
 {
@@ -62,8 +57,7 @@ int main()
         if(!systemId)
             systemId = check_license_db(db);
     }
-    return 0;
-} 
+}
 int check_license_db(Mongo& db)
 {
     string systemId = "0";
@@ -72,7 +66,7 @@ int check_license_db(Mongo& db)
     license["license"] = json::object();
     try{
         string licStr = Util::get_file_content("/run/sms/license.json");
-        if(licStr.size()>0){
+        if(!licStr.empty()){
             license["license"] = json::parse(licStr);
             LOG(debug) << license.dump(2);
             systemId = license["license"]["General"]["MMK_ID"];

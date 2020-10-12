@@ -20,8 +20,6 @@
  * SOFTWARE.
  */
 #include <chrono>
-#include <ctime>
-#include <exception>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -70,7 +68,7 @@ int main()
         vector<json>& chans = iter.second;
 
         LOG(debug) << "DVB " << dvbId << " Chan number " << chans.size();
-        if(!chans.size()){
+        if(chans.empty()){
             DB_ERROR(db, 2) << "Not found channel for tuner id " << dvbId;
             continue;
         }    
@@ -90,8 +88,8 @@ int main()
             continue;
         }
         int systemId = tuner["systemId"];
-        string tuner_cmd  = "";
-        string tuner_path = "";
+        string tuner_cmd;
+        string tuner_path;
         if(systemId >= 2000){
             systemId -= 2000;
             tuner_path = "/dev/usb-it950x" + to_string(systemId);

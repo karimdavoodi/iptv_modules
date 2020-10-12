@@ -21,11 +21,8 @@
  */
 #include <exception>
 #include <string>
-#include <utility>
 #include <boost/log/trivial.hpp>
 #include <mongocxx/logger.hpp>
-#include <mongocxx/options/client.hpp>
-#include <mongocxx/uri.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
 #include <bsoncxx/builder/basic/kvp.hpp>
 #include <bsoncxx/json.hpp>
@@ -37,38 +34,29 @@ using bsoncxx::builder::basic::make_document;
 using bsoncxx::builder::basic::kvp;
 static mongocxx::instance inst{};
 
-void Mongo::fill_defauls(){
-    try{
-        if(!exists_id("uniq_counter", 1)){    
-            insert("uniq_counter", "{ \"_id\":1, \"count\":100000 }");
-        }
-    }catch(std::exception& e){
-        std::cout << e.what() << '\n';
-    }
-}
 void Mongo::info()
 {
     auto dbs = client.database("iptv");
     auto cols = dbs.list_collection_names();
-    for(auto col : cols){
+    for(const auto& col : cols){
         std::cout << "col:" << col << '\n';
     }
 }
-bool Mongo::exists(const std::string col_name, const std::string doc)
+bool Mongo::exists(const std::string& col_name, const std::string& doc)
 {
     LOG(trace) << col_name << doc;
     auto result = db[col_name].count_documents(bsoncxx::from_json(doc));
     if(result > 0) return true;
     return false;
 }
-bool Mongo::exists_id(const std::string col_name, int64_t id)
+bool Mongo::exists_id(const std::string& col_name, int64_t id)
 {
     LOG(trace) << " col:"<< col_name << " id:" << id;
     auto result = db[col_name].count_documents(make_document(kvp("_id", id)));
     if(result > 0) return true;
     return false;
 }
-long Mongo::count(const std::string col, const std::string filter)
+long Mongo::count(const std::string& col, const std::string& filter)
 {
     LOG(trace) << "col:" << col; 
     try{
@@ -78,7 +66,7 @@ long Mongo::count(const std::string col, const std::string filter)
         return 0;
     }
 }
-bool Mongo::insert(const std::string col, const std::string doc)
+bool Mongo::insert(const std::string& col, const std::string& doc)
 {
     LOG(info) << " in col:" << col << " doc:" << doc;
     try{
@@ -89,7 +77,7 @@ bool Mongo::insert(const std::string col, const std::string doc)
         return false;
     }
 }
-bool Mongo::remove_mony(const std::string col, const std::string doc)
+bool Mongo::remove_mony(const std::string& col, const std::string& doc)
 {
     LOG(info) << " from col:" << col << " doc:" << doc;
     try{
@@ -100,7 +88,7 @@ bool Mongo::remove_mony(const std::string col, const std::string doc)
         return false;
     }
 }
-bool Mongo::remove_id(const std::string col, int64_t id)
+bool Mongo::remove_id(const std::string& col, int64_t id)
 {
     LOG(info) << " from col:" << col << " id:" << id;
     try{
@@ -111,7 +99,7 @@ bool Mongo::remove_id(const std::string col, int64_t id)
         return false;
     }
 }
-bool Mongo::replace(const std::string col, const std::string filter, const std::string doc)
+bool Mongo::replace(const std::string& col, const std::string& filter, const std::string& doc)
 {
     LOG(info) << "col:" << col << " filter:" << filter;
     try{
@@ -123,8 +111,8 @@ bool Mongo::replace(const std::string col, const std::string filter, const std::
         return false;
     }
 }
-bool Mongo::insert_or_replace_filter(const std::string col, const std::string filter,  
-        const std::string doc)
+bool Mongo::insert_or_replace_filter(const std::string& col, const std::string& filter,
+        const std::string& doc)
 {
     LOG(trace) << "doc:" << doc;
     try{
@@ -139,8 +127,8 @@ bool Mongo::insert_or_replace_filter(const std::string col, const std::string fi
     }
     return false;
 }
-bool Mongo::insert_or_replace_id(const std::string col, int64_t id, 
-        const std::string doc)
+bool Mongo::insert_or_replace_id(const std::string& col, int64_t id,
+        const std::string& doc)
 {
     LOG(info) << "col:" << col << " id:" << id;
     LOG(trace) << "doc:" << doc;
@@ -156,7 +144,7 @@ bool Mongo::insert_or_replace_id(const std::string col, int64_t id,
     }
     return false;
 }
-bool Mongo::replace_id(const std::string col, int64_t id, const std::string doc)
+bool Mongo::replace_id(const std::string& col, int64_t id, const std::string& doc)
 {
     LOG(info) << "col:" << col << " id:" << id;
     try{
@@ -167,9 +155,8 @@ bool Mongo::replace_id(const std::string col, int64_t id, const std::string doc)
         LOG(error) << e.what();
         return false;
     }
-    return false;
 }
-const std::string Mongo::find_mony( const std::string col, const std::string doc)
+std::string Mongo::find_mony( const std::string& col, const std::string& doc)
 {
     LOG(trace) << "col:" << col << " doc:" << doc;
     try{
@@ -178,14 +165,14 @@ const std::string Mongo::find_mony( const std::string col, const std::string doc
         for(const auto& e : result){
             result_str += bsoncxx::to_json(e) + ","; 
         }
-        if(result_str.size() > 0) result_str.pop_back();
+        if(!result_str.empty()) result_str.pop_back();
         return "[" + result_str + "]";
     }catch(std::exception& e){
         LOG(error) << e.what();
     }
     return "[]";
 }
-const std::string Mongo:: find_one( const std::string col, const std::string doc)
+std::string Mongo:: find_one( const std::string& col, const std::string& doc)
 {
     LOG(trace) << "col:" << col << " doc:" << doc;
     try{
@@ -199,7 +186,7 @@ const std::string Mongo:: find_one( const std::string col, const std::string doc
     }
     return "{}";
 }
-const std::string Mongo:: find_id(const std::string col, int64_t id)
+std::string Mongo:: find_id(const std::string& col, int64_t id)
 {
     LOG(trace) << "col:" << col << " id:" << id;
     try{
@@ -242,7 +229,7 @@ int64_t Mongo::get_uniq_id()
         return 1;
     }
 }
-const std::string Mongo:: find_range(const std::string col, long begin, long end)
+std::string Mongo:: find_range(const std::string& col, long begin, long end)
 {
     LOG(trace) << "col:" << col << " begin:" << begin << " end:" << end;
     try{
@@ -252,21 +239,21 @@ const std::string Mongo:: find_range(const std::string col, long begin, long end
         bsoncxx::document::view  v;
         long total = db[col].count_documents(v);
         auto result = db[col].find(v, options);
-        std::string result_str = "";
+        std::string result_str;
         for(auto e : result){
             result_str += bsoncxx::to_json(e) + ","; 
         }
-        if(result_str.size() > 0) result_str.pop_back();
+        if(!result_str.empty()) result_str.pop_back();
         result_str =  "{ \"total\": " + std::to_string(total) + 
             ", \"content\":[" + result_str + "] }";
         return result_str;
     }catch(std::exception& e){
         LOG(error) << e.what();
-        return "{ \"total\": 0, \"content\":[] }";
+        return R"({ "total": 0, "content":[] })";
     }
 }
-const std::string Mongo:: find_filter_range(const std::string col, 
-        const std::string filter,
+std::string Mongo:: find_filter_range(const std::string& col,
+        const std::string& filter,
         long begin, long end)
 {
     LOG(trace) << " begin:" << begin << " end:" << end
@@ -276,18 +263,18 @@ const std::string Mongo:: find_filter_range(const std::string col,
         options.skip(begin);
         options.limit(end - begin + 1);
         auto result = db[col].find( bsoncxx::from_json(filter),options);
-        std::string result_str = "";
+        std::string result_str;
         for(auto e : result){
             result_str += bsoncxx::to_json(e) + ","; 
         }
-        if(result_str.size() > 0)
+        if(!result_str.empty())
             result_str.pop_back();
         long total = db[col].count_documents(bsoncxx::from_json(filter));
         return "{ \"total\": " + std::to_string(total) + 
             ", \"content\":[" + result_str + "] }";
     }catch(std::exception& e){
         LOG(error) << e.what();
-        return "{ \"total\": 0, \"content\":[] }";
+        return R"({ "total": 0, "content":[] })";
     }
 }
 

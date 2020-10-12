@@ -19,10 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <fstream>
 #include <string>
 #include <chrono>
-#include <array>
 #include <boost/tokenizer.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
@@ -40,7 +38,7 @@ void SysUsage::calcCurrentUsage()
     calcCurrentLoad();
     calcCurrentContents();
 }
-const string SysUsage::getUsageJson(int systemId)
+string SysUsage::getUsageJson(int systemId)
 {
     Data delta;
     priviuse = current;

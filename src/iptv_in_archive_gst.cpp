@@ -86,7 +86,7 @@ void gst_stream_media_file(string media_path, string out_multicast, int port)
         LOG(error) << e.what();
     }
 }
-void multiqueue_padd_added_a(GstElement* object, GstPad* pad, gpointer data)
+void multiqueue_padd_added_a(GstElement* , GstPad* pad, gpointer data)
 {
     LOG(debug) << "Multiqueue PAD:" << Gst::pad_name(pad);
     if(gst_pad_get_direction(pad) == GST_PAD_SRC ){
@@ -101,7 +101,7 @@ void multiqueue_padd_added_a(GstElement* object, GstPad* pad, gpointer data)
         gst_object_unref(mpegtsmux);
     }
 }
-void demux_padd_added_a(GstElement* object, GstPad* pad, gpointer data)
+void demux_padd_added_a(GstElement* , GstPad* pad, gpointer data)
 {
     auto d = (Gst::Data*) data;
     Gst::demux_pad_link_to_muxer(d->pipeline, pad, 
@@ -111,7 +111,7 @@ void demux_padd_added_a(GstElement* object, GstPad* pad, gpointer data)
             false);
 }
 void typefind_have_type_a(GstElement* typefind,
-                                     guint arg0,
+                                     guint ,
                                      GstCaps* caps,
                                      gpointer user_data)
 {
@@ -121,7 +121,7 @@ void typefind_have_type_a(GstElement* typefind,
     string type {find_type};
     g_free(find_type);
     LOG(debug) << "Type find:" << type;
-    GstElement* demux = nullptr;
+    GstElement* demux;
     bool is_mp3 = false;
     if(type.find("video/mpegts") != string::npos){
         demux = Gst::add_element(d->pipeline, "tsdemux", "demux");
@@ -138,7 +138,6 @@ void typefind_have_type_a(GstElement* typefind,
         g_main_loop_quit(d->loop);
         return;
     }
-    if(demux != nullptr){
         LOG(trace) << "Add demux";
         gst_element_link(typefind, demux);
         gst_element_set_state(demux, GST_STATE_PLAYING);
@@ -157,5 +156,5 @@ void typefind_have_type_a(GstElement* typefind,
         }else{
             g_signal_connect(demux, "pad-added", G_CALLBACK(demux_padd_added_a), d);
         }
-    }
+
 }

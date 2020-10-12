@@ -21,7 +21,6 @@
  */
 #include <sstream>
 #include <thread>
-#include <vector>
 #include <deque>
 #include "utils.hpp"
 #include "gst.hpp"
@@ -43,8 +42,13 @@ struct Scramble_data {
  *   @param alg_key: key of cryptography algorithm
  *
  * */
-void gst_mpegts_crypto(string in_multicast, int port, string out_multicast, 
-        bool decrypt, string alg_name, string alg_key)
+void gst_mpegts_crypto(
+        string in_multicast, 
+        int port, 
+        string out_multicast, 
+        bool decrypt, 
+        string alg_name, 
+        string alg_key)
 {
     in_multicast = "udp://" + in_multicast + ":" + to_string(port);
     LOG(info) 

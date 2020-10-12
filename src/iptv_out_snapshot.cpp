@@ -21,7 +21,6 @@
  */
 #include <chrono>
 #include <ctime>
-#include <exception>
 #include <iostream>
 #include <vector>
 #include <thread>
@@ -32,7 +31,7 @@
 
 using namespace std;
 
-bool gst_capture_udp_in_jpg(string in_multicast, int port, const string pic_path);
+bool gst_capture_udp_in_jpg(string in_multicast, int port, string pic_path);
 void start_snapshot(const json& channel, live_setting live_config);
 
 /*

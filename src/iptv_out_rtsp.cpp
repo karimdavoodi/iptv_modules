@@ -19,16 +19,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <chrono>
-#include <ctime>
-#include <exception>
 #include <iostream>
-#include <vector>
-#include <fstream>
 #include <thread>
 #include "utils.hpp"
 using namespace std;
-void gst_task(string in_multicast, string out_multicast);
 int main()
 {
     Mongo db;
@@ -41,7 +35,7 @@ int main()
         return -1;
     }
     if(license["license"]["LiveStreamer"]["LVS_Output_RTSP"] > 0){
-        string nic_ip = "";
+        string nic_ip;
         json net = json::parse(db.find_id("system_network",1));
         int m_id = net["mainInterface"]; 
         for(auto& iface : net["interfaces"]){
@@ -50,7 +44,7 @@ int main()
                 break;
             }
         } 
-        if(nic_ip.size() > 0){
+        if(!nic_ip.empty()){
             string cmd = "/opt/sms/bin/iptv2rtsp-proxy -l 10016 -s " + nic_ip;
             Util::system(cmd);
         }else{

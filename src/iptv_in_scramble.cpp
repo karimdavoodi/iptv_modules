@@ -19,10 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <chrono>
-#include <ctime>
 #include <exception>
-#include <iostream>
 #include <vector>
 #include <thread>
 #include <boost/format.hpp>
@@ -32,8 +29,13 @@
 using namespace std;
 using nlohmann::json;
 
-void gst_mpegts_crypto(string in_multicast, int port, string out_multicast, 
-        bool decrypt, string alg_name, string alg_key);
+void gst_mpegts_crypto(
+        string in_multicast, 
+        int port, 
+        string out_multicast, 
+        bool decrypt, 
+        string alg_name, 
+        string alg_key);
 void start_channel(json channel, live_setting live_config);
 
 /*
@@ -93,7 +95,7 @@ void start_channel(json channel, live_setting live_config)
         } 
         string algorithm_name = profile["offline"]["algorithm"];
         string algorithm_key  = profile["offline"]["key"];
-        if(algorithm_name.size() > 0 && algorithm_key.size() > 0){
+        if(!algorithm_name.empty() && !algorithm_key.empty()){
             gst_mpegts_crypto(in_multicast, INPUT_PORT, out_multicast, channel["decrypt"], 
                     algorithm_name, algorithm_key);
         }else{

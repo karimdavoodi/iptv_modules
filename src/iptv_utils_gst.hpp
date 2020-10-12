@@ -24,16 +24,20 @@
 #include <map>
 class SysUsage {
     struct transfer {
-        float read;
-        float write;
+        float read = 0;
+        float write = 0;
     };
     struct Data {
         std::map<std::string, transfer> partitions;   
         std::map<std::string, transfer> interfaces; 
         std::map<std::string, long> contents; 
-        float cpuUsage, cpuTotal, cpuIdle;
-        float sysLoad;
-        float memUsage, memTotal, memAvailable;
+        float cpuUsage = 0,
+        cpuTotal = 0,
+        cpuIdle = 0,
+        sysLoad = 0,
+        memUsage = 0,
+        memTotal = 0,
+        memAvailable = 0;
     };
     private:
         Data current;
@@ -43,7 +47,7 @@ class SysUsage {
     public:
         SysUsage() { calcCurrentUsage(); };
         void calcCurrentUsage();
-        const std::string getUsageJson(int systemId);
+        std::string getUsageJson(int systemId);
     private:
         void calcCurrentPartitions();
         void calcCurrentInterfaces();

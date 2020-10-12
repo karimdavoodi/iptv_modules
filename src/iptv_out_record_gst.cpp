@@ -21,7 +21,6 @@
  */
 #include <exception>
 #include <thread>
-#include <signal.h>
 #include <boost/filesystem.hpp>
 #include "utils.hpp"
 #include "gst.hpp"
@@ -32,8 +31,7 @@ struct Record_data {
     Gst::Data d;
     Mongo db;
     json channel;
-    int maxPerChannel;
-    Record_data(){}
+    int maxPerChannel = 0;
 };
 
 void remove_old_timeshift(Mongo& db, int maxPerChannel, const json& channel);
@@ -95,7 +93,7 @@ bool gst_convert_udp_to_mkv(json channel, string in_multicast, int port, int max
         return false;
     }
 }
-void tsdemux_pad_added_r(GstElement* object, GstPad* pad, gpointer data)
+void tsdemux_pad_added_r(GstElement* /*object*/, GstPad* pad, gpointer data)
 {
     auto rdata = (Record_data *) data;
     Gst::demux_pad_link_to_muxer(rdata->d.pipeline, pad, 
@@ -140,7 +138,7 @@ void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
     db.insert("storage_contents_info", media.dump());
     LOG(info) << "Record " << name << ":" << name;
 }
-const string get_media_path(bool is_tv, int64_t id)
+string get_media_path(bool is_tv, int64_t id)
 {
     string file_path {MEDIA_ROOT};
     if(is_tv){
@@ -150,10 +148,10 @@ const string get_media_path(bool is_tv, int64_t id)
     }
     return file_path;
 }
-gchararray splitmuxsink_location_cb(GstElement*  splitmux,
-        guint fragment_id, gpointer data)
+gchararray splitmuxsink_location_cb(GstElement*  /*splitmux*/,
+        guint /*fragment_id*/, gpointer data)
 {
-    Record_data* rdata = (Record_data *) data;
+    auto* rdata = (Record_data *) data;
     int64_t id = std::chrono::system_clock::now().time_since_epoch().count();
     try{
         insert_content_info_db(rdata->db, rdata->channel, id);

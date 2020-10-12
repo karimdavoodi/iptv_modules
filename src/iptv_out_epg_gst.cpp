@@ -24,7 +24,6 @@
 #include <map>
 #include <glib.h>
 #include <glib-object.h>
-#include <glib/gprintf.h>
 #include <gst/mpegts/mpegts.h>
 #include "utils.hpp"
 #include "gst.hpp"
@@ -34,11 +33,11 @@ using namespace std;
 struct Event {
     string name;
     string text;
-    int start;
-    int duration;
+    int start = 0;
+    int duration = 0;
 };
 struct DayTime {
-    int hour, minute, second;
+    int hour = 0, minute = 0, second = 0;
 };
 struct Edata {
     Gst::Data d;
@@ -90,7 +89,7 @@ void gst_get_epg_of_stream(Mongo& db, string in_multicast, int port, int channel
                     int wait = EPG_UPDATE_TIME;
                     while(thread_running && wait--) Util::wait(1000);
                     try{
-                    if(edata.day_eit.size()){
+                    if(!edata.day_eit.empty()){
                         LOG(info) << "Try to save EPG in DB";
                         channel_epg_update(db, edata.day_eit, channel_id);
                     }else{
@@ -112,7 +111,7 @@ void gst_get_epg_of_stream(Mongo& db, string in_multicast, int port, int channel
 }
 int gst_date_to_int(GstDateTime* date)
 {
-    int n = 0;
+    int n;
     n  = 3600 * gst_date_time_get_hour(date);
     n += 60 * gst_date_time_get_minute(date);
     n += gst_date_time_get_second(date);
@@ -126,7 +125,7 @@ void gst_date_to_day_time(GstDateTime* date, DayTime& d)
 }
 string gst_date_to_str(GstDateTime* date)
 {
-    string ret = "";
+    string ret;
     if(date){
         DayTime d;
         gst_date_to_day_time(date, d);
@@ -159,7 +158,7 @@ void dump_descriptors (GstMpegtsEITEvent *event, map<int, Event>& day_eit)
 {
     GPtrArray *descriptors = event->descriptors;
     for (int i = 0; i < (int)descriptors->len; i++) {
-        GstMpegtsDescriptor *desc = (GstMpegtsDescriptor *)
+        auto* desc = (GstMpegtsDescriptor *)
                                     g_ptr_array_index (descriptors, i);
         if(desc->tag == GST_MTS_DESC_DVB_SHORT_EVENT) {
             gchar *language_code, *event_name, *text;
@@ -196,7 +195,7 @@ void dump_eit(GstMpegtsSection *sec, map<int, Event>& day_eit)
     int len = eit->events->len;
     LOG(debug) << "Event number:" << len;
     for (int i = 0; i < len; i++) {
-        GstMpegtsEITEvent *event = (GstMpegtsEITEvent *)
+        auto *event = (GstMpegtsEITEvent *)
             g_ptr_array_index(eit->events, i);
         if(event->running_status != 0) continue;
         LOG(debug) 
@@ -234,7 +233,7 @@ void channel_epg_update(Mongo& db, map<int, Event>& day_eit, int channel_id)
     db.insert_or_replace_id("report_live_epg", channel_id, epg.dump());
     LOG(info) << "Update EPG of channel_id:" << channel_id;
 }
-int bus_on_message(GstBus * bus, GstMessage * message, gpointer user_data)
+int bus_on_message(GstBus * /*bus*/, GstMessage * message, gpointer user_data)
 {
     auto edata = (Edata*) user_data;
 

@@ -23,7 +23,6 @@
 #include "gst.hpp"
 #include <thread>
 #include <mutex>
-#include <iostream>
 #include <gtk/gtk.h>
 #include <webkit2/webkit2.h>
 
@@ -136,7 +135,7 @@ void gst_convert_web_to_stream(string web_url, string out_multicast, int port)
                     webkit_web_view_get_snapshot(webView,
                             WEBKIT_SNAPSHOT_REGION_VISIBLE,
                             WEBKIT_SNAPSHOT_OPTIONS_NONE,
-                            NULL,
+                            nullptr,
                             get_snapshot,
                             webView);
                     }
@@ -168,14 +167,14 @@ void init_display(int display_id)
     gtk_init(&argc, &argv);
 
 }
-void app_need_data (GstElement *appsrc, guint unused_size, gpointer user_data)
+void app_need_data (GstElement *appsrc, guint /*unused_size*/, gpointer user_data)
 {
-    Gst::Data* d = (Gst::Data*) user_data; 
+    auto* d = (Gst::Data*) user_data;
     GstBuffer *buffer;
     GstFlowReturn ret;
 
     WAIT_MILISECOND(DELAY);
-    buffer = gst_buffer_new_allocate (NULL, FRAME_SIZE, NULL);
+    buffer = gst_buffer_new_allocate (nullptr, FRAME_SIZE, nullptr);
     {
         std::unique_lock<std::mutex> lock(frame_mutex);
         gst_buffer_fill(buffer, 0, frame, FRAME_SIZE);
@@ -191,15 +190,15 @@ void app_need_data (GstElement *appsrc, guint unused_size, gpointer user_data)
         g_main_loop_quit (d->loop);
     }
 }
-void get_snapshot(GObject *object, GAsyncResult *result, gpointer data)
+void get_snapshot(GObject */*object*/, GAsyncResult *result, gpointer data)
 {
-    WebKitWebView * webview = (WebKitWebView*)data;
-    GError* error = NULL;
+    auto * webview = (WebKitWebView*)data;
+    GError* error = nullptr;
 	surface = webkit_web_view_get_snapshot_finish(webview, result, &error);
     
     LOG(trace) << "Got frame";
     std::unique_lock<std::mutex> lock(frame_mutex);
-    uint8_t* f = (uint8_t*) cairo_image_surface_get_data(surface);
+    auto* f = (uint8_t*) cairo_image_surface_get_data(surface);
     memcpy(frame, f, FRAME_SIZE);
     cairo_surface_destroy(surface);
 }
