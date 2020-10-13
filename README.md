@@ -1,12 +1,12 @@
 # iptv_modules
-Sample Implements of Video Streaming by Gstreamer. It contains:
+Sample implements of Video Streaming by Gstreamer. It contains:
 
-     - iptv_in_archive: streaming a media file as multicast MPEGTS     
-     - iptv_in_network: streaming an network url as multicast MPEGTS     
-     - iptv_in_transcoder: transcode one MPEGTS stream to another 
-     - iptv_in_web: streaming a web URL to multicast MPEGTS         
-     - iptv_in_dvb: streaming a DVBT/DVBS to multicast MPEGTS          
-     - iptv_in_scramble: encrypt/decrypt multicast MPEGTS by AES/BISS  
+     - iptv_in_archive: streaming a media file as multicast MpegTs     
+     - iptv_in_network: streaming an network url as multicast MpegTs     
+     - iptv_in_transcoder: transcode one MpegTs stream to another 
+     - iptv_in_web: streaming a web URL to multicast MpegTs         
+     - iptv_in_dvb: streaming a DVBT/DVBS to multicast MpegTs          
+     - iptv_in_scramble: encrypt/decrypt multicast MpegTs by AES/BISS  
      - iptv_in_mix: mix two MpegTS by overlapping/scaling/tranparency filter          
      - iptv_out_hls: convert MpegTS format to HLS        
      - iptv_out_epg: Take EPG of MpegTS streams        
@@ -18,7 +18,7 @@ Sample Implements of Video Streaming by Gstreamer. It contains:
      - iptv_out_snapshot: take snapshut from MpegTS stream   
 
 
-## dependency 
+### Dependency 
     - libgstreamer: library for constructing graphs of media-handling components.
     - libmongocxx: C++ wrapper for MongoDB
-    - Boost: C++ libraries
+    - boost: C++ libraries
