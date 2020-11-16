@@ -194,7 +194,7 @@ void report_tuners(Mongo &db) {
                 string file_path = "/tmp/dvbstat_" + to_string(i) + ".txt";
                 if (boost::filesystem::exists(file_path)) {
                     json tuner_info = json::parse(db.find_one("live_tuners_info",
-                                                              "{\"systemId\":" + to_string(i) + "}"));
+                                             "{\"systemId\":" + to_string(i) + "}"));
                     if (tuner_info["_id"].is_null())
                         continue;
                     string content = Util::get_file_content(file_path);
@@ -222,7 +222,7 @@ void report_tuners(Mongo &db) {
             json tuner_infos = json::parse(db.find_mony("live_tuners_info",
                                                         "{\"active\": true }"));
             for (const auto &tuner : tuner_infos) {
-                int id = tuner["systemId"];
+                int id = tuner["systemId"].is_number() ? tuner["systemId"].get<int>() : 0;
                 if (id >= 1000) {
                     id = id % 10; // TODO: for less than 9 tuner!
                     id += 1201;

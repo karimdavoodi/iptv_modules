@@ -547,6 +547,6 @@ void Error::report_error()
         db.insert("report_error", j.dump());
 
     }catch(std::exception const& e){
-        LOG(error)  <<  e.what();
+        //LOG(error)  <<  e.what();
     }
 }

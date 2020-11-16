@@ -19,44 +19,98 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#include <boost/filesystem/operations.hpp>
 #include <chrono>
 #include <exception>
 #include <iostream>
 #include <thread>
+#include <sys/stat.h>
 #include <boost/filesystem.hpp>
 #include "utils.hpp"
 #include "iptv_utils_gst.hpp"
+#define LOG_PERIOD 60
+#define LICENSE_ID    "/opt/sms/lic.id"
+#define LICENSE_JSON  "/opt/sms/lic.json"
 using namespace std;
 
 int check_license_db(Mongo& db);
+void regenerate_id_and_json();
+bool json_is_new();
 
-int main()
+int main(int argc, char *argv[])
 {
     Mongo db;
     int check;
+    int systemId = 0;
+    int try_count = 0;
+    bool system_stoped = false;
 
     if( geteuid() != 0 ){
         LOG(error) << "Must run by root";
         return -1;
     }
     Util::boost_log_init(db);
-    Util::system("rm -f /run/sms/*");
-    license_capability_bool("GB_EPG", &check);
-    // Report system usage
-    int systemId = check_license_db(db);
+    systemId = check_license_db(db);
+    if(argc > 1){
+        LOG(info) << "Exit.";
+        return 0;
+    } 
     SysUsage usage;
     while(true){
-        std::this_thread::sleep_for(chrono::seconds(60));
-        string usage_json = usage.getUsageJson(systemId);
-        db.insert("report_system_usage", usage_json);
+        std::this_thread::sleep_for(chrono::seconds(LOG_PERIOD));
+
+        if(!systemId || json_is_new()){
+            systemId = check_license_db(db);
+        }
 
         if(!license_capability_bool("GB_EPG", &check)){
-            DB_ERROR(db, 1) << "INVALID LICENSE!";
-            Util::system("/opt/sms/bin/sms s");
-        }
-        if(!systemId)
             systemId = check_license_db(db);
+            if(!systemId){
+                try_count++;
+                if(try_count > 5){
+                    DB_ERROR(db, 1) << "Invalid license. Stop service!";
+                    Util::system("/opt/sms/bin/sms e");
+                    system_stoped = true;
+                    try_count = 0;
+                }
+            }else{
+                try_count = 0;
+            }
+        }
+        if(system_stoped && systemId){
+            DB_ERROR(db, 1) << "Valid license. Start service!";
+            Util::system("/opt/sms/bin/sms s");
+            system_stoped = false;
+        }
+
+        string usage_json = usage.getUsageJson(systemId);
+        db.insert("report_system_usage", usage_json);
     }
+}
+bool json_is_new()
+{
+    try{
+        struct stat st;
+
+        if(!stat(LICENSE_JSON, &st)){
+            return (time(nullptr) -  st.st_mtim.tv_sec) < LOG_PERIOD;
+        }
+    }catch(std::exception& e){
+        LOG(error) << e.what();
+    }
+    return true;
+}
+void regenerate_id_and_json()
+{
+    int check;
+    LOG(info) << "Regenerte lic.id and lic.json!";
+    try{
+        boost::filesystem::remove(LICENSE_JSON);
+        boost::filesystem::remove(LICENSE_ID);
+    }catch(std::exception& e){
+        LOG(error) << e.what();
+    } 
+    license_capability_bool("GB_EPG", &check);
 }
 int check_license_db(Mongo& db)
 {
@@ -65,12 +119,15 @@ int check_license_db(Mongo& db)
     license["_id"] = 1;
     license["license"] = json::object();
     try{
-        string licStr = Util::get_file_content("/run/sms/license.json");
+        regenerate_id_and_json();
+        string licStr = Util::get_file_content(LICENSE_JSON);
         if(!licStr.empty()){
             license["license"] = json::parse(licStr);
-            LOG(debug) << license.dump(2);
-            systemId = license["license"]["General"]["MMK_ID"];
-            db.insert_or_replace_id("system_license",1,license.dump());
+            if( !license["license"]["General"].is_null() ){
+                LOG(info) << "Insert license to DB";
+                systemId = license["license"]["General"]["MMK_ID"];
+                db.insert_or_replace_id("system_license",1,license.dump());
+            }
         }
     }catch(std::exception& e){
         LOG(error) << e.what();

@@ -39,15 +39,22 @@ namespace Gst {
     {
         gst_init(nullptr, nullptr);
     }
-    void zero_queue_buffer(GstElement* queue)
+    void queue_overrun(GstElement* queue, gpointer user_data)
+    {
+        long current_level_bytes;
+        g_object_get(queue, "current-level-bytes", &current_level_bytes, nullptr);
+        LOG(error) << "Queue overrun: " << Gst::element_name(queue) 
+            << " MB:" << current_level_bytes/1000'000L;
+    }
+    void set_max_queue_time(GstElement* queue, int sec)
     {
         CHECK_NULL(queue, "Queue");
         g_object_set(queue,
                 "max-size-buffers", 0,
                 "max-size-bytes", 0,
-                "max-size-time", 0,
-                //"leaky", 2,
+                "max-size-time", sec * GST_SECOND, 
                 nullptr);
+        g_signal_connect(queue, "overrun", G_CALLBACK(queue_overrun), nullptr);
     }
     std::string pad_caps_type(GstPad* pad)
     {
@@ -354,7 +361,7 @@ namespace Gst {
             g_object_set(parse, "disable-passthrough", true, nullptr);
             auto queue = Gst::add_element(pipeline, "queue", "", true);
             if(queue_buffer_zero){
-                Gst::zero_queue_buffer(queue);  // effect on iptv_in_archive memory consume 
+                Gst::set_max_queue_time(queue, 0);  // effect on iptv_in_archive memory consume 
             } 
             if(!Gst::pad_link_element_static(pad, queue, "sink")){
                 LOG(error) << "Can't link typefind to queue, SRC PAD CAPS:"

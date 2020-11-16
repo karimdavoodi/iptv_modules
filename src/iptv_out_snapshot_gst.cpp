@@ -105,8 +105,8 @@ bool gst_capture_udp_in_jpg(string in_multicast, int port, string pic_path)
     }
 }
 GstPadProbeReturn filesink_get_buffer(
-        GstPad */*pad*/,
-        GstPadProbeInfo */*info*/,
+        GstPad * /*pad*/,
+        GstPadProbeInfo * /*info*/,
         gpointer user_data)
 {
     auto d = (ProbData *)user_data;

@@ -40,13 +40,12 @@ struct transcoder_data {
     Gst::Data d;
     struct profile target;
     bool video_process;
-    bool audio_process;
     vector<GstPad*> mqueue_src_pads;
     atomic_int tsdemux_src_pads_num;
     bool tsdemux_no_more_pad_t;
     mutex mqueue_src_pads_mutex;
 
-    transcoder_data():video_process{false},audio_process{false},
+    transcoder_data():video_process{false},
         mqueue_src_pads{},tsdemux_src_pads_num{0},tsdemux_no_more_pad_t{false}{}
 };
 
@@ -57,7 +56,6 @@ void video_transcode(GstPad* src_pad, GstStructure* caps_struct,
                                         transcoder_data* tdata);
 void audio_transcode(GstPad* src_pad, GstStructure* caps_struct, 
                                         transcoder_data* tdata);
-void stream_passthrough(GstPad* src_pad, transcoder_data* tdata);
 void process_audio_pad(GstPad* pad, transcoder_data* tdata);
 void tsdemux_no_more_pad_t(GstElement* object, gpointer data);
 void tsdemux_pad_added_t(GstElement* object, GstPad* pad, gpointer data);
@@ -124,14 +122,16 @@ void gst_transcode_of_stream(string in_multicast, int port, string out_multicast
         g_signal_connect(multiqueue, "pad-added", G_CALLBACK(multiqueue_pad_added_t), &tdata);
         g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
         g_object_set(queue_sink,
-                "max-size-time", 2 * GST_SECOND,
+                "max-size-buffers", 0,
+                "max-size-bytes", 0,
+                "max-size-time", 10 * GST_SECOND,
                 nullptr);
         g_object_set(multiqueue,
                 "sync-by-running-time", true,
                 "unlinked-cache-time", 0,
                 "max-size-buffers", 0,
                 "max-size-bytes", 0,
-                "max-size-time", 0,
+                "max-size-time", 10 * GST_SECOND, 
                 nullptr);
         g_object_set(udpsink, 
                 "multicast_iface", "lo", 
@@ -145,7 +145,6 @@ void gst_transcode_of_stream(string in_multicast, int port, string out_multicast
         gst_element_set_state(GST_ELEMENT(tdata.d.pipeline), GST_STATE_PLAYING);
         Gst::dot_file(tdata.d.pipeline, "iptv_transcoder", 9);
         g_main_loop_run(tdata.d.loop);
-        //Gst::dot_file(tdata.d.pipeline, "iptv_transcoder", 0);
     }catch(std::exception& e){
         LOG(error) << e.what();
     }
@@ -159,7 +158,9 @@ void multiqueue_pad_added_t(GstElement* /*multiqueue*/, GstPad* pad, gpointer da
         std::unique_lock<mutex> lock(tdata->mqueue_src_pads_mutex);
         
         tdata->mqueue_src_pads.push_back(pad);
-
+        LOG(trace) << "tsdemux_no_more_pad_t:" << tdata-> tsdemux_no_more_pad_t
+            << " mqueue_src_pads.size " << tdata->mqueue_src_pads.size()
+            << " tsdemux_src_pads_num:" << tdata->tsdemux_src_pads_num;
         if(tdata->tsdemux_no_more_pad_t &&
            tdata->mqueue_src_pads.size() == (size_t)tdata->tsdemux_src_pads_num){
             auto mpegtsmux = gst_bin_get_by_name(GST_BIN(tdata->d.pipeline), "mpegtsmux");
@@ -170,7 +171,7 @@ void multiqueue_pad_added_t(GstElement* /*multiqueue*/, GstPad* pad, gpointer da
                     g_main_loop_quit(tdata->d.loop);
                     return;
                 }else{
-                    LOG(debug) << "Link multiqueue"<< Gst::pad_name(p) << " to mpegtsmux";
+                    LOG(debug) << "Link multiqueue "<< Gst::pad_name(p) << " to mpegtsmux";
                 } 
             }
             gst_object_unref(mpegtsmux);
@@ -306,12 +307,11 @@ void video_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
     }else{
         gst_element_link_many(queue_res, encoder, parser, nullptr);
     }
-
     gst_element_set_state(encoder, GST_STATE_PLAYING);
 
-    auto multiqueue = gst_bin_get_by_name(GST_BIN(tdata->d.pipeline), "multiqueue");
-    Gst::element_link_request(parser, "src", multiqueue, "sink_%u");
-    gst_object_unref(multiqueue);
+    auto pad_src  = gst_element_get_static_pad(parser, "src");
+    to_multiqueue(pad_src, tdata);
+    gst_object_unref(pad_src);
 }
 void audio_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data* tdata)
 {
@@ -380,13 +380,9 @@ void audio_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
     LOG(trace) << "Set audio bitrate:" << bitrate;
     g_object_set(encoder, "bitrate", bitrate , nullptr);  
 
-    auto multiqueue = gst_bin_get_by_name(GST_BIN(tdata->d.pipeline), "multiqueue");
-    Gst::element_link_request(parser, "src", multiqueue, "sink_%u");
-    gst_object_unref(multiqueue);
-}
-void stream_passthrough(GstPad* src_pad, transcoder_data* tdata)
-{
-    to_multiqueue(src_pad, tdata);
+    auto pad_src  = gst_element_get_static_pad(parser, "src");
+    to_multiqueue(pad_src, tdata);
+    gst_object_unref(pad_src);
 }
 void process_audio_pad(GstPad* pad, transcoder_data* tdata)
 {
@@ -427,13 +423,12 @@ void process_audio_pad(GstPad* pad, transcoder_data* tdata)
     if(transcode_audio && !tdata->target.audioCodec.empty()){
         LOG(info) << "Transcode audio due to codec name:" << tdata->target.audioCodec;
         audio_transcode(pad, caps_struct, tdata);
-        return;
+    }else{
+        //passthrough audio
+        LOG(info) << "Passthrough Audio due to same name:" << tdata->target.audioCodec;
+        to_multiqueue(pad, tdata);
     }
     // TODO: check other parameters 
-
-    //passthrough audio
-    LOG(info) << "Passthrough Audio due to same name:" << tdata->target.audioCodec;
-    stream_passthrough(pad, tdata);
 }
 GstPadProbeReturn parser_caps_probe(
         GstPad * pad, 
@@ -482,11 +477,11 @@ GstPadProbeReturn parser_caps_probe(
             video_transcode(pad, caps_struct, tdata);
         }else{
             LOG(info) << "Passthrough Video due to same name and frame size";
-            stream_passthrough(pad, tdata);
+            to_multiqueue(pad, tdata);
         }
         return GST_PAD_PROBE_OK;
     }
-    if(name.find("audio/mpeg") != string::npos && !tdata->audio_process){
+    if(name.find("audio/mpeg") != string::npos){
         int mpegversion = 0;
         int layer = 0;
         gst_structure_get_int(caps_struct, "mpegversion", &mpegversion);
@@ -495,8 +490,6 @@ GstPadProbeReturn parser_caps_probe(
             LOG(warning) << "Audio caps dosen't have mpegversion property";
             return GST_PAD_PROBE_OK;
         }
-        // TODO: Multi Audio 
-        tdata->audio_process = true;
         process_audio_pad(pad, tdata);
         return GST_PAD_PROBE_OK;
     }
@@ -504,6 +497,7 @@ GstPadProbeReturn parser_caps_probe(
 }
 void tsdemux_no_more_pad_t(GstElement* /*object*/, gpointer data)
 {
+    LOG(debug) << "No more pad";
     auto tdata = (transcoder_data *) data;
     tdata->tsdemux_no_more_pad_t = true;
 }

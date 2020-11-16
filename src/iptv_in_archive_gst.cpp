@@ -144,7 +144,6 @@ void typefind_have_type_a(GstElement* typefind,
         if(is_mp3){
             auto audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", "", true);
             auto queue = Gst::add_element(d->pipeline, "queue", "queue_mp3", true);
-            //Gst::zero_queue_buffer(queue);
             if(!gst_element_link_many(demux, audioparse, queue, nullptr)){
                 LOG(error) << "Can't link demux-->audioparse-->queue";
                 g_main_loop_quit(d->loop);

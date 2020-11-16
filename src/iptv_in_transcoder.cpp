@@ -86,6 +86,18 @@ void start_channel(json channel, live_setting live_config)
                     json::parse( live_profiles_transcode))) 
             return;
 
+        { // for test one channel
+            char* env = getenv("TRANS_CHAN");
+            if(env != nullptr ){
+                string chan_name = channel["name"];
+                if(chan_name.find(env) == string::npos){
+                    LOG(warning) << "No test " << chan_name << " " << chan_name;
+                    return;
+                }else{
+                    LOG(warning) << "Test " << chan_name << " " << chan_name;
+                }
+            }
+        }
         auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
         live_config.type_id = channel["inputType"];
         auto in_multicast  = Util::get_multicast(live_config, channel["input"]);

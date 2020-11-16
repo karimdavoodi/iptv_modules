@@ -19,6 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#include <boost/filesystem/operations.hpp>
 #include <chrono>
 #include <ctime>
 #include <iostream>
@@ -94,9 +95,15 @@ void start_snapshot(const json& channel, live_setting live_config)
     auto now_tm = localtime(&now);
     live_config.type_id = channel["inputType"].get<int>();
     auto in_multicast = Util::get_multicast(live_config, channel["input"]);
-    int pic_id = channel["_id"].get<int>();
-    auto pic_path = boost::format("%sSnapshot/%d.jpg")
-        % MEDIA_ROOT % pic_id; 
+    long channel_id = channel["_id"].get<long>();
+    auto pic_path = boost::format("%sSnapshot/%ld.jpg")
+        % MEDIA_ROOT % channel_id; 
+
+    if(boost::filesystem::exists(pic_path.str())){
+        boost::filesystem::remove(pic_path.str());
+        LOG(info) << "Delete old snapshut:" << pic_path.str();
+    }
+
     LOG(debug) << "Try to snapsot from " << channel["name"];
     bool succesfull = gst_capture_udp_in_jpg(in_multicast, INPUT_PORT, pic_path.str());
 
@@ -104,7 +111,8 @@ void start_snapshot(const json& channel, live_setting live_config)
         string name = channel["name"].get<string>();
         LOG(info) << "Capture " << name << " in " << pic_path.str();
         json media = json::object();
-        media["_id"] = pic_id;
+        media["_id"] = channel_id;
+        media["name"] = name;
         media["format"] = CONTENT_FORMAT_JPG; 
         media["type"] = CONTENT_TYPE_SNAPSHOT;
         media["price"] = 0;
@@ -126,8 +134,7 @@ void start_snapshot(const json& channel, live_setting live_config)
                       { "description" ,"" }
                   }}
         };
-        media["name"] = name;
-        db.insert_or_replace_id("storage_contents_info", pic_id, media.dump());
+        db.insert_or_replace_id("storage_contents_info", channel_id, media.dump());
     }
     json report = json::object();
     report["_id"] = std::chrono::system_clock::now().time_since_epoch().count();
@@ -136,7 +143,15 @@ void start_snapshot(const json& channel, live_setting live_config)
     report["inputId"] = channel["input"];
     report["inputType"] = channel["inputType"];
     report["status"] = succesfull ? 100 : 0;
-    report["snapshot"] = succesfull ?  pic_id : 0;
+    report["snapshot"] = succesfull ?  channel_id : 0;
     db.insert("report_channels", report.dump());
+    // Update report_output_channels
+    json report_output_channel = json::parse(db.find_id("report_output_channels",channel_id));
+    if(!report_output_channel["name"].is_null()){
+        report_output_channel["inputStatus"] =  report["status"];
+        report_output_channel["inputSnapshot"] =  report["snapshot"];
+        db.insert_or_replace_id("report_output_channels", channel_id, 
+                report_output_channel.dump());
+    }
     Util::wait(1000);
 }

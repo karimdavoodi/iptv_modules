@@ -49,7 +49,9 @@ int main()
         LOG(info) << "Error in live config! Exit.";
         return -1;
     }
-    Util::system("rm -rf /opt/sms/tmp/HLS/*");
+    if(getenv("HLS_CHAN") == nullptr){
+        Util::system("rm -rf /opt/sms/tmp/HLS/*");
+    }
     Util::check_path(HLS_ROOT);
 
     json channels = json::parse(db.find_mony("live_output_network", 
@@ -80,6 +82,18 @@ void start_channel(json channel, live_setting live_config)
     string chan_name = Util::get_channel_name(channel["input"], channel["inputType"]);
     string hls_root = string(HLS_ROOT) + chan_name;
     Util::check_path(hls_root);
+
+    { // for test one channel
+        char* env = getenv("HLS_CHAN");
+        if(env != nullptr ){
+            if(chan_name.find(env) == string::npos){
+                LOG(warning) << "No test " << chan_name << " " << in_multicast;
+                return;
+            }else{
+                LOG(warning) << "Test " << chan_name << " " << in_multicast;
+            }
+        }
+    }
 #if BY_FFMPEG
     auto cmd = boost::format("%s -i 'udp://%s:%d' "
             "-codec copy -map 0 -ac 2 "
@@ -89,6 +103,7 @@ void start_channel(json channel, live_setting live_config)
     Util::exec_shell_loop(cmd.str());
 #else
     while(true){
+        Util::system("rm -f " + hls_root + "/*");
         gst_convert_udp_to_hls(in_multicast, INPUT_PORT, hls_root); 
         Util::wait(5000);
     }

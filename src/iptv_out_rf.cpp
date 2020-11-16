@@ -20,16 +20,19 @@
  * SOFTWARE.
  */
 #include <chrono>
+#include <exception>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <sstream>
 #include <map>
 #include <thread>
+#include <set>
 #include <boost/filesystem/operations.hpp>
 #include "utils.hpp"
 #include "db_structure.hpp"
 using namespace std;
+void generate_serviceId(Mongo&);
 
 int main()
 {
@@ -45,8 +48,9 @@ int main()
         LOG(info) << "Error in live config! Exit.";
         return -1;
     }
-    json channels = json::parse(db.find_mony("live_output_dvb", 
-                "{\"active\":true}"));
+    generate_serviceId(db);
+    json channels = json::parse(db.find_mony("live_output_dvb", R"({"active":true})")); 
+
     for(auto& chan : channels ){
         if(!Util::check_json_validity(db, "live_output_dvb", chan, 
                 json::parse( live_output_dvb))) 
@@ -159,10 +163,36 @@ int main()
             << " -m " << pcr << " -P " << port << " &";
         std::ostringstream torf;
         torf << tuner_cmd << " "
-            << systemId << " " << freq << " " << port << " &";
+            << systemId << " " << freq/1000 << " " << port << " &";
         Util::system(tomts.str());
         Util::system(torf.str());
         tid++;
     }
     Util::wait_forever();
 } 
+void generate_serviceId(Mongo& db)
+{
+    set<long> service_ids;
+    long service_id = 101;
+    try{
+        json channels = json::parse(db.find_mony("live_output_dvb", R"({"active":true})")); 
+        for(const auto& chan : channels){
+            if(chan["serviceId"].is_number()){
+                service_ids.insert(chan["serviceId"].get<long>());
+            }
+        }
+        for(auto& chan : channels){
+            if(chan["serviceId"].is_null() || !chan["serviceId"].is_number()){
+                while(service_ids.count(service_id)) 
+                    service_id++;
+                chan["serviceId"] = service_id;
+                db.replace_id("live_output_dvb", chan["_id"], chan.dump());
+                LOG(info) << "Generate serviceId " << service_id << 
+                    " for channel " << chan["_id"];
+                service_id++;
+            }
+        }
+    }catch(std::exception& e){
+        LOG(error) << e.what();
+    }
+}

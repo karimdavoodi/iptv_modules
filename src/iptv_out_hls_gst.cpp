@@ -25,7 +25,7 @@
 using namespace std;
 
 void tsdemux_pad_added_h(GstElement* object, GstPad* pad, gpointer data);
-
+void queue_guard(GMainLoop* loop, GstElement* queue, int sec);
 /*
  *   The Gstreamer main function
  *   Convert udp:://in_multicast:port to HLS playlist 
@@ -51,6 +51,7 @@ void gst_convert_udp_to_hls(string in_multicast, int port, string hls_root)
              hlssink    = Gst::add_element(d.pipeline, "hlssink2", "hlssink");
 
         gst_element_link_many(udpsrc, queue_src, tsdemux, nullptr);
+        //queue_guard(d.loop, queue_src, 20);
 
         g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added_h), &d);
         g_object_set(udpsrc, "uri", in_multicast.c_str(), nullptr);
@@ -106,6 +107,7 @@ void tsdemux_pad_added_h(GstElement* /*object*/, GstPad* pad, gpointer data)
             audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", "", true);
         }else{
             if(caps_str.find("loas") != string::npos){
+                LOG(debug) << "Add LATM audio transcoder";
                 // convert audio codec, becuase hlssink not accept aac/loas format
                 audiodecoder = Gst::add_element(d->pipeline, "aacparse", "", true);
                 auto decoder = Gst::add_element(d->pipeline, "avdec_aac_latm", 
@@ -117,7 +119,6 @@ void tsdemux_pad_added_h(GstElement* /*object*/, GstPad* pad, gpointer data)
                         "", true);
                 gst_element_link_many(audiodecoder, decoder, audioconvert, queue, 
                                 lamemp3enc, audioparse, nullptr);
-                
             }else{
                 audioparse = Gst::add_element(d->pipeline, "aacparse", "", true);
             }
@@ -135,7 +136,7 @@ void tsdemux_pad_added_h(GstElement* /*object*/, GstPad* pad, gpointer data)
     if(parse != nullptr){
         g_object_set(parse, "disable-passthrough", true, nullptr);
         auto queue = Gst::add_element(d->pipeline, "queue", "", true);
-        Gst::zero_queue_buffer(queue);
+        queue_guard(d->loop, queue, 20);
         if(!Gst::pad_link_element_static(pad, queue, "sink")){
             LOG(error) << "Can't link typefind to queue";
             g_main_loop_quit(d->loop); return; 
@@ -151,6 +152,24 @@ void tsdemux_pad_added_h(GstElement* /*object*/, GstPad* pad, gpointer data)
         Gst::element_link_request(parse, "src", hlssink, type.c_str());
         gst_object_unref(hlssink);
     }
+}
+void queue_overrun(GstElement* queue, gpointer user_data)
+{
+    GMainLoop* loop = (GMainLoop*) user_data;
+    long current_level_bytes;
+    g_object_get(queue, "current-level-bytes", &current_level_bytes, nullptr);
+    LOG(error) << "Exit loop. queue overrun in HLS: " << Gst::element_name(queue) 
+        << " MB:" << current_level_bytes/1000'000L;
+    g_main_loop_quit(loop);
+}
+void queue_guard(GMainLoop* loop, GstElement* queue, int sec)
+{
+    g_object_set(queue,
+            "max-size-buffers", 0,
+            "max-size-bytes", 0,
+            "max-size-time", sec * 1000'000'000L, // in ns
+            nullptr);
+    g_signal_connect(queue, "overrun", G_CALLBACK( queue_overrun ), loop);
 }
 /*
  *   2020-09-14 17:02:18.383436 iptv_out_hls 0x00007faf6a7fc700 error: [element_link_request:211] Can't get request sink pad from hlssink by name audio

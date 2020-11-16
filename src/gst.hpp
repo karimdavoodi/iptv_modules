@@ -60,7 +60,7 @@ namespace Gst {
     std::string caps_string(GstCaps* caps);
     void pipeline_timeout(Data& d, int sec);
     void print_int_property_delay(GstElement* element, const char* attr, int seconds);
-    void zero_queue_buffer(GstElement* queue);
+    void set_max_queue_time(GstElement* queue, int sec);
     std::string pad_caps_string(GstPad* pad);
     std::string pad_caps_type(GstPad* pad);
     void dot_file(const GstPipeline* pipeline, const std::string& name, int sec = 5);
