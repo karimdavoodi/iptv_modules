@@ -19,7 +19,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#include <boost/filesystem/operations.hpp>
+#include <chrono>
 #include <thread>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "utils.hpp"
 #include "gst.hpp"
 using namespace std;
@@ -63,9 +68,29 @@ void gst_convert_udp_to_hls(string in_multicast, int port, string hls_root)
                 "playlist-location", playlist_location.c_str(),
                 "location", segment_location.c_str(),
                 "message-forward", true,
-                "target-duration", 6,
+                "target-duration", 10,
                 nullptr);
-
+        // Thread to quit if playlist not update
+        std::thread([&](){
+                while(true){
+                    std::this_thread::sleep_for(std::chrono::seconds(600)); 
+                    struct stat statbuf;
+                    if(!stat(playlist_location.c_str(), &statbuf)){
+                        if(statbuf.st_mtim.tv_sec < (time(nullptr)-360) ){
+                            LOG(error) << "Playlist '" << playlist_location
+                                << "' is old: " << statbuf.st_mtim.tv_sec
+                                << ". quit pipeline ";
+                            g_main_loop_quit(d.loop);
+                            break;
+                            }
+                    }else{
+                            LOG(error) << "Playlist '" << playlist_location
+                                       << "' not found! quit pipeline";
+                            g_main_loop_quit(d.loop);
+                            break;
+                    }
+                }
+                }).detach();
         Gst::add_bus_watch(d);
         Gst::dot_file(d.pipeline, "iptv_network", 5);
         gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
@@ -118,7 +143,7 @@ void tsdemux_pad_added_h(GstElement* /*object*/, GstPad* pad, gpointer data)
                 audioparse = Gst::add_element(d->pipeline, "mpegaudioparse", 
                         "", true);
                 gst_element_link_many(audiodecoder, decoder, audioconvert, queue, 
-                                lamemp3enc, audioparse, nullptr);
+                        lamemp3enc, audioparse, nullptr);
             }else{
                 audioparse = Gst::add_element(d->pipeline, "aacparse", "", true);
             }

@@ -52,14 +52,27 @@ int main()
     json channels = json::parse(db.find_mony("live_inputs_network", 
                 "{\"active\":true}"));
     for(auto& chan : channels ){
-        if(!Util::check_json_validity(db, "live_inputs_network", chan, 
-                json::parse( live_inputs_network))) 
-            continue;
-        if(chan["virtual"] || !chan["static"] || chan["webPage"] ) 
-            continue;
+        try{
+            if(!Util::check_json_validity(db, "live_inputs_network", chan, 
+                        json::parse( live_inputs_network))){
 
-        if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
-            pool.emplace_back(start_channel, chan, live_config);
+                LOG(warning) << "Invalid record " << chan["_id"];
+                continue;
+            } 
+            if( !chan["static"] || chan["webPage"] ){
+                LOG(warning) << "It is webpage or non static" << chan["_id"];
+                continue;
+            } 
+            if( !chan["virtual"].is_null() && chan["virtual"] == true  ){
+                LOG(warning) << "It is virtual" << chan["_id"];
+                continue;
+            } 
+
+            if(Util::chan_in_output(db, chan["_id"], live_config.type_id)){
+                pool.emplace_back(start_channel, chan, live_config);
+            }
+        }catch(std::exception const& e){
+            LOG(error)  <<  e.what();
         }
     }
     for(auto& t : pool)
@@ -75,22 +88,26 @@ int main()
  * */
 void start_channel(json channel,  live_setting live_config)
 {
-    LOG(info) << "Start Channel: " << channel["name"];
-    auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
-    auto url = channel["url"].get<string>();
-    while(true){
+    try{ 
+        LOG(info) << "Start Channel: " << channel["name"];
+        auto out_multicast = Util::get_multicast(live_config, channel["_id"]);
+        auto url = channel["url"].get<string>();
+        while(true){
 #if TEST_BY_FFMPEG
-        auto cmd = boost::format("%s -i '%s' -codec copy "
-                " -f mpegts 'udp://%s:%d?pkt_size=1316' ")
-            % FFMPEG % url % out_multicast % INPUT_PORT; 
-        Util::exec_shell_loop(cmd.str());
+            auto cmd = boost::format("%s -i '%s' -codec copy "
+                    " -f mpegts 'udp://%s:%d?pkt_size=1316' ")
+                % FFMPEG % url % out_multicast % INPUT_PORT; 
+            Util::exec_shell_loop(cmd.str());
 #else
-        //url = "udp://229.1.1.1:3200";
-        //url = "rtsp://192.168.56.12:554/iptv/239.1.1.2/3200"; 
-        //url = "http://192.168.56.12:8001/34/hdd11.ts";   
-        //url = "http://192.168.56.12/HLS/HLS/hdd11/p.m3u8";
-        gst_convert_stream_to_udp(url, out_multicast, INPUT_PORT);
+            //url = "udp://229.1.1.1:3200";
+            //url = "rtsp://192.168.56.12:554/iptv/239.1.1.2/3200"; 
+            //url = "http://192.168.56.12:8001/34/hdd11.ts";   
+            //url = "http://192.168.56.12/HLS/HLS/hdd11/p.m3u8";
+            gst_convert_stream_to_udp(url, out_multicast, INPUT_PORT);
 #endif
-        Util::wait(5000);
+            Util::wait(5000);
+        }
+    }catch(std::exception const& e){
+        LOG(error)  <<  e.what();
     }
 }

@@ -96,8 +96,8 @@ void start_channel(json channel, live_setting live_config)
     }
 #if BY_FFMPEG
     auto cmd = boost::format("%s -i 'udp://%s:%d' "
-            "-codec copy -map 0 -ac 2 "
-            "-hls_time 4 -hls_list_size 10 -hls_flags delete_segments "
+            " -map 0:v -map 0:a -vcodec copy -acodec mp2 -ac 2 "
+            "-hls_time 6 -hls_list_size 5 -hls_flags delete_segments "
             " '%s/p.m3u8'")
         % FFMPEG % in_multicast % INPUT_PORT % hls_root;
     Util::exec_shell_loop(cmd.str());

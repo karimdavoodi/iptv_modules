@@ -491,26 +491,32 @@ namespace Util {
     bool check_json_validity(Mongo& db, const string record_name,json& record, const json target)
     {
         bool result = true;
-        for(auto& [key, value]: target.items()){
-            if(!key.size()) continue;
-            if(value.is_array()){
-                result = result && check_json_validity(db, record_name,record[key][0], value[0]);
-            } else if(value.is_structured()){
-                result = result && check_json_validity(db, record_name,record[key], value);
-            } else if(record.is_null() || !record.contains(key)){
-                if(key == "description" || 
-                        key == "programName" ||     // in output/archive
-                        key == "diSEqC" ||          // in tuner info for dvbt
-                        key == "extra" ||           // in profile/transcode
-                        key == "tv" || 
-                        key == "logo"){
-                    LOG(warning) << "In " << record_name << " not found the key:" << key;
-                    result = result && true; // TODO: Ignore this fields
-                }else{
-                    DB_ERROR(db, 1) << "Problem in " << record_name << " with " << key;
-                    result = result && false;
+        try{
+            // TODO: chack for null value
+            for(auto& [key, value]: target.items()){
+                if(!key.size()) continue;
+                if(value.is_array()){
+                    result = result && check_json_validity(db, record_name,record[key][0], value[0]);
+                } else if(value.is_structured()){
+                    result = result && check_json_validity(db, record_name,record[key], value);
+                } else if(record.is_null() || !record.contains(key)){
+                    if(key == "description" || 
+                            key == "programName" ||     // in output/archive
+                            key == "diSEqC" ||          // in tuner info for dvbt
+                            key == "extra" ||           // in profile/transcode
+                            key == "tv" || 
+                            key == "logo"){
+                        LOG(warning) << "In " << record_name << " not found the key:" << key;
+                        result = result && true; // TODO: Ignore this fields
+                    }else{
+                        DB_ERROR(db, 1) << "Problem in " << record_name << " with " << key;
+                        result = result && false;
+                    }
                 }
             }
+        }catch(std::exception const& e){
+            LOG(error)  <<  e.what();
+            return false;
         }
         return result;
     }

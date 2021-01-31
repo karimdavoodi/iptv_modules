@@ -93,17 +93,18 @@ void gst_transcode_of_stream(string in_multicast, int port, string out_multicast
                                   ? "" : profile["videoSize"];
         tdata.target.videoFps   = !profile["videoFps"].is_number()? 0 :
                                   profile["videoFps"].get<int>();
-        tdata.target.videoRate  = !profile["videoRate"].is_number()? 0 :
-                                  profile["videoRate"].get<int>();
+        // Get in Mbps
+        tdata.target.videoRate  = !profile["videoRate"].is_number()? 2000000 :
+                                  profile["videoRate"].get<int>() * 1000000;
         tdata.target.videoProfile  = profile["videoProfile"].is_null()? "" :
                                   profile["videoProfile"];
 
         tdata.target.audioCodec = profile["audioCodec"].is_null() || 
                                   profile["audioCodec"] == "No Change" 
                                   ? "" : profile["audioCodec"];
-
-        tdata.target.audioRate  = !profile["audioRate"].is_number()? 0 :
-                                  profile["audioRate"].get<int>();
+        // Get in Kbps
+        tdata.target.audioRate  = !profile["audioRate"].is_number()? 128000 :
+                                  profile["audioRate"].get<int>() * 1000;
 
         // udpsrc -> tsdemux -> decoders -> encoders -> mpegtsmux -> udpsink
         auto udpsrc     = Gst::add_element(tdata.d.pipeline, "udpsrc"),

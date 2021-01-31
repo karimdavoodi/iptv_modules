@@ -22,9 +22,11 @@
 #include <exception>
 #include <thread>
 #include <boost/filesystem.hpp>
+#include <sys/statvfs.h>
 #include "utils.hpp"
 #include "gst.hpp"
 
+#define DISK_FREE 0.1f
 using namespace std;
 
 struct Record_data {
@@ -99,15 +101,33 @@ void tsdemux_pad_added_r(GstElement* /*object*/, GstPad* pad, gpointer data)
     Gst::demux_pad_link_to_muxer(rdata->d.pipeline, pad, 
             "mux", "audio_%u", "video");
 }
-void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
+string date_string()
 {
     time_t now = time(nullptr);
     auto now_tm = localtime(&now);
     char buffer[100];
-    strftime(buffer,sizeof(buffer),"%Y-%m-%d %H:%M:%S",now_tm);
-    string name_date(buffer);
+    strftime(buffer,sizeof(buffer),"%Y-%m-%d %H-%M-%S",now_tm);
+    return string(buffer);
+}
+string get_media_path(bool is_tv, string name)
+{
+    string date = date_string();
+    string file_path {MEDIA_ROOT};
+    if(is_tv){
+        file_path += "LiveVideo/" + name + " " + date + ".mkv"; 
+    }else{
+        file_path += "LiveAudio/" + name + " " + date + ".mp3"; 
+    }
+    return file_path;
+}
+void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
+{
+    time_t now = time(nullptr);
+    auto now_tm = localtime(&now);
+    string name_date = date_string();
 
     string name = channel["name"];
+    string file_name = name + name_date + ".mkv";
     json media = json::object();
     media["_id"] = id;
     media["format"] = CONTENT_FORMAT_MKV;
@@ -134,19 +154,9 @@ void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
                   { "description" ,"" }
               }}
     };
-    media["name"] = name;
+    media["name"] = get_media_path(channel["tv"], channel["name"]);
     db.insert("storage_contents_info", media.dump());
     LOG(info) << "Record " << name << ":" << name;
-}
-string get_media_path(bool is_tv, int64_t id)
-{
-    string file_path {MEDIA_ROOT};
-    if(is_tv){
-        file_path += "LiveVideo/" + to_string(id) + ".mkv"; 
-    }else{
-        file_path += "LiveAudio/" + to_string(id) + ".mp3"; 
-    }
-    return file_path;
 }
 gchararray splitmuxsink_location_cb(GstElement*  /*splitmux*/,
         guint /*fragment_id*/, gpointer data)
@@ -159,9 +169,18 @@ gchararray splitmuxsink_location_cb(GstElement*  /*splitmux*/,
     }catch(std::exception& e){
         LOG(error) << e.what();
     }
-    string file_path = get_media_path(rdata->channel["tv"], id);
+    string file_path = get_media_path(rdata->channel["tv"], rdata->channel["name"]);
     LOG(info) << "For " << rdata->channel["name"] << " New file: " <<  file_path;
     return  g_strdup(file_path.c_str());
+}
+bool disk_is_full()
+{
+    struct statvfs s;
+    if((statvfs(MEDIA_ROOT,&s)) >= 0 ) {
+        float free = s.f_bfree * 1.0f / s.f_blocks;
+        return free < DISK_FREE;
+    }
+    return false;
 }
 /*
  *   Clean Storage from recorded file that expired
@@ -186,11 +205,12 @@ void remove_old_timeshift(Mongo& db, int maxPerChannel, const json& channel)
     for(auto& media : channel_media){
         long media_date = (!media["time"].is_null() ? media["time"].get<long>() : 0);
         long late = now - media_date;
-        if(late > maxPerChannel * RECORD_DURATION ){
+         
+        if(late > maxPerChannel * RECORD_DURATION || disk_is_full() ){
             LOG(warning) << "Remove " << media["name"] << " of channel " << channel["name"] 
                 << " for time " << media_date;
             uint64_t media_id = media["_id"];
-            auto media_path = get_media_path(channel["tv"], media_id);   
+            auto media_path = get_media_path(channel["tv"], channel["name"]);   
             db.remove_id("storage_contents_info", media_id);
             if(boost::filesystem::exists(media_path)){
                 boost::filesystem::remove(media_path);
