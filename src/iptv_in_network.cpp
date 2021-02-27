@@ -29,7 +29,7 @@
 using namespace std;
 
 void gst_convert_stream_to_udp(string in_url, string out_multicast, int port);
-void start_channel(json channel, live_setting live_config);
+void start_channel(json channel, const live_setting live_config);
 /*
  *   The main()
  *      - check license
@@ -86,7 +86,7 @@ int main()
  *  @param live_config : general live streamer config
  *
  * */
-void start_channel(json channel,  live_setting live_config)
+void start_channel(json channel,  const live_setting live_config)
 {
     try{ 
         LOG(info) << "Start Channel: " << channel["name"];

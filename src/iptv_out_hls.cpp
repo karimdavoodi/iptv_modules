@@ -19,7 +19,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#include <execinfo.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <thread>
 #include <boost/format.hpp>
@@ -28,9 +34,32 @@
 #define BY_FFMPEG 0
 using namespace std;
 
-void gst_convert_udp_to_hls(string in_multicast, int in_port, string hls_root);
+void gst_convert_udp_to_hls(
+        const string in_multicast, 
+        int in_port, 
+        const string hls_root, 
+        const string chan_name);
 void start_channel(json channel, live_setting live_config);
 
+void handler(int sig) {
+    int j, nptrs;
+    void *buffer[100];
+    char **strings;
+    nptrs = backtrace(buffer, 100);
+    strings = backtrace_symbols(buffer, nptrs);
+    if (strings != NULL) {
+        string tm = to_string(time(nullptr));
+        ofstream out("/opt/sms/tmp/iptv_out_bt_"+ tm + ".txt");
+        if(out.is_open()){
+            out << "BACK TRACE:\n";
+            for (j = 0; j < nptrs; j++)
+                out << strings[j] << '\n';
+        }
+        out.close();
+        free(strings);
+    }
+    exit(0);
+}
 /*
  *   The main()
  *      - check license
@@ -45,6 +74,7 @@ int main()
     live_setting live_config;
     CHECK_LICENSE;
     Util::init(db);
+    signal(SIGSEGV, handler);  
     if(!Util::get_live_config(db, live_config, "archive")){
         LOG(info) << "Error in live config! Exit.";
         return -1;
@@ -78,9 +108,9 @@ int main()
 void start_channel(json channel, live_setting live_config)
 {
     live_config.type_id = channel["inputType"];
-    auto in_multicast = Util::get_multicast(live_config, channel["input"]);
-    string chan_name = Util::get_channel_name(channel["input"], channel["inputType"]);
-    string hls_root = string(HLS_ROOT) + chan_name;
+    const string in_multicast = Util::get_multicast(live_config, channel["input"]);
+    const string chan_name = Util::get_channel_name(channel["input"], channel["inputType"]);
+    const string hls_root = string(HLS_ROOT) + chan_name;
     Util::check_path(hls_root);
 
     { // for test one channel
@@ -103,8 +133,9 @@ void start_channel(json channel, live_setting live_config)
     Util::exec_shell_loop(cmd.str());
 #else
     while(true){
-        Util::system("rm -f " + hls_root + "/*");
-        gst_convert_udp_to_hls(in_multicast, INPUT_PORT, hls_root); 
+        Util::system("rm -f '" + hls_root + "'/*.ts");
+        const string path = hls_root;
+        gst_convert_udp_to_hls(in_multicast, INPUT_PORT, path, chan_name); 
         Util::wait(5000);
     }
 #endif

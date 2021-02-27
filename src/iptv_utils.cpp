@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
         return 0;
     } 
     SysUsage usage;
+
     while(true){
         std::this_thread::sleep_for(chrono::seconds(LOG_PERIOD));
 

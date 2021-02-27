@@ -122,12 +122,12 @@ string get_media_path(bool is_tv, string name)
 }
 void insert_content_info_db(Mongo &db,json& channel, uint64_t id)
 {
-    time_t now = time(nullptr);
-    auto now_tm = localtime(&now);
-    string name_date = date_string();
+    const time_t now = time(nullptr);
+    const struct tm* now_tm = localtime(&now);
+    const string name_date = date_string();
 
-    string name = channel["name"];
-    string file_name = name + name_date + ".mkv";
+    const string name = channel["name"];
+    const string file_name = name + name_date + ".mkv";
     json media = json::object();
     media["_id"] = id;
     media["format"] = CONTENT_FORMAT_MKV;

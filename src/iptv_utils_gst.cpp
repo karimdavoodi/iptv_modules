@@ -86,16 +86,16 @@ string SysUsage::getUsageJson(int systemId)
         for(const auto& interface : delta.interfaces){
             json net = json::object();
             net["name"] = interface.first;
-            net["read"] = int(interface.second.read);
-            net["write"] = int(interface.second.write);
+            net["read"] = uint64_t(interface.second.read);
+            net["write"] = uint64_t(interface.second.write);
             usage["networkInterfaces"].push_back(net);
         }
         usage["diskPartitions"] = json::array();
         for(const auto& partition : delta.partitions){
             json part = json::object();
             part["name"] = partition.first;
-            part["read"] = int(partition.second.read);
-            part["write"] = int(partition.second.write);
+            part["read"] = uint64_t(partition.second.read);
+            part["write"] = uint64_t(partition.second.write);
             usage["diskPartitions"].push_back(part);
         }
         json contents = json::object();
@@ -113,17 +113,19 @@ string SysUsage::getUsageJson(int systemId)
 void SysUsage::calcCurrentPartitions()
 {
     string line;
+// 8       1 sda1 152 895 14335 2105 3 0 10 12 0 1704 2117 0 0 0 0 0 0
     ifstream disk("/proc/diskstats");
     while(disk.good()){
         getline(disk, line);
-        if(line.find("sd") == string::npos) continue;
+        if(line.find(" sd") == string::npos) continue;
+        vector<string> fields;
         boost::tokenizer<> tok(line);
-        auto it = tok.begin();
-        ++it; 
-        string name = *(++it);
-        current.partitions[name].read = stof(*(++it));
-        ++it; ++it; ++it; 
-        current.partitions[name].write = stof(*(++it));
+        for(const auto& t : tok){
+            fields.push_back(t);
+        }
+        string name = fields[2];
+        current.partitions[name].read = 512*stof(fields[5]);
+        current.partitions[name].write = 512*stof(fields[9]);
     }
 }
 void SysUsage::calcCurrentInterfaces()

@@ -31,7 +31,7 @@ using namespace std;
 using nlohmann::json;
 
 void gst_convert_web_to_stream(string web_url, string out_multicast, int port);
-void start_channel(json channel, live_setting live_config);
+void start_channel(json channel, const  live_setting live_config);
 void init_display(int display_id);
 
 /*
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
  *  @param live_config : general live streamer config
  *
  * */
-void start_channel(json channel, live_setting live_config)
+void start_channel(json channel, const  live_setting live_config)
 {
     LOG(info) << "Start web Channel: " << channel["name"];
     string url = channel["url"];

@@ -91,10 +91,10 @@ bool gst_capture_udp_in_jpg(string in_multicast, int port, string pic_path)
                 LOG(debug) << "Pipeline timeout reached"; 
                 g_main_loop_quit(d.loop);
                 });
-        t.detach();
         gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_PLAYING);
         g_main_loop_run(d.loop);
         thread_running = false;
+        t.join();
 
         gst_element_set_state(GST_ELEMENT(d.pipeline), GST_STATE_NULL);
         gst_object_unref(filesink_pad);

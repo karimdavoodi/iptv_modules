@@ -77,7 +77,7 @@ int main()
  *  @param live_config : general live streamer config
  *
  * */
-void start_channel(json channel, live_setting live_config)
+void start_channel(json channel,  live_setting live_config)
 {
     Mongo db;
 

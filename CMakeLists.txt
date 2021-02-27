@@ -12,7 +12,7 @@ add_definitions(
     -DBOOST_LOG_DYN_LINK=1
     -DGST_USE_UNSTABLE_API=1
     -Wall
-    #-g
+    -g
     )
 
 #BOOST
@@ -84,7 +84,7 @@ foreach( APP ${project_EXES} )
 endforeach()
 
 add_custom_target(copy ALL 
-    COMMAND strip iptv_* &&  cp -f iptv_* /opt/sms/bin
+    COMMAND cp -f iptv_* /opt/sms/bin && strip /opt/sms/bin/iptv_*
     COMMENT "Copy to /opt/sms/bin"
     DEPENDS ${project_EXES}
     )

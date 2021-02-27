@@ -96,23 +96,23 @@ namespace Util {
     void system(const std::string cmd);
     void wait(int millisecond);
     void boost_log_init(Mongo& db);
-    const std::string shell_out(const std::string cmd);
+    std::string shell_out(const std::string cmd);
     void exec_shell_loop(const std::string cmd);
     bool get_live_config(Mongo& db, live_setting& cfg, std::string type);
-    const std::string get_multicast(const live_setting& config, int channel_id, 
+    std::string get_multicast(const live_setting& config, int channel_id, 
             bool out_multicast=false);
-    const std::string get_content_path(Mongo& db, int id);
+    std::string get_content_path(Mongo& db, int id);
     void add_route_by_mask8(int multicast_class, std::string nic);
     void init(Mongo& db);
     bool is_channel_tv(int64_t input_id, int input_type);
     void check_path(const std::string path);
-    const std::string get_file_content(const std::string name);
-    const std::pair<int,int> profile_resolution_pair(const std::string p_vsize);
-    const std::string profile_resolution(const std::string p_vsize);
+    std::string get_file_content(const std::string name);
+    std::pair<int,int> profile_resolution_pair(const std::string p_vsize);
+    std::string profile_resolution(const std::string p_vsize);
     bool check_weektime(Mongo& db, int weektime_id);
     bool chan_in_output(Mongo &db, int chan_id, int chan_type);
     bool chan_in_input(Mongo &db, int chan_id, int chan_type);
     void insert_content_info_db(Mongo &db,json& channel, uint64_t id);
-    const std::string get_channel_name(int64_t input_id, int input_type);
+    std::string get_channel_name(int64_t input_id, int input_type);
     bool check_json_validity(Mongo &db, const std::string record_name,json& record, const json target);
 }

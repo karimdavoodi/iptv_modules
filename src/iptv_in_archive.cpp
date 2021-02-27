@@ -37,7 +37,7 @@ void gst_stream_media_file(string media_path, string multicast_addr, int port);
 bool time_to_play(Mongo& db, json& media);
 int current_time();
 void update_epg(Mongo& db, int64_t silver_chan_id, int64_t content_id);
-void start_channel(json channel, live_setting live_config);
+void start_channel(json channel, const live_setting live_config);
 /*
  *   The main()
  *      - check license
@@ -82,7 +82,7 @@ int main()
  *  @param live_config : general live streamer config
  *
  * */
-void start_channel(json channel, live_setting live_config)
+void start_channel(json channel, const live_setting live_config)
 {
     Mongo db;
     try{

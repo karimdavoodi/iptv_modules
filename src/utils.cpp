@@ -67,7 +67,7 @@ namespace Util {
     {
         LOG(debug) << "Run shell command:" << cmd;
         if(std::system(cmd.c_str())){
-            LOG(error) << "Error in run " << cmd;
+            LOG(debug) << "Error in run " << cmd;
         }
     }
     void wait(int millisecond)
@@ -81,7 +81,7 @@ namespace Util {
             wait(1000000000L);
         }
     }
-    const std::string shell_out(const std::string cmd) {
+    std::string shell_out(const std::string cmd) {
         std::array<char, 128> buffer;
         std::string result;
         std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
@@ -254,7 +254,7 @@ namespace Util {
             return false;
         }
     }
-    const string get_multicast(const live_setting& config, int channel_id, bool out_multicast)  
+    string get_multicast(const live_setting& config, int channel_id, bool out_multicast)  
     {
         uint32_t address = 0;
         uint8_t channel_id_byte1 = (channel_id & 0x000000ff);  
@@ -274,7 +274,7 @@ namespace Util {
             << " --> " << addr_str;
         return addr_str;
     }
-    const string get_content_path(Mongo& db, int id)
+    string get_content_path(Mongo& db, int id)
     {
         try{
             json content_info = json::parse(db.find_id("storage_contents_info",id));
@@ -310,7 +310,7 @@ namespace Util {
             boost::filesystem::create_directories(path);
         }
     }
-    const std::string get_file_content(const std::string name)
+    std::string get_file_content(const std::string name)
     {
         if(boost::filesystem::exists(name)){
             ifstream file(name);
@@ -323,7 +323,7 @@ namespace Util {
         LOG(warning)  <<  "file not exists: " << name;
         return "";
     }
-    const pair<int,int> profile_resolution_pair(const string p_vsize)
+    pair<int,int> profile_resolution_pair(const string p_vsize)
     {
         if(p_vsize.find("SD") != string::npos)        return make_pair(720, 576);
         else if(p_vsize.find("FHD") != string::npos)  return make_pair(1920, 1080);
@@ -332,7 +332,7 @@ namespace Util {
         else if(p_vsize.find("CD") != string::npos)   return make_pair(320, 240);
         return make_pair(0, 0);
     }
-    const string profile_resolution(const string p_vsize)
+    string profile_resolution(const string p_vsize)
     {
         if(p_vsize.find("SD") != string::npos)        return "720x576";
         else if(p_vsize.find("FHD") != string::npos)  return "1920x1080";
@@ -450,7 +450,7 @@ namespace Util {
         }
         return false;
     }
-    const std::string get_channel_name(int64_t input_id, int input_type)
+    std::string get_channel_name(int64_t input_id, int input_type)
     {   
         try{
             Mongo db;

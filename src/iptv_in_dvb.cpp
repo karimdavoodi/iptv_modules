@@ -39,7 +39,7 @@
 using namespace std;
 using nlohmann::json;
 
-void start_channel(json tuner, live_setting live_config);
+void start_channel(json tuner, const live_setting live_config);
 
 void report_tuners(Mongo &db);
 
@@ -116,7 +116,7 @@ int main()
  *  @param live_config : general live streamer config
  *
  * */
-void start_channel(json tuner, live_setting live_config) {
+void start_channel(json tuner, const live_setting live_config) {
     Mongo db;
     try {
         LOG(trace) << tuner.dump(4);

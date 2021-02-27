@@ -100,11 +100,11 @@ void gst_get_epg_of_stream(Mongo& db, string in_multicast, int port, int channel
                     }
                 }
                 });
-        t.detach();
 
         gst_element_set_state(GST_ELEMENT(edata.d.pipeline), GST_STATE_PLAYING);
         g_main_loop_run(edata.d.loop);
         thread_running = false;
+        t.join();
     }catch(std::exception& e){
         LOG(error) << e.what();
     }

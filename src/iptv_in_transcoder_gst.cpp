@@ -50,6 +50,7 @@ struct transcoder_data {
 };
 
 
+void queue_guard(GMainLoop* loop, GstElement* queue, int sec);
 void multiqueue_pad_added_t(GstElement* multiqueue, GstPad* pad, gpointer data);
 void to_multiqueue(GstPad* src_pad, transcoder_data* tdata);
 void video_transcode(GstPad* src_pad, GstStructure* caps_struct, 
@@ -117,6 +118,8 @@ void gst_transcode_of_stream(string in_multicast, int port, string out_multicast
 
         gst_element_link_many(udpsrc, queue_src, tsdemux, nullptr);
         gst_element_link_many(mpegtsmux, queue_sink, udpsink, nullptr);
+        // Test it
+        queue_guard(tdata.d.loop, queue_src, 20);
 
         g_signal_connect(tsdemux, "pad-added", G_CALLBACK(tsdemux_pad_added_t), &tdata);
         g_signal_connect(tsdemux, "no-more-pads", G_CALLBACK(tsdemux_no_more_pad_t), &tdata);
@@ -187,6 +190,24 @@ void to_multiqueue(GstPad* src_pad, transcoder_data* tdata)
     Gst::pad_link_element_request(src_pad, multiqueue, "sink_%u");
     gst_object_unref(multiqueue);
 }
+void queue_overrun(GstElement* queue, gpointer user_data)
+{
+    GMainLoop* loop = (GMainLoop*) user_data;
+    long current_level_bytes;
+    g_object_get(queue, "current-level-bytes", &current_level_bytes, nullptr);
+    LOG(error) << "Exit loop. queue overrun in Transcode: " << Gst::element_name(queue) 
+        << " MB:" << current_level_bytes/1000'000L;
+    g_main_loop_quit(loop);
+}
+void queue_guard(GMainLoop* loop, GstElement* queue, int sec)
+{
+    g_object_set(queue,
+            "max-size-buffers", 0,
+            "max-size-bytes", 0,
+            "max-size-time", sec * 1000'000'000L, // in ns
+            nullptr);
+    g_signal_connect(queue, "overrun", G_CALLBACK( queue_overrun ), loop);
+}
 void video_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data* tdata)
 {
 
@@ -238,7 +259,8 @@ void video_transcode(GstPad* src_pad, GstStructure* caps_struct, transcoder_data
 
     gst_element_link_many(decoder, queue_raw, videoconvert1, videorate, caps_rate,   
                         queue_res1, videoscale, caps_resize,queue_res, nullptr);
-    
+    // TODO: test it 
+    queue_guard(tdata->d.loop, queue_raw, 20);
     std::ostringstream caps_str;
     if(width && height)
         caps_str << "video/x-raw, width=(int)" << width << ", height=(int)" << height;
